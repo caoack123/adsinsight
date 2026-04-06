@@ -45,7 +45,6 @@ function exportFeedProducts() {
     '  segments.product_title, ' +
     '  segments.product_brand, ' +
     '  segments.product_type_l1, ' +
-    '  segments.product_bidding_category_level1, ' +
     '  metrics.impressions, ' +
     '  metrics.clicks, ' +
     '  metrics.cost_micros, ' +
@@ -74,7 +73,7 @@ function exportFeedProducts() {
         item_id: row.segments.productItemId || '',
         current_title: row.segments.productTitle || '',
         brand: row.segments.productBrand || '',
-        product_type: row.segments.productTypeL1 || row.segments.productBiddingCategoryLevel1 || '',
+        product_type: row.segments.productTypeL1 || '',
         impressions: impressions,
         clicks: clicks,
         ctr: impressions > 0 ? clicks / impressions : 0,
@@ -105,7 +104,8 @@ function exportChangeHistory() {
     '  change_event.user_email, ' +
     '  campaign.name ' +
     'FROM change_event ' +
-    'WHERE change_event.change_date_time >= \\"' + daysAgo(CONFIG.CHANGE_DAYS) + '\\" ' +
+    'WHERE change_event.change_date_time >= "' + daysAgo(CONFIG.CHANGE_DAYS) + '" ' +
+    '  AND change_event.change_date_time <= "' + daysAgo(0) + '" ' +
     'ORDER BY change_event.change_date_time DESC ' +
     'LIMIT ' + CONFIG.MAX_CHANGES;
 
