@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSettings } from '@/context/settings-context';
 import {
-  changeTrackerAnnotated,
-  changeTrackerSummary,
   CHANGE_TYPE_LABEL,
   formatChangeDate,
   formatChangeDateShort,
@@ -12,6 +10,7 @@ import {
   fmtDelta,
   fmtRoas,
 } from '@/lib/change-tracker';
+import { annotateChanges, computeSummary } from '@/modules/change-tracker/processor';
 import type { AnnotatedChange } from '@/modules/change-tracker/schema';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,9 +19,6 @@ import { MetricCard } from '@/components/metric-card';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react';
 import type { AnalyzeChangeResponse } from '@/app/api/ai/analyze-change/route';
-
-// Derive unique campaigns for filter
-const allCampaigns = [...new Set(changeTrackerAnnotated.map(a => a.change.campaign))];
 
 function DeltaCell({ value, good, bad }: { value: string; good: boolean; bad: boolean }) {
   return (
@@ -164,19 +160,41 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
 }
 
 export default function ChangeTrackerPage() {
+  const { selectedAccountId } = useSettings();
+  const [allAnnotated, setAllAnnotated] = useState<AnnotatedChange[]>([]);
+  const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [campaign, setCampaign] = useState('all');
   const [verdict, setVerdict] = useState('all');
 
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/data/changes?account_id=${selectedAccountId}`)
+      .then(r => r.json())
+      .then(data => {
+        const changes = data.changes ?? [];
+        // Map DB fields to expected schema if needed
+        const normalized = changes.map((c: Record<string, unknown>) => ({
+          ...c,
+          timestamp: c.changed_at ?? c.timestamp,
+        }));
+        setAllAnnotated(annotateChanges(normalized));
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [selectedAccountId]);
+
+  const summary = useMemo(() => computeSummary(allAnnotated), [allAnnotated]);
+  const allCampaigns = useMemo(() => [...new Set(allAnnotated.map(a => a.change.campaign))], [allAnnotated]);
+
   const filtered = useMemo(() => {
-    return changeTrackerAnnotated.filter(a => {
+    return allAnnotated.filter(a => {
       if (campaign !== 'all' && a.change.campaign !== campaign) return false;
       if (verdict !== 'all' && a.delta.verdict !== verdict) return false;
       return true;
     });
-  }, [campaign, verdict]);
+  }, [allAnnotated, campaign, verdict]);
 
-  // Sort newest first
   const sorted = useMemo(() =>
     [...filtered].sort((a, b) =>
       new Date(b.change.timestamp).getTime() - new Date(a.change.timestamp).getTime()
@@ -184,6 +202,14 @@ export default function ChangeTrackerPage() {
 
   function toggle(id: string) {
     setExpandedId(prev => (prev === id ? null : id));
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground py-12 justify-center">
+        <Loader2 size={16} className="animate-spin" /> 加载中...
+      </div>
+    );
   }
 
   return (
@@ -194,23 +220,23 @@ export default function ChangeTrackerPage() {
       <div className="grid grid-cols-4 gap-3">
         <MetricCard
           title="总变更次数"
-          value={String(changeTrackerSummary.total_changes)}
+          value={String(summary.total_changes)}
           subtitle="近 30 天"
         />
         <MetricCard
           title="正向变更"
-          value={String(changeTrackerSummary.positive_changes)}
-          subtitle={`占比 ${Math.round(changeTrackerSummary.positive_changes / changeTrackerSummary.total_changes * 100)}%`}
+          value={String(summary.positive_changes)}
+          subtitle={`占比 ${Math.round(summary.positive_changes / summary.total_changes * 100)}%`}
           highlight
         />
         <MetricCard
           title="负向变更"
-          value={String(changeTrackerSummary.negative_changes)}
+          value={String(summary.negative_changes)}
           subtitle="需要关注"
         />
         <MetricCard
           title="节省花费"
-          value={`$${changeTrackerSummary.cost_saved.toFixed(0)}`}
+          value={`$${summary.cost_saved.toFixed(0)}`}
           subtitle="通过暂停/降价"
         />
       </div>

@@ -3,7 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Sidebar } from '@/components/sidebar';
 import { Providers } from '@/components/providers';
-import { feedOptimizerData } from '@/lib/feed-optimizer';
+import { AccountSwitcher } from '@/components/account-switcher';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -24,8 +24,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Sidebar />
           <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
             <header className="border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
-              <span className="text-sm font-semibold text-foreground tracking-tight">AdInsight AI <span className="text-muted-foreground font-normal text-xs ml-1">广告洞察 AI</span></span>
-              <span className="text-xs text-muted-foreground">{feedOptimizerData.account_name} · Google Ads</span>
+              <span className="text-sm font-semibold text-foreground tracking-tight">
+                AdInsight AI <span className="text-muted-foreground font-normal text-xs ml-1">广告洞察 AI</span>
+              </span>
+              <AccountSwitcher />
             </header>
             <main className="flex-1 overflow-auto p-6">
               {children}
