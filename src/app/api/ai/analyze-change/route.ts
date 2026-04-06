@@ -10,6 +10,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAiCache, upsertAiCache } from '@/lib/db';
 
 export interface AnalyzeChangeRequest {
   change_type: string;
@@ -52,6 +53,9 @@ export interface AnalyzeChangeRequest {
   // Optional overrides from client Settings
   api_key?: string;
   model?: string;
+  // Optional — for caching
+  account_id?: string;
+  change_id?: string;
 }
 
 export interface AnalyzeChangeResponse {
@@ -83,7 +87,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { api_key: clientKey, model: clientModel } = body;
+  const { api_key: clientKey, model: clientModel, account_id, change_id } = body;
+
+  // ── Cache lookup ───────────────────────────────────────────────────────────
+  if (account_id && change_id) {
+    const cached = await getAiCache({ account_id, entity_type: 'change_record', entity_id: change_id }).catch(() => null);
+    if (cached) return NextResponse.json(cached.result);
+  }
+
   const openrouterKey = clientKey || process.env.OPENROUTER_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
@@ -191,6 +202,18 @@ export async function POST(request: NextRequest) {
 
     const cleaned = text.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
     const result: AnalyzeChangeResponse = JSON.parse(cleaned);
+
+    // ── Save to cache ──────────────────────────────────────────────────────
+    if (account_id && change_id) {
+      await upsertAiCache({
+        account_id,
+        entity_type: 'change_record',
+        entity_id: change_id,
+        model_used: clientModel || 'anthropic/claude-sonnet-4-5',
+        result: result as unknown as Record<string, unknown>,
+      }).catch(() => {});
+    }
+
     return NextResponse.json(result);
   } catch (err) {
     console.error('[AI analyze-change]', err);

@@ -10,6 +10,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAiCache, upsertAiCache } from '@/lib/db';
 
 export interface OptimizeTitleRequest {
   current_title: string;
@@ -31,6 +32,9 @@ export interface OptimizeTitleRequest {
   // Optional overrides from client Settings
   api_key?: string;
   model?: string;
+  // Optional — for caching
+  account_id?: string;
+  item_group_id?: string;
 }
 
 export interface OptimizeTitleResponse {
@@ -52,7 +56,14 @@ export async function POST(request: NextRequest) {
     ctr, impressions, clicks, conversions, cost,
     top_search_terms, rule_issues,
     api_key: clientKey, model: clientModel,
+    account_id, item_group_id,
   } = body;
+
+  // ── Cache lookup ───────────────────────────────────────────────────────────
+  if (account_id && item_group_id) {
+    const cached = await getAiCache({ account_id, entity_type: 'feed_product', entity_id: item_group_id }).catch(() => null);
+    if (cached) return NextResponse.json(cached.result);
+  }
 
   const openrouterKey = clientKey || process.env.OPENROUTER_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
@@ -149,6 +160,18 @@ ${rule_issues.length > 0
 
     const cleaned = text.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
     const result: OptimizeTitleResponse = JSON.parse(cleaned);
+
+    // ── Save to cache ──────────────────────────────────────────────────────
+    if (account_id && item_group_id) {
+      await upsertAiCache({
+        account_id,
+        entity_type: 'feed_product',
+        entity_id: item_group_id,
+        model_used: clientModel || 'anthropic/claude-sonnet-4-5',
+        result: result as unknown as Record<string, unknown>,
+      }).catch(() => {});
+    }
+
     return NextResponse.json(result);
   } catch (err) {
     console.error('[AI optimize-title]', err);

@@ -13,6 +13,7 @@
  */
 
 import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai';
+import { getAiCache, upsertAiCache } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   SIGNAL_DEFINITIONS,
@@ -28,10 +29,12 @@ export interface AnalyzeVideoRequest {
   youtube_url: string;
   video_id: string;
   brand_name: string;
-  branded_products: string[];  // e.g. ["ice crystal ring", "snow boots"]
+  branded_products: string[];
   // Optional overrides from client Settings
   api_key?: string;
   model?: string;
+  // Optional — if provided, result will be cached in Supabase
+  account_id?: string;
 }
 
 // ─── Gemini response schema ───────────────────────────────────────────────────
@@ -101,7 +104,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { youtube_url, video_id, brand_name, branded_products, api_key: clientKey, model: clientModel } = body;
+  const { youtube_url, video_id, brand_name, branded_products, api_key: clientKey, model: clientModel, account_id } = body;
+
+  // ── Cache lookup ───────────────────────────────────────────────────────────
+  if (account_id) {
+    const cached = await getAiCache({ account_id, entity_type: 'video_ad', entity_id: video_id }).catch(() => null);
+    if (cached) return NextResponse.json(cached.result);
+  }
 
   const apiKey = clientKey || process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
@@ -232,6 +241,17 @@ Be specific and actionable. Reference actual seconds in the video when possible.
       summary_zh: raw.summary_zh,
       model: 'gemini-2.5-flash',
     };
+
+    // ── Save to cache ────────────────────────────────────────────────────────
+    if (account_id) {
+      await upsertAiCache({
+        account_id,
+        entity_type: 'video_ad',
+        entity_id: video_id,
+        model_used: clientModel || 'gemini-2.5-flash',
+        result: analysis as unknown as Record<string, unknown>,
+      }).catch(() => {});
+    }
 
     return NextResponse.json(analysis);
   } catch (err) {
