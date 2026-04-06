@@ -173,6 +173,9 @@ function daysAgo(n) {
   return d.toISOString().split('T')[0] + ' 00:00:00';
 }
 
+// ── Auto-execute when eval'd by loader script ─────────────────────────────────
+main();
+
 // ── POST to /api/ingest ───────────────────────────────────────────────────────
 function postData(dataType, records) {
   if (records.length === 0) {
