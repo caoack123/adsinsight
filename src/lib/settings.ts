@@ -7,7 +7,7 @@ export type ClaudeModel =
   | 'anthropic/claude-3-haiku';
 
 export type GeminiModel =
-  | 'gemini-2.0-flash'
+  | 'gemini-2.0-flash-001'
   | 'gemini-1.5-pro'
   | 'gemini-1.5-flash';
 
@@ -26,7 +26,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   googleAiApiKey: '',
   feedOptimizerModel: 'anthropic/claude-sonnet-4-5',
   changeTrackerModel: 'anthropic/claude-sonnet-4-5',
-  videoAbcdModel: 'gemini-2.0-flash',
+  videoAbcdModel: 'gemini-2.0-flash-001',
 };
 
 // ─── Model option lists ───────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ export const CLAUDE_MODELS: { value: ClaudeModel; label: string; description: st
 
 export const GEMINI_MODELS: { value: GeminiModel; label: string; description: string; badge?: string }[] = [
   {
-    value: 'gemini-2.0-flash',
+    value: 'gemini-2.0-flash-001',
     label: 'Gemini 2.0 Flash',
     description: '视频理解最快',
     badge: '推荐',
