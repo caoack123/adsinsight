@@ -1,0 +1,122 @@
+{
+  "account_name": "Crowned Ice Store",
+  "exported_at": "2026-04-05T10:00:00Z",
+  "products": [
+    {
+      "item_id": "shopify_US_8012345_40012345",
+      "item_group_id": "shopify_US_8012345",
+      "current_title": "Women Ice Crystal Ring Silver Plated Fashion Jewelry Engagement Wedding Band Ring for Women Girl Gift",
+      "current_description": "Material: S925 Silver Plated. High quality ice crystal design. Perfect for engagement, wedding, daily wear. Multiple sizes available.",
+      "brand": "Crowned Ice",
+      "product_type": "Jewelry > Rings > Wedding Bands",
+      "image_url": "https://cdn.shopify.com/example/ring1.jpg",
+      "price": 29.99,
+      "currency": "USD",
+      "impressions": 12500,
+      "clicks": 125,
+      "ctr": 0.01,
+      "cost": 89.50,
+      "conversions": 3,
+      "conversions_value": 89.97,
+      "top_search_terms": [
+        "ice crystal ring",
+        "silver wedding band women",
+        "crystal engagement ring",
+        "fashion ring gift for girlfriend"
+      ]
+    },
+    {
+      "item_id": "shopify_US_8012346_40012346",
+      "item_group_id": "shopify_US_8012346",
+      "current_title": "Snowflake Pendant Necklace Women Fashion Jewelry Winter Snow Crystal Necklace Chain",
+      "current_description": "Snowflake design pendant. Chain length: 45cm. Material: Alloy with crystal. Winter themed jewelry.",
+      "brand": "Crowned Ice",
+      "product_type": "Jewelry > Necklaces > Pendants",
+      "image_url": "https://cdn.shopify.com/example/necklace1.jpg",
+      "price": 19.99,
+      "currency": "USD",
+      "impressions": 8200,
+      "clicks": 205,
+      "ctr": 0.025,
+      "cost": 62.30,
+      "conversions": 8,
+      "conversions_value": 159.92,
+      "top_search_terms": [
+        "snowflake necklace",
+        "winter jewelry",
+        "snow crystal pendant",
+        "christmas gift necklace for women"
+      ]
+    },
+    {
+      "item_id": "shopify_US_8012347_40012347",
+      "item_group_id": "shopify_US_8012347",
+      "current_title": "Iced Out Bracelet Men Women Hip Hop Fashion Jewelry Cuban Link Chain Bracelet Gold Silver",
+      "current_description": "Hip hop style iced out bracelet. Cuban link chain design. Available in gold and silver color. Unisex.",
+      "brand": "Crowned Ice",
+      "product_type": "Jewelry > Bracelets",
+      "image_url": "https://cdn.shopify.com/example/bracelet1.jpg",
+      "price": 34.99,
+      "currency": "USD",
+      "impressions": 18000,
+      "clicks": 108,
+      "ctr": 0.006,
+      "cost": 156.20,
+      "conversions": 2,
+      "conversions_value": 69.98,
+      "top_search_terms": [
+        "cuban link bracelet",
+        "iced out bracelet men",
+        "hip hop jewelry",
+        "gold chain bracelet"
+      ]
+    },
+    {
+      "item_id": "shopify_US_8012348_40012348",
+      "item_group_id": "shopify_US_8012348",
+      "current_title": "Women Earring Drop Dangle Crystal Ice Blue Color Fashion Jewelry Earrings for Women Gift Party Wedding",
+      "current_description": "Crystal drop earrings. Ice blue color. Suitable for party, wedding, daily wear. Lightweight and comfortable.",
+      "brand": "Crowned Ice",
+      "product_type": "Jewelry > Earrings > Drop Earrings",
+      "image_url": "https://cdn.shopify.com/example/earring1.jpg",
+      "price": 15.99,
+      "currency": "USD",
+      "impressions": 6500,
+      "clicks": 39,
+      "ctr": 0.006,
+      "cost": 45.80,
+      "conversions": 1,
+      "conversions_value": 15.99,
+      "top_search_terms": [
+        "blue crystal earrings",
+        "drop earrings women",
+        "ice blue earrings",
+        "dangle earrings wedding"
+      ]
+    },
+    {
+      "item_id": "shopify_US_8012349_40012349",
+      "item_group_id": "shopify_US_8012349",
+      "current_title": "Snow Boot Women Winter Warm Fur Lined Waterproof Anti Slip Outdoor Boot Women Shoes",
+      "current_title_bad_reason": "keyword stuffing, no brand, no specific style",
+      "current_description": "Winter snow boots for women. Warm fur lining. Waterproof material. Anti-slip sole. Available in multiple colors and sizes.",
+      "brand": "Crowned Ice",
+      "product_type": "Shoes > Boots > Snow Boots",
+      "image_url": "https://cdn.shopify.com/example/boot1.jpg",
+      "price": 49.99,
+      "currency": "USD",
+      "impressions": 32000,
+      "clicks": 480,
+      "ctr": 0.015,
+      "cost": 312.00,
+      "conversions": 15,
+      "conversions_value": 749.85,
+      "top_search_terms": [
+        "women snow boots waterproof",
+        "winter boots warm lined",
+        "snow boots for women",
+        "waterproof winter boots women"
+      ]
+    }
+  ]
+}

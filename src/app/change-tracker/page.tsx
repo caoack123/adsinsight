@@ -1,0 +1,331 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import { useSettings } from '@/context/settings-context';
+import {
+  changeTrackerAnnotated,
+  changeTrackerSummary,
+  CHANGE_TYPE_LABEL,
+  formatChangeDate,
+  formatChangeDateShort,
+  getVerdictConfig,
+  fmtDelta,
+  fmtRoas,
+} from '@/lib/change-tracker';
+import type { AnnotatedChange } from '@/modules/change-tracker/schema';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MetricCard } from '@/components/metric-card';
+import { cn } from '@/lib/utils';
+import { ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react';
+import type { AnalyzeChangeResponse } from '@/app/api/ai/analyze-change/route';
+
+// Derive unique campaigns for filter
+const allCampaigns = [...new Set(changeTrackerAnnotated.map(a => a.change.campaign))];
+
+function DeltaCell({ value, good, bad }: { value: string; good: boolean; bad: boolean }) {
+  return (
+    <span className={cn('tabular-nums text-xs font-medium', good && 'text-green-400', bad && 'text-red-400', !good && !bad && 'text-muted-foreground')}>
+      {value}
+    </span>
+  );
+}
+
+function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
+  const { change, delta } = annotated;
+  const before = change.performance_before;
+  const after = change.performance_after;
+  const { settings } = useSettings();
+
+  const [aiResult, setAiResult] = useState<AnalyzeChangeResponse | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  const displayInsight = aiResult?.insight_zh ?? delta.insight_zh;
+  const isAiGenerated = aiResult !== null;
+
+  async function handleGenerateAI() {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const res = await fetch('/api/ai/analyze-change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          change_type: change.change_type,
+          resource_type: change.resource_type,
+          resource_name: change.resource_name,
+          campaign: change.campaign,
+          ad_group: change.ad_group,
+          changed_by: change.changed_by,
+          timestamp: change.timestamp,
+          old_value: change.old_value,
+          new_value: change.new_value,
+          performance_before: change.performance_before,
+          performance_after: change.performance_after,
+          delta: {
+            impressions_delta: delta.impressions_delta,
+            clicks_delta: delta.clicks_delta,
+            ctr_delta: delta.ctr_delta,
+            cost_delta: delta.cost_delta,
+            conversions_delta: delta.conversions_delta,
+            roas_delta: delta.roas_delta,
+          },
+          ...(settings.openrouterApiKey && { api_key: settings.openrouterApiKey }),
+          model: settings.changeTrackerModel,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error ?? 'Unknown error');
+      }
+      const data: AnalyzeChangeResponse = await res.json();
+      setAiResult(data);
+    } catch (e) {
+      setAiError(String(e));
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  return (
+    <div className="px-4 py-3 bg-accent/10 border-t border-border">
+      <div className="grid grid-cols-2 gap-4 mb-3">
+        {/* Before / After metrics */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">变更前（{before.window_days} 天）</p>
+          <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
+            {[
+              { label: '曝光', value: before.impressions.toLocaleString() },
+              { label: '点击', value: before.clicks.toLocaleString() },
+              { label: 'CTR', value: `${(before.ctr * 100).toFixed(1)}%` },
+              { label: '花费', value: `$${before.cost.toFixed(2)}` },
+              { label: '转化', value: before.conversions.toFixed(1) },
+              { label: 'ROAS', value: fmtRoas(before.roas) },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="text-xs font-semibold">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">变更后（{after.window_days} 天）</p>
+          <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
+            {[
+              { label: '曝光', value: after.impressions.toLocaleString(), delta: delta.impressions_delta },
+              { label: '点击', value: after.clicks.toLocaleString(), delta: delta.clicks_delta },
+              { label: 'CTR', value: `${(after.ctr * 100).toFixed(1)}%`, delta: delta.ctr_delta * 100 },
+              { label: '花费', value: `$${after.cost.toFixed(2)}`, delta: delta.cost_delta },
+              { label: '转化', value: after.conversions.toFixed(1), delta: delta.conversions_delta },
+              { label: 'ROAS', value: fmtRoas(after.roas), delta: delta.roas_delta },
+            ].map(({ label, value, delta: d }) => (
+              <div key={label}>
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className={cn(
+                  'text-xs font-semibold',
+                  d > 0 && (label === '花费' ? 'text-amber-400' : 'text-green-400'),
+                  d < 0 && (label === '花费' ? 'text-green-400' : 'text-red-400')
+                )}>{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* AI Insight */}
+      <div className="border border-border rounded px-3 py-2.5 bg-card">
+        <div className="flex items-center justify-between mb-1.5">
+          <p className="text-xs font-semibold flex items-center gap-1.5 text-yellow-400">
+            <Sparkles size={11} />
+            AI 分析
+            {isAiGenerated && <span className="text-blue-400 font-normal">· claude-sonnet-4-6 实时生成</span>}
+          </p>
+          <button
+            onClick={handleGenerateAI}
+            disabled={aiLoading}
+            className="flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-blue-700/20 border border-blue-500/40 text-blue-300 hover:bg-blue-700/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {aiLoading
+              ? <><Loader2 size={11} className="animate-spin" /> 生成中…</>
+              : <><Sparkles size={11} /> {isAiGenerated ? '重新生成' : '用 Claude 实时分析'}</>
+            }
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">{displayInsight}</p>
+        {aiError && (
+          <p className="text-xs text-red-400 mt-1.5">生成失败：{aiError}。请确认 ANTHROPIC_API_KEY 已配置。</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function ChangeTrackerPage() {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [campaign, setCampaign] = useState('all');
+  const [verdict, setVerdict] = useState('all');
+
+  const filtered = useMemo(() => {
+    return changeTrackerAnnotated.filter(a => {
+      if (campaign !== 'all' && a.change.campaign !== campaign) return false;
+      if (verdict !== 'all' && a.delta.verdict !== verdict) return false;
+      return true;
+    });
+  }, [campaign, verdict]);
+
+  // Sort newest first
+  const sorted = useMemo(() =>
+    [...filtered].sort((a, b) =>
+      new Date(b.change.timestamp).getTime() - new Date(a.change.timestamp).getTime()
+    ), [filtered]);
+
+  function toggle(id: string) {
+    setExpandedId(prev => (prev === id ? null : id));
+  }
+
+  return (
+    <div className="space-y-5">
+      <h1 className="text-base font-semibold">变更追踪</h1>
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-4 gap-3">
+        <MetricCard
+          title="总变更次数"
+          value={String(changeTrackerSummary.total_changes)}
+          subtitle="近 30 天"
+        />
+        <MetricCard
+          title="正向变更"
+          value={String(changeTrackerSummary.positive_changes)}
+          subtitle={`占比 ${Math.round(changeTrackerSummary.positive_changes / changeTrackerSummary.total_changes * 100)}%`}
+          highlight
+        />
+        <MetricCard
+          title="负向变更"
+          value={String(changeTrackerSummary.negative_changes)}
+          subtitle="需要关注"
+        />
+        <MetricCard
+          title="节省花费"
+          value={`$${changeTrackerSummary.cost_saved.toFixed(0)}`}
+          subtitle="通过暂停/降价"
+        />
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex items-center gap-3">
+        <Select value={campaign} onValueChange={(v) => setCampaign(v ?? 'all')}>
+          <SelectTrigger className="w-52 h-8 text-xs">
+            <SelectValue placeholder="全部广告系列" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部广告系列</SelectItem>
+            {allCampaigns.map(c => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={verdict} onValueChange={(v) => setVerdict(v ?? 'all')}>
+          <SelectTrigger className="w-36 h-8 text-xs">
+            <SelectValue placeholder="全部结果" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部结果</SelectItem>
+            <SelectItem value="positive">正向</SelectItem>
+            <SelectItem value="negative">负向</SelectItem>
+            <SelectItem value="neutral">中性</SelectItem>
+            <SelectItem value="paused">已暂停</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-xs text-muted-foreground ml-auto">{sorted.length} 条变更</span>
+      </div>
+
+      {/* Change list */}
+      <Card className="border-border">
+        <CardHeader className="pb-2 pt-4 px-4">
+          <CardTitle className="text-sm font-semibold">变更记录 + 效果对比</CardTitle>
+          <p className="text-xs text-muted-foreground">点击任意行展开 AI 分析和详细数据对比</p>
+        </CardHeader>
+        <CardContent className="px-0 pb-0">
+          {/* Header row */}
+          <div className="grid grid-cols-[140px_1fr_130px_80px_80px_80px_80px_80px_28px] gap-2 px-4 py-2 border-b border-border">
+            {['时间', '变更内容', '广告系列', 'ΔROAS', 'Δ转化', 'Δ花费', 'Δ点击', '结果', ''].map(h => (
+              <span key={h} className="text-xs text-muted-foreground font-medium">{h}</span>
+            ))}
+          </div>
+
+          {sorted.map(annotated => {
+            const { change, delta } = annotated;
+            const vc = getVerdictConfig(delta.verdict);
+            const isExpanded = expandedId === change.change_id;
+
+            return (
+              <div key={change.change_id}>
+                <div
+                  className="grid grid-cols-[140px_1fr_130px_80px_80px_80px_80px_80px_28px] gap-2 px-4 py-2.5 border-b border-border hover:bg-accent/20 cursor-pointer transition-colors items-center"
+                  onClick={() => toggle(change.change_id)}
+                >
+                  {/* Time */}
+                  <div>
+                    <p className="text-xs text-foreground font-medium">{formatChangeDateShort(change.timestamp)}</p>
+                    <p className="text-xs text-muted-foreground">{formatChangeDate(change.timestamp).split(' ').slice(-1)[0]}</p>
+                  </div>
+
+                  {/* Change content */}
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-foreground truncate">{CHANGE_TYPE_LABEL[change.change_type]}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {change.resource_name}
+                      {change.old_value && change.new_value ? ` · ${change.old_value} → ${change.new_value}` : ''}
+                    </p>
+                    <p className="text-xs text-muted-foreground/60">{change.changed_by}</p>
+                  </div>
+
+                  {/* Campaign */}
+                  <p className="text-xs text-muted-foreground truncate">{change.campaign}</p>
+
+                  {/* Deltas */}
+                  <DeltaCell
+                    value={delta.roas_delta !== 0 ? fmtDelta(delta.roas_delta) + 'x' : '—'}
+                    good={delta.roas_delta > 0.1}
+                    bad={delta.roas_delta < -0.1}
+                  />
+                  <DeltaCell
+                    value={delta.conversions_delta !== 0 ? fmtDelta(delta.conversions_delta) : '—'}
+                    good={delta.conversions_delta > 0}
+                    bad={delta.conversions_delta < 0}
+                  />
+                  <DeltaCell
+                    value={delta.cost_delta !== 0 ? '$' + fmtDelta(delta.cost_delta) : '—'}
+                    good={delta.cost_delta < 0}
+                    bad={delta.cost_delta > 30}
+                  />
+                  <DeltaCell
+                    value={delta.clicks_delta !== 0 ? fmtDelta(delta.clicks_delta) : '—'}
+                    good={delta.clicks_delta > 0}
+                    bad={delta.clicks_delta < 0}
+                  />
+
+                  {/* Verdict */}
+                  <Badge variant="outline" className={cn('text-xs px-1.5 whitespace-nowrap', vc.badgeClass)}>
+                    {vc.label}
+                  </Badge>
+
+                  {/* Expand toggle */}
+                  <span className="text-muted-foreground">
+                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </span>
+                </div>
+
+                {isExpanded && <ExpandedRow annotated={annotated} />}
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

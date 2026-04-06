@@ -1,0 +1,294 @@
+{
+  "account_name": "Crowned Ice Store",
+  "exported_at": "2026-04-05T10:00:00Z",
+  "changes": [
+    {
+      "change_id": "chg_001",
+      "timestamp": "2026-03-10T09:15:00Z",
+      "campaign": "Shopping - Ice Jewelry",
+      "ad_group": null,
+      "change_type": "BIDDING_STRATEGY_CHANGED",
+      "resource_type": "CAMPAIGN",
+      "resource_name": "Shopping - Ice Jewelry",
+      "changed_by": "alex@crownedice.com",
+      "old_value": "Manual CPC",
+      "new_value": "Target ROAS: 300%",
+      "performance_before": {
+        "window_days": 7,
+        "impressions": 8500,
+        "clicks": 120,
+        "ctr": 0.0141,
+        "cost": 98.40,
+        "conversions": 4,
+        "conversions_value": 179.96,
+        "roas": 1.83
+      },
+      "performance_after": {
+        "window_days": 7,
+        "impressions": 6200,
+        "clicks": 93,
+        "ctr": 0.015,
+        "cost": 74.20,
+        "conversions": 5,
+        "conversions_value": 219.95,
+        "roas": 2.96
+      }
+    },
+    {
+      "change_id": "chg_002",
+      "timestamp": "2026-03-12T14:30:00Z",
+      "campaign": "Shopping - Ice Jewelry",
+      "ad_group": "Ice Crystal Rings",
+      "change_type": "BID_CHANGED",
+      "resource_type": "AD_GROUP",
+      "resource_name": "Ice Crystal Rings",
+      "changed_by": "alex@crownedice.com",
+      "old_value": "Max CPC: $0.45",
+      "new_value": "Max CPC: $0.75",
+      "performance_before": {
+        "window_days": 7,
+        "impressions": 3200,
+        "clicks": 32,
+        "ctr": 0.01,
+        "cost": 14.40,
+        "conversions": 1,
+        "conversions_value": 29.99,
+        "roas": 2.08
+      },
+      "performance_after": {
+        "window_days": 7,
+        "impressions": 5800,
+        "clicks": 87,
+        "ctr": 0.015,
+        "cost": 65.25,
+        "conversions": 3,
+        "conversions_value": 89.97,
+        "roas": 1.38
+      }
+    },
+    {
+      "change_id": "chg_003",
+      "timestamp": "2026-03-14T11:00:00Z",
+      "campaign": "Search - Brand Terms",
+      "ad_group": null,
+      "change_type": "BUDGET_CHANGED",
+      "resource_type": "CAMPAIGN",
+      "resource_name": "Search - Brand Terms",
+      "changed_by": "jenny@crownedice.com",
+      "old_value": "Daily budget: $15.00",
+      "new_value": "Daily budget: $30.00",
+      "performance_before": {
+        "window_days": 7,
+        "impressions": 1200,
+        "clicks": 96,
+        "ctr": 0.08,
+        "cost": 72.30,
+        "conversions": 8,
+        "conversions_value": 319.92,
+        "roas": 4.42
+      },
+      "performance_after": {
+        "window_days": 7,
+        "impressions": 2100,
+        "clicks": 189,
+        "ctr": 0.09,
+        "cost": 148.20,
+        "conversions": 18,
+        "conversions_value": 719.82,
+        "roas": 4.86
+      }
+    },
+    {
+      "change_id": "chg_004",
+      "timestamp": "2026-03-17T16:45:00Z",
+      "campaign": "Shopping - Ice Jewelry",
+      "ad_group": "Hip Hop Bracelets",
+      "change_type": "AD_PAUSED",
+      "resource_type": "AD",
+      "resource_name": "Iced Out Bracelet - Promo Creative",
+      "changed_by": "alex@crownedice.com",
+      "old_value": "Status: ENABLED",
+      "new_value": "Status: PAUSED",
+      "performance_before": {
+        "window_days": 7,
+        "impressions": 9800,
+        "clicks": 59,
+        "ctr": 0.006,
+        "cost": 88.50,
+        "conversions": 1,
+        "conversions_value": 34.99,
+        "roas": 0.40
+      },
+      "performance_after": {
+        "window_days": 7,
+        "impressions": 7200,
+        "clicks": 43,
+        "ctr": 0.006,
+        "cost": 64.80,
+        "conversions": 2,
+        "conversions_value": 69.98,
+        "roas": 1.08
+      }
+    },
+    {
+      "change_id": "chg_005",
+      "timestamp": "2026-03-19T10:20:00Z",
+      "campaign": "Shopping - Ice Jewelry",
+      "ad_group": "Snow Boots",
+      "change_type": "BID_CHANGED",
+      "resource_type": "AD_GROUP",
+      "resource_name": "Snow Boots",
+      "changed_by": "jenny@crownedice.com",
+      "old_value": "Max CPC: $0.60",
+      "new_value": "Max CPC: $0.90",
+      "performance_before": {
+        "window_days": 7,
+        "impressions": 14000,
+        "clicks": 182,
+        "ctr": 0.013,
+        "cost": 109.20,
+        "conversions": 5,
+        "conversions_value": 249.95,
+        "roas": 2.29
+      },
+      "performance_after": {
+        "window_days": 7,
+        "impressions": 18500,
+        "clicks": 277,
+        "ctr": 0.015,
+        "cost": 249.30,
+        "conversions": 10,
+        "conversions_value": 499.90,
+        "roas": 2.01
+      }
+    },
+    {
+      "change_id": "chg_006",
+      "timestamp": "2026-03-22T09:00:00Z",
+      "campaign": "Search - Brand Terms",
+      "ad_group": "Brand Keywords",
+      "change_type": "KEYWORD_ADDED",
+      "resource_type": "KEYWORD",
+      "resource_name": "[crowned ice jewelry]",
+      "changed_by": "alex@crownedice.com",
+      "old_value": null,
+      "new_value": "Keyword: [crowned ice jewelry], Match: Exact, CPC bid: $0.80",
+      "performance_before": {
+        "window_days": 7,
+        "impressions": 800,
+        "clicks": 64,
+        "ctr": 0.08,
+        "cost": 51.20,
+        "conversions": 6,
+        "conversions_value": 199.94,
+        "roas": 3.91
+      },
+      "performance_after": {
+        "window_days": 7,
+        "impressions": 1100,
+        "clicks": 99,
+        "ctr": 0.09,
+        "cost": 79.20,
+        "conversions": 10,
+        "conversions_value": 349.90,
+        "roas": 4.42
+      }
+    },
+    {
+      "change_id": "chg_007",
+      "timestamp": "2026-03-25T13:10:00Z",
+      "campaign": "Shopping - Ice Jewelry",
+      "ad_group": null,
+      "change_type": "CAMPAIGN_PAUSED",
+      "resource_type": "CAMPAIGN",
+      "resource_name": "Shopping - Clearance Items",
+      "changed_by": "jenny@crownedice.com",
+      "old_value": "Status: ENABLED",
+      "new_value": "Status: PAUSED",
+      "performance_before": {
+        "window_days": 7,
+        "impressions": 4200,
+        "clicks": 42,
+        "ctr": 0.01,
+        "cost": 37.80,
+        "conversions": 0,
+        "conversions_value": 0,
+        "roas": 0
+      },
+      "performance_after": {
+        "window_days": 7,
+        "impressions": 0,
+        "clicks": 0,
+        "ctr": 0,
+        "cost": 0,
+        "conversions": 0,
+        "conversions_value": 0,
+        "roas": 0
+      }
+    },
+    {
+      "change_id": "chg_008",
+      "timestamp": "2026-03-28T15:55:00Z",
+      "campaign": "Shopping - Ice Jewelry",
+      "ad_group": "Drop Earrings",
+      "change_type": "BID_CHANGED",
+      "resource_type": "AD_GROUP",
+      "resource_name": "Drop Earrings",
+      "changed_by": "alex@crownedice.com",
+      "old_value": "Max CPC: $0.55",
+      "new_value": "Max CPC: $0.35",
+      "performance_before": {
+        "window_days": 7,
+        "impressions": 3800,
+        "clicks": 23,
+        "ctr": 0.006,
+        "cost": 26.45,
+        "conversions": 0,
+        "conversions_value": 0,
+        "roas": 0
+      },
+      "performance_after": {
+        "window_days": 7,
+        "impressions": 2100,
+        "clicks": 13,
+        "ctr": 0.006,
+        "cost": 9.75,
+        "conversions": 0,
+        "conversions_value": 0,
+        "roas": 0
+      }
+    },
+    {
+      "change_id": "chg_009",
+      "timestamp": "2026-04-01T08:30:00Z",
+      "campaign": "Shopping - Ice Jewelry",
+      "ad_group": null,
+      "change_type": "BUDGET_CHANGED",
+      "resource_type": "CAMPAIGN",
+      "resource_name": "Shopping - Ice Jewelry",
+      "changed_by": "alex@crownedice.com",
+      "old_value": "Daily budget: $50.00",
+      "new_value": "Daily budget: $80.00",
+      "performance_before": {
+        "window_days": 7,
+        "impressions": 22000,
+        "clicks": 308,
+        "ctr": 0.014,
+        "cost": 308.00,
+        "conversions": 10,
+        "conversions_value": 429.90,
+        "roas": 1.40
+      },
+      "performance_after": {
+        "window_days": 4,
+        "impressions": 16800,
+        "clicks": 252,
+        "ctr": 0.015,
+        "cost": 268.80,
+        "conversions": 9,
+        "conversions_value": 399.91,
+        "roas": 1.49
+      }
+    }
+  ]
+}

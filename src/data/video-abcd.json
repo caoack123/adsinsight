@@ -1,0 +1,71 @@
+{
+  "account_name": "Crowned Ice Store",
+  "brand_name": "Crowned Ice",
+  "branded_products": ["ice crystal ring", "snowflake necklace", "iced out bracelet", "snow boots", "crystal earrings"],
+  "exported_at": "2026-04-05T10:00:00Z",
+  "videos": [
+    {
+      "video_id": "vid_001",
+      "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "youtube_video_id": "dQw4w9WgXcQ",
+      "ad_name": "Spring Collection 2026 — Ice Crystal Ring Hero",
+      "campaign": "Video - Shopping Intent",
+      "ad_group": "Rings - Prospecting",
+      "duration_seconds": 30,
+      "format": "in_stream",
+      "thumbnail_url": "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+      "performance": {
+        "impressions": 185000,
+        "views": 46250,
+        "view_rate": 0.25,
+        "clicks": 1480,
+        "ctr": 0.008,
+        "cost": 1295.00,
+        "conversions": 18,
+        "conversions_value": 539.82
+      }
+    },
+    {
+      "video_id": "vid_002",
+      "youtube_url": "https://www.youtube.com/watch?v=9bZkp7q19f0",
+      "youtube_video_id": "9bZkp7q19f0",
+      "ad_name": "Snow Boots Winter 2026 — Lifestyle UGC",
+      "campaign": "Video - Shopping Intent",
+      "ad_group": "Boots - Retargeting",
+      "duration_seconds": 15,
+      "format": "in_stream",
+      "thumbnail_url": "https://img.youtube.com/vi/9bZkp7q19f0/hqdefault.jpg",
+      "performance": {
+        "impressions": 320000,
+        "views": 128000,
+        "view_rate": 0.40,
+        "clicks": 6400,
+        "ctr": 0.02,
+        "cost": 3840.00,
+        "conversions": 96,
+        "conversions_value": 4798.08
+      }
+    },
+    {
+      "video_id": "vid_003",
+      "youtube_url": "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
+      "youtube_video_id": "kJQP7kiw5Fk",
+      "ad_name": "Iced Out Bracelet — Hip Hop Style",
+      "campaign": "Video - Brand Awareness",
+      "ad_group": "Bracelets - Cold Audience",
+      "duration_seconds": 20,
+      "format": "in_stream",
+      "thumbnail_url": "https://img.youtube.com/vi/kJQP7kiw5Fk/hqdefault.jpg",
+      "performance": {
+        "impressions": 420000,
+        "views": 63000,
+        "view_rate": 0.15,
+        "clicks": 2100,
+        "ctr": 0.005,
+        "cost": 2940.00,
+        "conversions": 6,
+        "conversions_value": 209.94
+      }
+    }
+  ]
+}
