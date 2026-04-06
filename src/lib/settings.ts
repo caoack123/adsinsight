@@ -7,9 +7,9 @@ export type ClaudeModel =
   | 'anthropic/claude-3-haiku';
 
 export type GeminiModel =
-  | 'gemini-2.0-flash-001'
-  | 'gemini-1.5-pro'
-  | 'gemini-1.5-flash';
+  | 'gemini-2.5-flash'
+  | 'gemini-2.5-pro'
+  | 'gemini-2.5-flash-lite';
 
 // ─── Settings shape ───────────────────────────────────────────────────────────
 
@@ -26,7 +26,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   googleAiApiKey: '',
   feedOptimizerModel: 'anthropic/claude-sonnet-4-5',
   changeTrackerModel: 'anthropic/claude-sonnet-4-5',
-  videoAbcdModel: 'gemini-2.0-flash-001',
+  videoAbcdModel: 'gemini-2.5-flash',
 };
 
 // ─── Model option lists ───────────────────────────────────────────────────────
@@ -57,20 +57,20 @@ export const CLAUDE_MODELS: { value: ClaudeModel; label: string; description: st
 
 export const GEMINI_MODELS: { value: GeminiModel; label: string; description: string; badge?: string }[] = [
   {
-    value: 'gemini-2.0-flash-001',
-    label: 'Gemini 2.0 Flash',
-    description: '视频理解最快',
+    value: 'gemini-2.5-flash',
+    label: 'Gemini 2.5 Flash',
+    description: '速度快 · 视频理解强',
     badge: '推荐',
   },
   {
-    value: 'gemini-1.5-pro',
-    label: 'Gemini 1.5 Pro',
-    description: '高精度 · 长上下文',
+    value: 'gemini-2.5-pro',
+    label: 'Gemini 2.5 Pro',
+    description: '最强推理 · 高精度',
   },
   {
-    value: 'gemini-1.5-flash',
-    label: 'Gemini 1.5 Flash',
-    description: '轻量快速',
+    value: 'gemini-2.5-flash-lite',
+    label: 'Gemini 2.5 Flash Lite',
+    description: '最轻量 · 成本最低',
   },
 ];
 

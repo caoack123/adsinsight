@@ -177,7 +177,7 @@ Be specific and actionable. Reference actual seconds in the video when possible.
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: clientModel || 'gemini-2.0-flash-001',
+      model: clientModel || 'gemini-2.5-flash',
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema,
@@ -230,7 +230,7 @@ Be specific and actionable. Reference actual seconds in the video when possible.
       top_strengths_zh: raw.top_strengths_zh.slice(0, 3),
       top_improvements_zh: raw.top_improvements_zh.slice(0, 3),
       summary_zh: raw.summary_zh,
-      model: 'gemini-2.0-flash-001',
+      model: 'gemini-2.5-flash',
     };
 
     return NextResponse.json(analysis);
