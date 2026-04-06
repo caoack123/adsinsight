@@ -17,8 +17,20 @@ function computeDelta(change: AccountChange): PerformanceDelta {
   const before = change.performance_before;
   const after = change.performance_after;
 
+  // No performance data (e.g. freshly imported from DB without perf snapshot)
+  if (!before || !after) {
+    return {
+      impressions_delta: 0, clicks_delta: 0, ctr_delta: 0,
+      cost_delta: 0, conversions_delta: 0, roas_delta: 0,
+      cost_per_conv_before: 0, cost_per_conv_after: 0,
+      verdict: 'neutral',
+      verdict_reason_zh: '暂无效果数据',
+      insight_zh: '此变更尚未采集变更前后效果数据，无法自动分析影响。可点击「AI 实时分析」获取基于变更类型的建议。',
+    };
+  }
+
   // Normalise to per-day to handle different window sizes
-  const scale = before.window_days / after.window_days;
+  const scale = (before.window_days && after.window_days) ? before.window_days / after.window_days : 1;
   const afterNorm: PerformanceSnapshot = {
     ...after,
     impressions: after.impressions * scale,

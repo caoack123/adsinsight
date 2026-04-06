@@ -173,10 +173,20 @@ export default function ChangeTrackerPage() {
       .then(r => r.json())
       .then(data => {
         const changes = data.changes ?? [];
-        // Map DB fields to expected schema if needed
+        // Map DB field names → AccountChange schema
         const normalized = changes.map((c: Record<string, unknown>) => ({
           ...c,
-          timestamp: c.changed_at ?? c.timestamp,
+          timestamp: c.changed_at ?? c.timestamp ?? new Date().toISOString(),
+          changed_by: c.changed_by ?? 'Google Ads',
+          change_type: c.change_type ?? 'UNKNOWN',
+          resource_type: c.resource_type ?? 'UNKNOWN',
+          resource_name: c.resource_name ?? '',
+          campaign: c.campaign ?? '',
+          ad_group: c.ad_group ?? null,
+          old_value: c.old_value ?? null,
+          new_value: c.new_value ?? null,
+          performance_before: c.performance_before ?? null,
+          performance_after: c.performance_after ?? null,
         }));
         setAllAnnotated(annotateChanges(normalized));
       })

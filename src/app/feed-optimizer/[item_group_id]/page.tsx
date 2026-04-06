@@ -1,15 +1,16 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  getFeedProductAnalysis,
   getIssueTypeLabel,
   getScoreTone,
   getSeverityLabel,
   getRoas,
   getSearchCoverage,
 } from '@/lib/feed-optimizer';
+import { analyzeTitles } from '@/modules/feed-optimizer/processor';
+import type { TitleAnalysis } from '@/modules/feed-optimizer/schema';
 import type { OptimizeTitleResponse } from '@/app/api/ai/optimize-title/route';
 import { useSettings } from '@/context/settings-context';
 import { Badge } from '@/components/ui/badge';
@@ -23,13 +24,35 @@ export default function FeedProductDetailPage({
   params: Promise<{ item_group_id: string }>;
 }) {
   const { item_group_id } = use(params);
-  const analysis = getFeedProductAnalysis(item_group_id);
-  const { settings } = useSettings();
+  const { settings, selectedAccountId } = useSettings();
 
+  const [analysis, setAnalysis] = useState<TitleAnalysis | null>(null);
+  const [pageLoading, setPageLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [aiResult, setAiResult] = useState<OptimizeTitleResponse | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPageLoading(true);
+    fetch(`/api/data/feed?account_id=${selectedAccountId}`)
+      .then(r => r.json())
+      .then(data => {
+        const analyses = analyzeTitles(data.products ?? []);
+        const found = analyses.find(a => a.product.item_group_id === item_group_id);
+        setAnalysis(found ?? null);
+      })
+      .catch(console.error)
+      .finally(() => setPageLoading(false));
+  }, [item_group_id, selectedAccountId]);
+
+  if (pageLoading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground py-12 justify-center">
+        <Loader2 size={16} className="animate-spin" /> 加载中...
+      </div>
+    );
+  }
 
   if (!analysis) {
     return (
@@ -37,7 +60,7 @@ export default function FeedProductDetailPage({
         <Link href="/feed-optimizer" className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm">
           <ArrowLeft size={14} /> 返回列表
         </Link>
-        <p className="text-sm text-muted-foreground">找不到该产品。</p>
+        <p className="text-sm text-muted-foreground">找不到该产品（ID: {item_group_id}）。</p>
       </div>
     );
   }
