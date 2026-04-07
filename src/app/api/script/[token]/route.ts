@@ -118,11 +118,11 @@ function exportChangeHistory() {
       var evt = row.changeEvent;
       var resourceName = evt.resourceName || '';
       // Use resource_name as a stable change_id
-      var changeId = resourceName + '_' + (evt.changeDateTimeAsString || '').replace(/[^0-9]/g, '');
+      var changeId = resourceName + '_' + (evt.changeDateTime || '').replace(/[^0-9]/g, '');
 
       var campName = (row.campaign && row.campaign.name) ? row.campaign.name : '';
       var changedFields = evt.changedFields || '';
-      var changedAt = evt.changeDateTimeAsString || new Date().toISOString();
+      var changedAt = evt.changeDateTime || new Date().toISOString();
       var changedDate = changedAt.split('T')[0];
       records.push({
         change_id: changeId,
