@@ -4,6 +4,7 @@ import './globals.css';
 import { Sidebar } from '@/components/sidebar';
 import { Providers } from '@/components/providers';
 import { AccountSwitcher } from '@/components/account-switcher';
+import { ThemeToggle } from '@/components/theme-provider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -18,7 +19,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-CN" className={`dark ${inter.variable}`}>
+    <html lang="zh-CN" className={inter.variable}>
+      <head>
+        {/* Prevent flash of wrong theme */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('adinsight_theme');if(t!=='light')document.documentElement.classList.add('dark');})()` }} />
+      </head>
       <body className="bg-background text-foreground min-h-screen flex">
         <Providers>
           <Sidebar />
@@ -27,7 +32,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="text-sm font-semibold text-foreground tracking-tight">
                 AdInsight AI <span className="text-muted-foreground font-normal text-xs ml-1">广告洞察 AI</span>
               </span>
-              <AccountSwitcher />
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <AccountSwitcher />
+              </div>
             </header>
             <main className="flex-1 overflow-auto p-6">
               {children}

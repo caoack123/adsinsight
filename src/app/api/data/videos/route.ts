@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getVideoAds, upsertVideoAds, upsertAiCache } from '@/lib/db';
-import { createServerClient } from '@/lib/supabase';
+import { getVideoAds, upsertVideoAds } from '@/lib/db';
 import videoDemoData from '@/data/video-abcd.json';
 import type { ABCDAnalysis } from '@/modules/video-abcd/schema';
 
@@ -13,25 +12,6 @@ export async function GET(request: NextRequest) {
 
   try {
     const videos = await getVideoAds(accountId);
-
-    // Attach abcd_analysis from ai_analysis_cache for any video that has one
-    if (videos.length > 0) {
-      const db = createServerClient();
-      const { data: cacheRows } = await db
-        .from('ai_analysis_cache')
-        .select('entity_id, result')
-        .eq('account_id', accountId)
-        .eq('entity_type', 'video_ad');
-      if (cacheRows && cacheRows.length > 0) {
-        const cacheMap = Object.fromEntries(cacheRows.map(r => [r.entity_id, r.result]));
-        for (const v of videos) {
-          if (!v.abcd_analysis && cacheMap[v.video_id]) {
-            v.abcd_analysis = cacheMap[v.video_id];
-          }
-        }
-      }
-    }
-
     return NextResponse.json({ brand_name: '', branded_products: [], videos });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
@@ -56,23 +36,16 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Insert minimal row into video_ads (only columns that exist in schema)
+    // Save to video_ads with all relevant columns (thumbnail_url + abcd_analysis added via migration)
     await upsertVideoAds(account_id, [{
       video_id,
       youtube_url,
       ad_name: `[手动分析] ${video_id}`,
+      thumbnail_url: `https://img.youtube.com/vi/${video_id}/hqdefault.jpg`,
+      abcd_analysis: analysis,
       performance: {},
       synced_at: new Date().toISOString(),
     }]);
-
-    // Save analysis to ai_analysis_cache (has abcd_analysis as JSONB result)
-    await upsertAiCache({
-      account_id,
-      entity_type: 'video_ad',
-      entity_id: video_id,
-      model_used: analysis.model ?? 'gemini',
-      result: analysis as unknown as Record<string, unknown>,
-    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
