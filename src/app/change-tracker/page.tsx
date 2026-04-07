@@ -100,6 +100,35 @@ function getChangeTypeLabel(changeType: string): string {
     || changeType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 }
 
+/**
+ * Compute the human-readable date range for before/after performance windows.
+ * isBefore=true  → ends the day BEFORE the change, spans windowDays backward
+ * isBefore=false → starts ON the change date, spans windowDays forward
+ */
+function windowDateRange(changeTimestamp: string, windowDays: number, isBefore: boolean): string {
+  const fmt = (d: Date) =>
+    `${d.getMonth() + 1}/${d.getDate()}`;
+
+  try {
+    // Work in UTC-date arithmetic to avoid DST/tz surprises
+    const change = new Date(changeTimestamp);
+    const changeUTC = Date.UTC(change.getUTCFullYear(), change.getUTCMonth(), change.getUTCDate());
+    const DAY = 86_400_000;
+
+    let startMs: number, endMs: number;
+    if (isBefore) {
+      endMs   = changeUTC - DAY;                         // day before change
+      startMs = endMs - (windowDays - 1) * DAY;
+    } else {
+      startMs = changeUTC;                               // change day itself
+      endMs   = startMs + (windowDays - 1) * DAY;
+    }
+    return `${fmt(new Date(startMs))} – ${fmt(new Date(endMs))}`;
+  } catch {
+    return `${windowDays} 天`;
+  }
+}
+
 function DeltaCell({ value, good, bad }: { value: string; good: boolean; bad: boolean }) {
   return (
     <span className={cn('tabular-nums text-xs font-medium', good && 'text-green-400', bad && 'text-red-400', !good && !bad && 'text-muted-foreground')}>
@@ -171,7 +200,12 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
         <div className="grid grid-cols-2 gap-4 mb-3">
           {/* Before metrics */}
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">变更前（{before.window_days} 天）</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              变更前 {before.window_days} 天
+              <span className="ml-1 normal-case font-normal text-muted-foreground/70">
+                ({windowDateRange(change.timestamp, before.window_days, true)})
+              </span>
+            </p>
             <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
               {[
                 { label: '曝光', value: before.impressions.toLocaleString() },
@@ -190,7 +224,13 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
           </div>
           {/* After metrics */}
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">变更后（{after.window_days} 天）</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              变更后 {after.window_days} 天
+              <span className="ml-1 normal-case font-normal text-muted-foreground/70">
+                ({windowDateRange(change.timestamp, after.window_days, false)})
+              </span>
+              <span className="ml-1 normal-case font-normal text-muted-foreground/50 text-[10px]">已换算同期</span>
+            </p>
             <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
               {[
                 { label: '曝光', value: after.impressions.toLocaleString(), delta: delta.impressions_delta },
@@ -391,10 +431,13 @@ export default function ChangeTrackerPage() {
                   className="grid grid-cols-[140px_1fr_130px_80px_80px_80px_80px_80px_28px] gap-2 px-4 py-2.5 border-b border-border hover:bg-accent/20 cursor-pointer transition-colors items-center"
                   onClick={() => toggle(change.change_id)}
                 >
-                  {/* Time */}
+                  {/* Time — displayed in browser local timezone */}
                   <div>
                     <p className="text-xs text-foreground font-medium">{formatChangeDateShort(change.timestamp)}</p>
-                    <p className="text-xs text-muted-foreground">{formatChangeDate(change.timestamp).split(' ').slice(-1)[0]}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(change.timestamp))}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground/40 leading-tight">本地时间</p>
                   </div>
 
                   {/* Change content */}
