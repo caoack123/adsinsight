@@ -117,11 +117,23 @@ function AbcdResultCard({ analysis, videoId }: { analysis: ABCDAnalysis; videoId
 
 function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { accountId: string; brandName: string; onSaved: (videoId: string) => void }) {
   const { settings } = useSettings();
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(() =>
+    typeof window !== 'undefined' ? sessionStorage.getItem('yt_analyzer_url') ?? '' : ''
+  );
   const [brand, setBrand] = useState(defaultBrand);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ videoId: string; analysis: ABCDAnalysis } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Restore last analysis result from sessionStorage on mount
+  const [result, setResult] = useState<{ videoId: string; analysis: ABCDAnalysis } | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const savedUrl = sessionStorage.getItem('yt_analyzer_url') ?? '';
+    const videoId = extractYouTubeId(savedUrl.trim());
+    if (!videoId) return null;
+    const stored = sessionStorage.getItem(`video_abcd_manual_${videoId}`);
+    if (!stored) return null;
+    try { const p = JSON.parse(stored); return { videoId, analysis: p.analysis }; } catch { return null; }
+  });
 
   async function handleAnalyze() {
     const videoId = extractYouTubeId(url.trim());
@@ -195,7 +207,12 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { acco
             type="text"
             placeholder="https://www.youtube.com/watch?v=... 或直接粘贴 Video ID"
             value={url}
-            onChange={e => { setUrl(e.target.value); setResult(null); setError(null); }}
+            onChange={e => {
+              setUrl(e.target.value);
+              setResult(null);
+              setError(null);
+              if (typeof window !== 'undefined') sessionStorage.setItem('yt_analyzer_url', e.target.value);
+            }}
             className="flex-1 bg-muted border border-border rounded px-3 py-1.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           <input
