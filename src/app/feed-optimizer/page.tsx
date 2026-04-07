@@ -9,13 +9,41 @@ import { MetricCard } from '@/components/metric-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowUpDown, Loader2 } from 'lucide-react';
+import { ArrowUpDown, Loader2, Search, Layers, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { TitleAnalysis, FeedOptimizerSummary } from '@/modules/feed-optimizer/schema';
 
 type SortKey = 'score' | 'ctr' | 'cost' | 'roas' | 'issues';
 type SortDir = 'asc' | 'desc';
+
+// Aggregate variants of the same product type into one row
+function groupByProductType(analyses: TitleAnalysis[]) {
+  const groups: Record<string, {
+    label: string; count: number; cost: number; clicks: number;
+    impressions: number; conversions: number; conversions_value: number;
+    minScore: number; totalIssues: number; items: TitleAnalysis[];
+  }> = {};
+  for (const a of analyses) {
+    const key = (a.product.product_type ?? '').split('>').pop()?.trim() || a.product.brand || a.product.item_group_id;
+    if (!groups[key]) groups[key] = { label: key, count: 0, cost: 0, clicks: 0, impressions: 0, conversions: 0, conversions_value: 0, minScore: 100, totalIssues: 0, items: [] };
+    const g = groups[key];
+    g.count++;
+    g.cost += a.product.cost;
+    g.clicks += a.product.clicks;
+    g.impressions += a.product.impressions;
+    g.conversions += a.product.conversions;
+    g.conversions_value += a.product.conversions_value ?? 0;
+    g.minScore = Math.min(g.minScore, a.score);
+    g.totalIssues += a.issues.length;
+    g.items.push(a);
+  }
+  return Object.values(groups).map(g => ({
+    ...g,
+    ctr: g.impressions > 0 ? g.clicks / g.impressions : 0,
+    roas: g.cost > 0 ? g.conversions_value / g.cost : 0,
+  }));
+}
 
 const SortTh = ({ col, label, sortKey, onSort }: { col: SortKey; label: string; sortKey: SortKey; onSort: (k: SortKey) => void }) => (
   <TableHead className="cursor-pointer select-none text-xs whitespace-nowrap hover:text-foreground" onClick={() => onSort(col)}>
@@ -31,8 +59,11 @@ export default function FeedOptimizerPage() {
   const [analyses, setAnalyses] = useState<TitleAnalysis[]>([]);
   const [summary, setSummary] = useState<FeedOptimizerSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sortKey, setSortKey] = useState<SortKey>('score');
-  const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [sortKey, setSortKey] = useState<SortKey>('cost');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [search, setSearch] = useState('');
+  const [grouped, setGrouped] = useState(false);
+  const [exportedAt, setExportedAt] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -43,13 +74,25 @@ export default function FeedOptimizerPage() {
         const a = analyzeTitles(prods);
         setAnalyses(a);
         setSummary(computeSummary(a));
+        setExportedAt(data.exported_at ?? null);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [selectedAccountId]);
 
+  const filtered = useMemo(() => {
+    if (!search.trim()) return analyses;
+    const q = search.toLowerCase();
+    return analyses.filter(a =>
+      (a.product.current_title ?? '').toLowerCase().includes(q) ||
+      (a.product.product_type ?? '').toLowerCase().includes(q) ||
+      (a.product.brand ?? '').toLowerCase().includes(q) ||
+      a.product.item_group_id.toLowerCase().includes(q)
+    );
+  }, [analyses, search]);
+
   const sorted = useMemo(() => {
-    return [...analyses].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       let av = 0, bv = 0;
       if (sortKey === 'score') { av = a.score; bv = b.score; }
       else if (sortKey === 'ctr') { av = a.product.ctr; bv = b.product.ctr; }
@@ -58,7 +101,20 @@ export default function FeedOptimizerPage() {
       else if (sortKey === 'issues') { av = a.issues.length; bv = b.issues.length; }
       return sortDir === 'asc' ? av - bv : bv - av;
     });
-  }, [analyses, sortKey, sortDir]);
+  }, [filtered, sortKey, sortDir]);
+
+  const groupedRows = useMemo(() => {
+    if (!grouped) return null;
+    const g = groupByProductType(filtered);
+    return [...g].sort((a, b) => {
+      if (sortKey === 'score') return sortDir === 'asc' ? a.minScore - b.minScore : b.minScore - a.minScore;
+      if (sortKey === 'ctr') return sortDir === 'asc' ? a.ctr - b.ctr : b.ctr - a.ctr;
+      if (sortKey === 'cost') return sortDir === 'asc' ? a.cost - b.cost : b.cost - a.cost;
+      if (sortKey === 'roas') return sortDir === 'asc' ? a.roas - b.roas : b.roas - a.roas;
+      if (sortKey === 'issues') return sortDir === 'asc' ? a.totalIssues - b.totalIssues : b.totalIssues - a.totalIssues;
+      return 0;
+    });
+  }, [filtered, grouped, sortKey, sortDir]);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -106,16 +162,48 @@ export default function FeedOptimizerPage() {
       </div>
 
       <Card className="border-border">
-        <CardHeader className="pb-2 pt-4 px-4">
-          <CardTitle className="text-sm font-semibold">产品列表</CardTitle>
+        <CardHeader className="pb-2 pt-3 px-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <CardTitle className="text-sm font-semibold">产品列表</CardTitle>
+            {exportedAt && (
+              <span className="text-xs text-muted-foreground">
+                数据周期：最近 30 天 · 同步于 {new Date(exportedAt).toLocaleDateString('zh-CN')}
+              </span>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              {/* Search */}
+              <div className="relative">
+                <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="搜索产品..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="pl-6 pr-3 py-1 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 w-40"
+                />
+              </div>
+              {/* Group toggle */}
+              <button
+                onClick={() => setGrouped(v => !v)}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs transition-colors',
+                  grouped ? 'border-blue-500/60 bg-blue-950/30 text-blue-300' : 'border-border text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {grouped ? <Layers size={12} /> : <List size={12} />}
+                {grouped ? '按产品聚合' : '按 SKU 展示'}
+              </button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="px-0 pb-0">
           <Table>
             <TableHeader>
               <TableRow className="border-border">
-                <TableHead className="text-xs pl-4">产品名称</TableHead>
-                <TableHead className="text-xs max-w-xs">当前标题</TableHead>
-                <SortTh col="score" label="质量分" sortKey={sortKey} onSort={handleSort} />
+                <TableHead className="text-xs pl-4">{grouped ? '产品类型' : '产品名称'}</TableHead>
+                {!grouped && <TableHead className="text-xs max-w-xs">当前标题</TableHead>}
+                {grouped && <TableHead className="text-xs">SKU 数</TableHead>}
+                <SortTh col="score" label={grouped ? '最低质量分' : '质量分'} sortKey={sortKey} onSort={handleSort} />
                 <SortTh col="ctr" label="CTR" sortKey={sortKey} onSort={handleSort} />
                 <SortTh col="cost" label="花费" sortKey={sortKey} onSort={handleSort} />
                 <SortTh col="roas" label="ROAS" sortKey={sortKey} onSort={handleSort} />
@@ -123,7 +211,22 @@ export default function FeedOptimizerPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sorted.map(a => {
+              {grouped && groupedRows ? groupedRows.map(g => {
+                const tone = getScoreTone(g.minScore);
+                return (
+                  <TableRow key={g.label} className="border-border hover:bg-accent/30">
+                    <TableCell className="text-sm font-medium pl-4 whitespace-nowrap text-foreground">{g.label}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{g.count} 个</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', tone.badgeClassName)}>{g.minScore}</Badge>
+                    </TableCell>
+                    <TableCell className={cn('text-xs tabular-nums', g.ctr < 0.01 && 'text-red-400')}>{(g.ctr * 100).toFixed(1)}%</TableCell>
+                    <TableCell className="text-xs tabular-nums">${g.cost.toFixed(2)}</TableCell>
+                    <TableCell className={cn('text-xs tabular-nums font-medium', g.roas >= 2 ? 'text-green-400' : g.roas < 1 ? 'text-red-400' : 'text-foreground')}>{g.roas.toFixed(2)}x</TableCell>
+                    <TableCell><span className={cn('text-xs font-semibold', g.totalIssues >= 4 ? 'text-red-400' : g.totalIssues >= 2 ? 'text-amber-400' : 'text-muted-foreground')}>{g.totalIssues}</span></TableCell>
+                  </TableRow>
+                );
+              }) : sorted.map(a => {
                 const tone = getScoreTone(a.score);
                 const roas = getRoas(a.product);
                 return (
@@ -137,27 +240,20 @@ export default function FeedOptimizerPage() {
                       {a.product.current_title}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', tone.badgeClassName)}>
-                        {a.score}
-                      </Badge>
+                      <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', tone.badgeClassName)}>{a.score}</Badge>
                     </TableCell>
-                    <TableCell className={cn('text-xs tabular-nums', a.product.ctr < 0.01 && 'text-red-400')}>
-                      {(a.product.ctr * 100).toFixed(1)}%
-                    </TableCell>
+                    <TableCell className={cn('text-xs tabular-nums', a.product.ctr < 0.01 && 'text-red-400')}>{(a.product.ctr * 100).toFixed(1)}%</TableCell>
                     <TableCell className="text-xs tabular-nums">${a.product.cost.toFixed(2)}</TableCell>
-                    <TableCell className={cn('text-xs tabular-nums font-medium', roas >= 2 ? 'text-green-400' : roas < 1 ? 'text-red-400' : 'text-foreground')}>
-                      {roas.toFixed(2)}x
-                    </TableCell>
-                    <TableCell>
-                      <span className={cn('text-xs font-semibold', a.issues.length >= 4 ? 'text-red-400' : a.issues.length >= 2 ? 'text-amber-400' : 'text-muted-foreground')}>
-                        {a.issues.length}
-                      </span>
-                    </TableCell>
+                    <TableCell className={cn('text-xs tabular-nums font-medium', roas >= 2 ? 'text-green-400' : roas < 1 ? 'text-red-400' : 'text-foreground')}>{roas.toFixed(2)}x</TableCell>
+                    <TableCell><span className={cn('text-xs font-semibold', a.issues.length >= 4 ? 'text-red-400' : a.issues.length >= 2 ? 'text-amber-400' : 'text-muted-foreground')}>{a.issues.length}</span></TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
+          {(grouped ? groupedRows?.length === 0 : sorted.length === 0) && search && (
+            <p className="text-xs text-muted-foreground text-center py-6">没有匹配「{search}」的产品</p>
+          )}
         </CardContent>
       </Card>
 

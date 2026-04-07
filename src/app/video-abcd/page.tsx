@@ -176,12 +176,15 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { acco
 
       // Save to DB (non-demo accounts) so result survives navigation
       if (accountId !== 'demo') {
-        await fetch('/api/data/videos', {
+        const saveRes = await fetch('/api/data/videos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ account_id: accountId, video_id: videoId, youtube_url: youtubeUrl, analysis }),
         });
-        onSaved(videoId);
+        if (saveRes.ok) {
+          onSaved(videoId);
+        }
+        // If save fails, result is still shown inline (sessionStorage fallback)
       }
     } catch (e) {
       setError(String(e));

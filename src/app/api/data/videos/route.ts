@@ -43,14 +43,8 @@ export async function POST(request: NextRequest) {
     const record = {
       video_id,
       youtube_url,
-      youtube_video_id: video_id,
       ad_name: `[手动分析] ${video_id}`,
-      campaign: '',
-      ad_group: '',
-      duration_seconds: 0,
-      format: 'in_stream',
       thumbnail_url: `https://img.youtube.com/vi/${video_id}/hqdefault.jpg`,
-      performance: { impressions: 0, views: 0, view_rate: 0, clicks: 0, ctr: 0, cost: 0, conversions: 0, conversions_value: 0 },
       abcd_analysis: analysis,
       synced_at: new Date().toISOString(),
     };

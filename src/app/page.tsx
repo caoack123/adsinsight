@@ -172,10 +172,10 @@ export default function OverviewPage() {
       .finally(() => setLoading(false));
   }, [selectedAccountId]);
 
-  // Fetch performance data separately (re-runs when account or range changes)
+  // Fetch 2× the display period so we can compare curr vs prev half
   useEffect(() => {
     setPerfLoading(true);
-    fetch(`/api/data/performance?account_id=${selectedAccountId}&days=${perfDays}`)
+    fetch(`/api/data/performance?account_id=${selectedAccountId}&days=${perfDays * 2}`)
       .then(r => r.json())
       .then(d => setPerfData(d.data ?? []))
       .catch(() => setPerfData([]))
@@ -185,7 +185,9 @@ export default function OverviewPage() {
   const enabledModules = Object.entries(MODULE_REGISTRY).filter(([, m]) => m.enabled);
   const disabledModules = Object.entries(MODULE_REGISTRY).filter(([, m]) => !m.enabled);
 
-  const chartData = useMemo(() => groupData(perfData, perfDays), [perfData, perfDays]);
+  // Split at perfDays: recent half for chart & KPI, prior half for comparison
+  const recentData = useMemo(() => perfData.slice(-perfDays), [perfData, perfDays]);
+  const chartData = useMemo(() => groupData(recentData, perfDays), [recentData, perfDays]);
   const kpi = useMemo(() => perfData.length > 0 ? periodTotals(perfData) : null, [perfData]);
 
   const METRIC_CONFIG = {
@@ -386,7 +388,7 @@ export default function OverviewPage() {
           )}
 
           {/* Chart */}
-          {perfData.length === 0 && !perfLoading ? (
+          {recentData.length === 0 && !perfLoading ? (
             <div className="h-40 flex items-center justify-center text-xs text-muted-foreground">
               暂无性能数据。运行 Google Ads 脚本后将显示 {perfDays} 天趋势图。
             </div>
