@@ -63,6 +63,8 @@ function exportFeedProducts() {
     var report = AdsApp.search(query);
     while (report.hasNext()) {
       var row = report.next();
+      // Guard: some rows (e.g. PMax) may return null segments
+      if (!row.segments || !row.segments.productItemId) continue;
       var cost = (row.metrics.costMicros || 0) / 1000000;
       var impressions = parseInt(row.metrics.impressions) || 0;
       var clicks = parseInt(row.metrics.clicks) || 0;
@@ -144,17 +146,23 @@ function exportChangeHistory() {
 
     // Attach before/after performance snapshots
     if (records.length > 0) {
-      // Find the earliest change date to anchor the before/after windows
-      var changeDate = records[0]._change_date || daysAgo(0);
+      // Use the OLDEST change date as the anchor so we get the widest before/after window
+      var changeDate = records[records.length - 1]._change_date || dateOnly(0);
+      var yesterday  = dateOnly(1);   // yesterday — today's data is not yet finalized
+
       var beforeStart = daysBeforeDate(changeDate, 14);
       var beforeEnd   = daysBeforeDate(changeDate, 1);
       var afterStart  = changeDate;
+      // Cap afterEnd to yesterday; if change happened today, skip after metrics entirely
       var afterEnd    = daysAfterDate(changeDate, 7);
+      if (afterEnd > yesterday) afterEnd = yesterday;
 
       var beforeMetrics = getCampaignMetrics(beforeStart, beforeEnd);
-      var afterMetrics  = getCampaignMetrics(afterStart, afterEnd);
-      Logger.log('Campaign metrics before: ' + Object.keys(beforeMetrics).length + ' campaigns');
-      Logger.log('Campaign metrics after:  ' + Object.keys(afterMetrics).length + ' campaigns');
+      var afterMetrics  = (afterStart <= yesterday)
+        ? getCampaignMetrics(afterStart, afterEnd)
+        : {};   // change is too recent — no finalized after data yet
+      Logger.log('Campaign metrics before: ' + Object.keys(beforeMetrics).length + ' campaigns ('+beforeStart+' to '+beforeEnd+')');
+      Logger.log('Campaign metrics after:  ' + Object.keys(afterMetrics).length + ' campaigns ('+afterStart+' to '+afterEnd+')');
 
       for (var k = 0; k < records.length; k++) {
         var camp = records[k]._campaign;
@@ -266,9 +274,9 @@ function daysBeforeDate(dateStr, n) {
 function daysAfterDate(dateStr, n) {
   var d = new Date(dateStr);
   d.setDate(d.getDate() + n);
-  var today = new Date().toISOString().split('T')[0];
+  var yesterday = dateOnly(1);   // cap to yesterday — today is not finalized
   var result = d.toISOString().split('T')[0];
-  return result < today ? result : today;
+  return result < yesterday ? result : yesterday;
 }
 
 // Returns map of campaign_name → aggregated metrics
