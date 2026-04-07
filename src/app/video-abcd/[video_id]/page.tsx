@@ -434,18 +434,22 @@ export default function VideoDetailPage({
           <Card className="border-border overflow-hidden">
             <div className="relative w-full aspect-video bg-muted">
               <Image
-                src={video.thumbnail_url}
+                src={video.thumbnail_url ?? `https://img.youtube.com/vi/${video.video_id}/hqdefault.jpg`}
                 alt={video.ad_name}
                 fill
                 className="object-cover"
                 unoptimized
               />
-              <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                {formatDuration(video.duration_seconds)}
-              </div>
-              <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                {FORMAT_LABEL[video.format]}
-              </div>
+              {video.duration_seconds != null && (
+                <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                  {formatDuration(video.duration_seconds)}
+                </div>
+              )}
+              {video.format && (
+                <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                  {FORMAT_LABEL[video.format]}
+                </div>
+              )}
             </div>
             <CardContent className="p-3">
               <a
@@ -459,33 +463,35 @@ export default function VideoDetailPage({
             </CardContent>
           </Card>
 
-          {/* Performance */}
-          <Card className="border-border">
-            <CardHeader className="pb-1 pt-3 px-4">
-              <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">广告效果数据</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                {[
-                  { label: '曝光量', value: (video.performance.impressions / 1000).toFixed(0) + 'K' },
-                  { label: '视频观看', value: (video.performance.views / 1000).toFixed(0) + 'K' },
-                  { label: '观看率 (VTR)', value: (video.performance.view_rate * 100).toFixed(0) + '%', good: video.performance.view_rate >= 0.3 },
-                  { label: '点击率 (CTR)', value: (video.performance.ctr * 100).toFixed(2) + '%', warn: video.performance.ctr < 0.008 },
-                  { label: '单次观看成本 (CPV)', value: '$' + cpv.toFixed(3) },
-                  { label: '总花费', value: '$' + video.performance.cost.toLocaleString() },
-                  { label: '转化数', value: String(video.performance.conversions) },
-                  { label: 'ROAS', value: roas.toFixed(2) + 'x', good: roas >= 2, warn: roas > 0 && roas < 1 },
-                ].map(({ label, value, warn, good }) => (
-                  <div key={label}>
-                    <p className="text-xs text-muted-foreground">{label}</p>
-                    <p className={cn('text-sm font-semibold tabular-nums',
-                      good ? 'text-green-400' : warn ? 'text-red-400' : 'text-foreground'
-                    )}>{value}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Performance — only shown if the video has real ad data */}
+          {video.performance && (video.performance.impressions > 0 || video.performance.cost > 0) && (
+            <Card className="border-border">
+              <CardHeader className="pb-1 pt-3 px-4">
+                <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">广告效果数据</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                  {[
+                    { label: '曝光量', value: ((video.performance.impressions ?? 0) / 1000).toFixed(0) + 'K' },
+                    { label: '视频观看', value: ((video.performance.views ?? 0) / 1000).toFixed(0) + 'K' },
+                    { label: '观看率 (VTR)', value: ((video.performance.view_rate ?? 0) * 100).toFixed(0) + '%', good: (video.performance.view_rate ?? 0) >= 0.3 },
+                    { label: '点击率 (CTR)', value: ((video.performance.ctr ?? 0) * 100).toFixed(2) + '%', warn: (video.performance.ctr ?? 0) < 0.008 },
+                    { label: '单次观看成本 (CPV)', value: '$' + cpv.toFixed(3) },
+                    { label: '总花费', value: '$' + (video.performance.cost ?? 0).toLocaleString() },
+                    { label: '转化数', value: String(video.performance.conversions ?? 0) },
+                    { label: 'ROAS', value: roas.toFixed(2) + 'x', good: roas >= 2, warn: roas > 0 && roas < 1 },
+                  ].map(({ label, value, warn, good }) => (
+                    <div key={label}>
+                      <p className="text-xs text-muted-foreground">{label}</p>
+                      <p className={cn('text-sm font-semibold tabular-nums',
+                        good ? 'text-green-400' : warn ? 'text-red-400' : 'text-foreground'
+                      )}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* ABCD score summary when analyzed */}
           {analysis && (

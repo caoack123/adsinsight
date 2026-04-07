@@ -309,14 +309,13 @@ export interface VideoAdPerformance {
 export interface VideoAd {
   video_id: string;
   youtube_url: string;
-  youtube_video_id: string;    // the 11-char YouTube ID
+  youtube_video_id?: string;
   ad_name: string;
-  campaign: string;
-  ad_group: string;
-  duration_seconds: number;
-  format: 'in_stream' | 'in_feed' | 'shorts' | 'bumper';
-  thumbnail_url: string;
-  performance: VideoAdPerformance;
-  // Set after analysis
+  campaign?: string;
+  ad_group?: string;
+  duration_seconds?: number;
+  format?: 'in_stream' | 'in_feed' | 'shorts' | 'bumper';
+  thumbnail_url?: string;
+  performance?: VideoAdPerformance;
   abcd_analysis?: ABCDAnalysis;
 }

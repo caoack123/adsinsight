@@ -74,24 +74,23 @@ export function getSignalsByCategory(category: ABCDCategory) {
 // ─── Performance helpers ──────────────────────────────────────────────────────
 
 export function getRoas(video: VideoAd): number {
-  return video.performance.cost > 0
-    ? video.performance.conversions_value / video.performance.cost
-    : 0;
+  const p = video.performance;
+  return p && p.cost > 0 ? p.conversions_value / p.cost : 0;
 }
 
 export function getCpv(video: VideoAd): number {
-  return video.performance.views > 0
-    ? video.performance.cost / video.performance.views
-    : 0;
+  const p = video.performance;
+  return p && p.views > 0 ? p.cost / p.views : 0;
 }
 
-export function formatDuration(seconds: number): string {
+export function formatDuration(seconds: number | undefined): string {
+  if (!seconds) return '—';
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return m > 0 ? `${m}:${s.toString().padStart(2, '0')}` : `${s}s`;
 }
 
-export const FORMAT_LABEL: Record<VideoAd['format'], string> = {
+export const FORMAT_LABEL: Record<string, string> = {
   in_stream: 'In-stream',
   in_feed:   'In-feed',
   shorts:    'Shorts',

@@ -287,7 +287,7 @@ function VideoCard({ video }: { video: VideoAd }) {
             </div>
             {video.format && (
               <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1 rounded">
-                {FORMAT_LABEL[video.format as keyof typeof FORMAT_LABEL] ?? video.format}
+                {FORMAT_LABEL[video.format ?? ''] ?? video.format}
               </div>
             )}
           </div>
