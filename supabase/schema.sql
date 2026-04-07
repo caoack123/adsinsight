@@ -74,7 +74,24 @@ CREATE TABLE IF NOT EXISTS video_ads (
   UNIQUE(account_id, video_id)
 );
 
--- ─── 5. AI Analysis Cache ────────────────────────────────────────────────────
+-- ─── 5. Daily Performance ────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS performance_daily (
+  id                UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  account_id        UUID REFERENCES accounts(id) ON DELETE CASCADE NOT NULL,
+  date              DATE NOT NULL,
+  campaign_name     TEXT NOT NULL DEFAULT '',
+  impressions       BIGINT DEFAULT 0,
+  clicks            BIGINT DEFAULT 0,
+  cost              NUMERIC(12,4) DEFAULT 0,
+  conversions       NUMERIC(10,2) DEFAULT 0,
+  conversions_value NUMERIC(12,2) DEFAULT 0,
+  ctr               NUMERIC(8,6) DEFAULT 0,
+  average_cpc       NUMERIC(10,4) DEFAULT 0,
+  created_at        TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(account_id, date, campaign_name)
+);
+
+-- ─── 6. AI Analysis Cache ────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS ai_analysis_cache (
   id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   account_id   UUID REFERENCES accounts(id) ON DELETE CASCADE NOT NULL,
@@ -98,17 +115,19 @@ CREATE TABLE IF NOT EXISTS sync_logs (
 );
 
 -- ─── Indexes ─────────────────────────────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS idx_feed_products_account     ON feed_products(account_id);
-CREATE INDEX IF NOT EXISTS idx_change_records_account    ON change_records(account_id);
-CREATE INDEX IF NOT EXISTS idx_change_records_changed_at ON change_records(changed_at DESC);
-CREATE INDEX IF NOT EXISTS idx_video_ads_account         ON video_ads(account_id);
-CREATE INDEX IF NOT EXISTS idx_ai_cache_lookup           ON ai_analysis_cache(account_id, entity_type, entity_id);
-CREATE INDEX IF NOT EXISTS idx_sync_logs_account         ON sync_logs(account_id, synced_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feed_products_account       ON feed_products(account_id);
+CREATE INDEX IF NOT EXISTS idx_change_records_account      ON change_records(account_id);
+CREATE INDEX IF NOT EXISTS idx_change_records_changed_at   ON change_records(changed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_video_ads_account           ON video_ads(account_id);
+CREATE INDEX IF NOT EXISTS idx_ai_cache_lookup             ON ai_analysis_cache(account_id, entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_sync_logs_account           ON sync_logs(account_id, synced_at DESC);
+CREATE INDEX IF NOT EXISTS idx_performance_daily_account   ON performance_daily(account_id, date DESC);
 
 -- ─── Disable RLS (server uses service role key) ───────────────────────────────
-ALTER TABLE accounts           DISABLE ROW LEVEL SECURITY;
-ALTER TABLE feed_products      DISABLE ROW LEVEL SECURITY;
-ALTER TABLE change_records     DISABLE ROW LEVEL SECURITY;
-ALTER TABLE video_ads          DISABLE ROW LEVEL SECURITY;
-ALTER TABLE ai_analysis_cache  DISABLE ROW LEVEL SECURITY;
-ALTER TABLE sync_logs          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE accounts             DISABLE ROW LEVEL SECURITY;
+ALTER TABLE feed_products        DISABLE ROW LEVEL SECURITY;
+ALTER TABLE change_records       DISABLE ROW LEVEL SECURITY;
+ALTER TABLE video_ads            DISABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_analysis_cache    DISABLE ROW LEVEL SECURITY;
+ALTER TABLE sync_logs            DISABLE ROW LEVEL SECURITY;
+ALTER TABLE performance_daily    DISABLE ROW LEVEL SECURITY;

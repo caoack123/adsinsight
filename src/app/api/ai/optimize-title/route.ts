@@ -9,6 +9,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAiCache, upsertAiCache } from '@/lib/db';
 
@@ -22,6 +23,7 @@ export interface OptimizeTitleRequest {
   impressions: number;
   clicks: number;
   conversions: number;
+  conversions_value: number;
   cost: number;
   top_search_terms: string[];
   rule_issues: {
@@ -53,7 +55,7 @@ export async function POST(request: NextRequest) {
 
   const {
     current_title, brand, product_type, price, currency,
-    ctr, impressions, clicks, conversions, cost,
+    ctr, impressions, clicks, conversions, conversions_value, cost,
     top_search_terms, rule_issues,
     api_key: clientKey, model: clientModel,
     account_id, item_group_id,
@@ -67,15 +69,18 @@ export async function POST(request: NextRequest) {
 
   const openrouterKey = clientKey || process.env.OPENROUTER_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const googleKey = process.env.GOOGLE_AI_API_KEY;
 
-  if (!openrouterKey && !anthropicKey) {
+  if (!openrouterKey && !anthropicKey && !googleKey) {
     return NextResponse.json(
-      { error: '未配置 API Key。请在设置页填写 OpenRouter Key，或在服务器配置 OPENROUTER_API_KEY / ANTHROPIC_API_KEY。' },
+      { error: '未配置 AI API Key。请在设置页填写 OpenRouter Key，或在 Vercel 环境变量中配置 OPENROUTER_API_KEY / ANTHROPIC_API_KEY / GOOGLE_AI_API_KEY。' },
       { status: 500 }
     );
   }
 
-  const roas = cost > 0 ? ((conversions * price) / cost).toFixed(2) : 'N/A';
+  // Prefer conversions_value (actual revenue) over conversions * price (price may be 0 in real data)
+  const revenueForRoas = conversions_value > 0 ? conversions_value : conversions * price;
+  const roas = cost > 0 && revenueForRoas > 0 ? (revenueForRoas / cost).toFixed(2) : 'N/A';
 
   const prompt = `你是一位专业的 Google Shopping 广告优化师，服务于中国跨境电商卖家（面向美国市场）。
 
@@ -123,10 +128,11 @@ ${rule_issues.length > 0
 
   try {
     let text: string;
+    const selectedModel = clientModel || 'anthropic/claude-sonnet-4-5';
+    const isGoogleModel = selectedModel.startsWith('google/');
 
     if (openrouterKey) {
-      // ── OpenRouter ───────────────────────────────────────────────────────
-      const model = clientModel || 'anthropic/claude-sonnet-4-5';
+      // ── OpenRouter (Claude or Google models) ─────────────────────────────
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -136,7 +142,7 @@ ${rule_issues.length > 0
           'X-Title': 'AdInsight AI',
         },
         body: JSON.stringify({
-          model,
+          model: selectedModel,
           messages: [{ role: 'user', content: prompt }],
           max_tokens: 1024,
         }),
@@ -147,6 +153,13 @@ ${rule_issues.length > 0
       }
       const data = await res.json();
       text = data.choices?.[0]?.message?.content ?? '';
+    } else if (googleKey && (isGoogleModel || !anthropicKey)) {
+      // ── Google AI SDK (Gemini) — works if GOOGLE_AI_API_KEY is set ───────
+      const geminiModelName = isGoogleModel ? selectedModel.replace('google/', '') : 'gemini-2.5-flash';
+      const genAI = new GoogleGenerativeAI(googleKey);
+      const model = genAI.getGenerativeModel({ model: geminiModelName });
+      const result = await model.generateContent(prompt);
+      text = result.response.text();
     } else {
       // ── Anthropic SDK fallback ───────────────────────────────────────────
       const client = new Anthropic({ apiKey: anthropicKey });

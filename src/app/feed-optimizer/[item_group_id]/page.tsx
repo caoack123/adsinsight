@@ -99,6 +99,7 @@ export default function FeedProductDetailPage({
           impressions: product.impressions,
           clicks: product.clicks,
           conversions: product.conversions,
+          conversions_value: product.conversions_value,
           cost: product.cost,
           top_search_terms: product.top_search_terms,
           rule_issues: issues.map(i => ({
