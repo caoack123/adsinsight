@@ -115,7 +115,7 @@ function AbcdResultCard({ analysis, videoId }: { analysis: ABCDAnalysis; videoId
 
 // ── Manual YouTube analyzer panel ────────────────────────────────────────────
 
-function YoutubeAnalyzer({ accountId, brandName: defaultBrand }: { accountId: string; brandName: string }) {
+function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { accountId: string; brandName: string; onSaved: (videoId: string) => void }) {
   const { settings } = useSettings();
   const [url, setUrl] = useState('');
   const [brand, setBrand] = useState(defaultBrand);
@@ -133,8 +133,9 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand }: { accountId: st
     setError(null);
     setResult(null);
     try {
+      const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
       const body: AnalyzeVideoRequest = {
-        youtube_url: `https://www.youtube.com/watch?v=${videoId}`,
+        youtube_url: youtubeUrl,
         video_id: videoId,
         brand_name: brand || 'Brand',
         branded_products: [],
@@ -152,12 +153,23 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand }: { accountId: st
       }
       const analysis: ABCDAnalysis = await res.json();
       setResult({ videoId, analysis });
-      // Persist so the detail page can render this video even though it's not in DB
+
+      // Persist to sessionStorage for detail page
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(
           `video_abcd_manual_${videoId}`,
-          JSON.stringify({ videoId, youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`, analysis }),
+          JSON.stringify({ videoId, youtubeUrl, analysis }),
         );
+      }
+
+      // Save to DB (non-demo accounts) so result survives navigation
+      if (accountId !== 'demo') {
+        await fetch('/api/data/videos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account_id: accountId, video_id: videoId, youtube_url: youtubeUrl, analysis }),
+        });
+        onSaved(videoId);
       }
     } catch (e) {
       setError(String(e));
@@ -336,10 +348,8 @@ export default function VideoAbcdPage() {
   const [brandName, setBrandName] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setLoading(true);
+  function loadVideos() {
     if (isDemo) {
-      // Use static demo data
       setVideos(videoAbcdVideos);
       setBrandName('Crowned Ice');
       setLoading(false);
@@ -353,6 +363,12 @@ export default function VideoAbcdPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    setLoading(true);
+    loadVideos();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccountId, isDemo]);
 
   const demoSummary = getVideoAbcdSummary();
@@ -439,7 +455,7 @@ export default function VideoAbcdPage() {
       )}
 
       {/* ── Manual YouTube analyzer (always visible) ── */}
-      <YoutubeAnalyzer accountId={selectedAccountId} brandName={brandName} />
+      <YoutubeAnalyzer accountId={selectedAccountId} brandName={brandName} onSaved={loadVideos} />
     </div>
   );
 }
