@@ -74,8 +74,8 @@ export function getSeverityLabel(severity: 'high' | 'medium' | 'low') {
 }
 
 export function getProductDisplayName(product: FeedProduct) {
-  const segments = product.product_type.split('>').map(segment => segment.trim()).filter(Boolean);
-  return segments[segments.length - 1] || product.current_title;
+  const segments = (product.product_type ?? '').split('>').map(segment => segment.trim()).filter(Boolean);
+  return segments[segments.length - 1] || product.current_title || product.item_group_id;
 }
 
 export function getScoreTone(score: number) {

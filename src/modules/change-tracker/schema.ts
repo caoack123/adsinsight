@@ -36,8 +36,8 @@ export interface AccountChange {
   changed_by: string;
   old_value: string | null;
   new_value: string | null;
-  performance_before: PerformanceSnapshot;
-  performance_after: PerformanceSnapshot;
+  performance_before: PerformanceSnapshot | null;
+  performance_after: PerformanceSnapshot | null;
 }
 
 export interface PerformanceDelta {

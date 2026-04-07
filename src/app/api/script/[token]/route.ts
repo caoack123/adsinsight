@@ -119,17 +119,19 @@ function exportChangeHistory() {
       // Use resource_name as a stable change_id
       var changeId = resourceName + '_' + (evt.changeDateTimeAsString || '').replace(/[^0-9]/g, '');
 
+      var campName = (row.campaign && row.campaign.name) ? row.campaign.name : '';
+      var changedFields = evt.changedFields || '';
       records.push({
         change_id: changeId,
         change_type: mapChangeType(evt.changeResourceType, evt.resourceChangeOperation),
         resource_type: evt.changeResourceType || '',
-        resource_name: extractResourceName(resourceName),
-        campaign: (row.campaign && row.campaign.name) ? row.campaign.name : '',
+        resource_name: buildResourceName(evt.changeResourceType, campName, resourceName),
+        campaign: campName,
         ad_group: null,
         changed_by: evt.userEmail || 'Google Ads',
         changed_at: evt.changeDateTimeAsString || new Date().toISOString(),
-        old_value: safeStringify(evt.oldResource),
-        new_value: safeStringify(evt.newResource),
+        old_value: extractChangedFields(changedFields, evt.oldResource),
+        new_value: extractChangedFields(changedFields, evt.newResource),
         performance_before: null,
         performance_after: null
       });
@@ -156,10 +158,40 @@ function mapChangeType(resourceType, operation) {
   return (rt + '_' + op) || 'UNKNOWN';
 }
 
-function extractResourceName(resourcePath) {
+function buildResourceName(resourceType, campaignName, resourcePath) {
+  var rt = (resourceType || '').toUpperCase();
+  // Use campaign name as readable label for campaign-level changes
+  if (rt === 'CAMPAIGN' || rt === 'CAMPAIGN_BUDGET') return campaignName || extractLastId(resourcePath);
+  // For ad group / ad / criterion changes, prefix with campaign name if available
+  if (campaignName) return campaignName;
+  return extractLastId(resourcePath);
+}
+
+function extractLastId(resourcePath) {
   if (!resourcePath) return '';
   var parts = resourcePath.split('/');
   return parts[parts.length - 1] || resourcePath;
+}
+
+function extractChangedFields(changedFields, resource) {
+  if (!resource || !changedFields) return null;
+  try {
+    var fields = changedFields.split(',');
+    var result = {};
+    for (var i = 0; i < fields.length; i++) {
+      var field = fields[i].trim();
+      // Get the last segment of the field path and convert to camelCase
+      var key = field.split('.').pop() || '';
+      var camelKey = key.replace(/_([a-z])/g, function(m, c) { return c.toUpperCase(); });
+      if (resource[camelKey] !== undefined) {
+        result[camelKey] = resource[camelKey];
+      }
+    }
+    var str = JSON.stringify(result);
+    return str && str !== '{}' ? str.substring(0, 500) : safeStringify(resource);
+  } catch(e) {
+    return safeStringify(resource);
+  }
 }
 
 function safeStringify(obj) {

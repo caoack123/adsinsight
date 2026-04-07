@@ -20,6 +20,86 @@ import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react';
 import type { AnalyzeChangeResponse } from '@/app/api/ai/analyze-change/route';
 
+/** Flatten one level of nesting: {"campaign":{"status":"PAUSED"}} → {"status":"PAUSED"} */
+function flattenChangeObj(obj: Record<string, unknown>): Record<string, unknown> {
+  const wrappers = ['campaign', 'adGroup', 'ad', 'adGroupCriterion', 'campaignCriterion', 'biddingStrategy', 'campaignBudget'];
+  const keys = Object.keys(obj);
+  if (keys.length === 1 && wrappers.includes(keys[0])) {
+    const inner = obj[keys[0]];
+    if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
+      return flattenChangeObj(inner as Record<string, unknown>);
+    }
+  }
+  return obj;
+}
+
+/** Try to parse a JSON old/new value into a human-readable string */
+function parseChangeValue(raw: string | null): string {
+  if (!raw) return '';
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return String(raw).slice(0, 60);
+    const obj = flattenChangeObj(parsed as Record<string, unknown>);
+
+    // Status changes
+    if (obj.status !== undefined) {
+      const m: Record<string, string> = { ENABLED: '启用', PAUSED: '暂停', REMOVED: '删除' };
+      return m[String(obj.status)] || String(obj.status);
+    }
+    // Bid / budget in micros
+    if (obj.cpcBidMicros !== undefined) return `$${(Number(obj.cpcBidMicros) / 1_000_000).toFixed(2)} CPC`;
+    if (obj.cpvBidMicros !== undefined) return `$${(Number(obj.cpvBidMicros) / 1_000_000).toFixed(4)} CPV`;
+    if (obj.amountMicros !== undefined) return `预算 $${(Number(obj.amountMicros) / 1_000_000).toFixed(2)}/天`;
+    if (obj.targetCpaMicros !== undefined) return `目标CPA $${(Number(obj.targetCpaMicros) / 1_000_000).toFixed(2)}`;
+    // Target ROAS — can be nested {"targetRoas":{"targetRoas": 3.2}} or flat {"targetRoas": 3.2}
+    if (obj.targetRoas !== undefined) {
+      const v = obj.targetRoas;
+      const num = typeof v === 'number' ? v
+        : (v && typeof v === 'object' && 'targetRoas' in (v as object)) ? Number((v as Record<string, unknown>).targetRoas)
+        : Number(v);
+      return `ROAS目标 ${(num * 100).toFixed(0)}%`;
+    }
+    // Maximize conversion value with target ROAS
+    if (obj.maximizeConversionValue !== undefined) {
+      const inner = obj.maximizeConversionValue as Record<string, unknown>;
+      if (inner?.targetRoas !== undefined) return `最大化转化价值 ROAS ${(Number(inner.targetRoas) * 100).toFixed(0)}%`;
+      return '最大化转化价值';
+    }
+    // Bidding strategy type
+    if (obj.biddingStrategyType !== undefined) return String(obj.biddingStrategyType);
+    if (obj.type !== undefined) return String(obj.type);
+    // Name change
+    if (obj.name !== undefined) return String(obj.name).slice(0, 40);
+    // Fallback: first scalar key/value
+    const keys = Object.keys(obj);
+    for (const k of keys) {
+      const v = obj[k];
+      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') return `${k}: ${v}`;
+    }
+    return raw.slice(0, 60);
+  } catch {
+    return raw.slice(0, 60);
+  }
+}
+
+/** Get a readable label for any change_type string, including ones from live scripts */
+function getChangeTypeLabel(changeType: string): string {
+  const extra: Record<string, string> = {
+    CAMPAIGN_UPDATED: '广告系列更新',
+    AD_GROUP_UPDATED: '广告组更新',
+    AD_UPDATED: '广告更新',
+    CAMPAIGN_REMOVED: '广告系列删除',
+    AD_GROUP_REMOVED: '广告组删除',
+    AD_REMOVED: '广告删除',
+    CAMPAIGN_CRITERION_UPDATE: '广告系列定向调整',
+    AD_GROUP_CRITERION_UPDATE: '广告组定向调整',
+    UNKNOWN: '变更',
+  };
+  return (CHANGE_TYPE_LABEL as Record<string, string>)[changeType]
+    || extra[changeType]
+    || changeType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function DeltaCell({ value, good, bad }: { value: string; good: boolean; bad: boolean }) {
   return (
     <span className={cn('tabular-nums text-xs font-medium', good && 'text-green-400', bad && 'text-red-400', !good && !bad && 'text-muted-foreground')}>
@@ -87,49 +167,56 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
 
   return (
     <div className="px-4 py-3 bg-accent/10 border-t border-border">
-      <div className="grid grid-cols-2 gap-4 mb-3">
-        {/* Before / After metrics */}
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">变更前（{before.window_days} 天）</p>
-          <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
-            {[
-              { label: '曝光', value: before.impressions.toLocaleString() },
-              { label: '点击', value: before.clicks.toLocaleString() },
-              { label: 'CTR', value: `${(before.ctr * 100).toFixed(1)}%` },
-              { label: '花费', value: `$${before.cost.toFixed(2)}` },
-              { label: '转化', value: before.conversions.toFixed(1) },
-              { label: 'ROAS', value: fmtRoas(before.roas) },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-xs text-muted-foreground">{label}</p>
-                <p className="text-xs font-semibold">{value}</p>
-              </div>
-            ))}
+      {before && after ? (
+        <div className="grid grid-cols-2 gap-4 mb-3">
+          {/* Before metrics */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">变更前（{before.window_days} 天）</p>
+            <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
+              {[
+                { label: '曝光', value: before.impressions.toLocaleString() },
+                { label: '点击', value: before.clicks.toLocaleString() },
+                { label: 'CTR', value: `${(before.ctr * 100).toFixed(1)}%` },
+                { label: '花费', value: `$${before.cost.toFixed(2)}` },
+                { label: '转化', value: before.conversions.toFixed(1) },
+                { label: 'ROAS', value: fmtRoas(before.roas) },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="text-xs font-semibold">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* After metrics */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">变更后（{after.window_days} 天）</p>
+            <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
+              {[
+                { label: '曝光', value: after.impressions.toLocaleString(), delta: delta.impressions_delta },
+                { label: '点击', value: after.clicks.toLocaleString(), delta: delta.clicks_delta },
+                { label: 'CTR', value: `${(after.ctr * 100).toFixed(1)}%`, delta: delta.ctr_delta * 100 },
+                { label: '花费', value: `$${after.cost.toFixed(2)}`, delta: delta.cost_delta },
+                { label: '转化', value: after.conversions.toFixed(1), delta: delta.conversions_delta },
+                { label: 'ROAS', value: fmtRoas(after.roas), delta: delta.roas_delta },
+              ].map(({ label, value, delta: d }) => (
+                <div key={label}>
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className={cn(
+                    'text-xs font-semibold',
+                    d > 0 && (label === '花费' ? 'text-amber-400' : 'text-green-400'),
+                    d < 0 && (label === '花费' ? 'text-green-400' : 'text-red-400')
+                  )}>{value}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">变更后（{after.window_days} 天）</p>
-          <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
-            {[
-              { label: '曝光', value: after.impressions.toLocaleString(), delta: delta.impressions_delta },
-              { label: '点击', value: after.clicks.toLocaleString(), delta: delta.clicks_delta },
-              { label: 'CTR', value: `${(after.ctr * 100).toFixed(1)}%`, delta: delta.ctr_delta * 100 },
-              { label: '花费', value: `$${after.cost.toFixed(2)}`, delta: delta.cost_delta },
-              { label: '转化', value: after.conversions.toFixed(1), delta: delta.conversions_delta },
-              { label: 'ROAS', value: fmtRoas(after.roas), delta: delta.roas_delta },
-            ].map(({ label, value, delta: d }) => (
-              <div key={label}>
-                <p className="text-xs text-muted-foreground">{label}</p>
-                <p className={cn(
-                  'text-xs font-semibold',
-                  d > 0 && (label === '花费' ? 'text-amber-400' : 'text-green-400'),
-                  d < 0 && (label === '花费' ? 'text-green-400' : 'text-red-400')
-                )}>{value}</p>
-              </div>
-            ))}
-          </div>
+      ) : (
+        <div className="mb-3 px-3 py-2 rounded border border-border bg-card text-xs text-muted-foreground">
+          暂无变更前后效果快照数据。Google Ads 脚本目前未采集变更前后指标，可点击「AI 实时分析」获取基于变更类型的建议。
         </div>
-      </div>
+      )}
 
       {/* AI Insight */}
       <div className="border border-border rounded px-3 py-2.5 bg-card">
@@ -312,10 +399,13 @@ export default function ChangeTrackerPage() {
 
                   {/* Change content */}
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{CHANGE_TYPE_LABEL[change.change_type]}</p>
+                    <p className="text-xs font-medium text-foreground truncate">{getChangeTypeLabel(change.change_type)}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {change.resource_name}
-                      {change.old_value && change.new_value ? ` · ${change.old_value} → ${change.new_value}` : ''}
+                      {/* If resource_name looks like a raw numeric/tilde ID, use campaign name instead */}
+                      {/^[\d~_]+$/.test(change.resource_name) ? (change.campaign || '—') : (change.resource_name || change.campaign || '—')}
+                      {change.old_value && change.new_value
+                        ? ` · ${parseChangeValue(change.old_value)} → ${parseChangeValue(change.new_value)}`
+                        : ''}
                     </p>
                     <p className="text-xs text-muted-foreground/60">{change.changed_by}</p>
                   </div>

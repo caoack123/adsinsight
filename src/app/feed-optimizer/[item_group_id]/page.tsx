@@ -133,7 +133,7 @@ export default function FeedProductDetailPage({
           <ArrowLeft size={16} />
         </Link>
         <div>
-          <h1 className="text-base font-semibold">{product.product_type.split('>').pop()?.trim()}</h1>
+          <h1 className="text-base font-semibold">{(product.product_type ?? '').split('>').pop()?.trim() || product.item_group_id}</h1>
           <p className="text-xs text-muted-foreground">{product.item_group_id}</p>
         </div>
         <Badge variant="outline" className={cn('text-xs font-semibold px-1.5 ml-auto', tone.badgeClassName)}>
@@ -256,16 +256,16 @@ export default function FeedProductDetailPage({
               <div className="w-full aspect-square rounded bg-muted flex items-center justify-center text-xs text-muted-foreground mb-3 relative overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={product.image_url}
-                  alt={product.current_title}
+                  src={product.image_url ?? ''}
+                  alt={product.current_title ?? product.item_group_id}
                   className="w-full h-full object-contain rounded"
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
                 <span className="absolute text-xs text-muted-foreground">产品图片</span>
               </div>
-              <p className="text-xs font-semibold text-foreground">{product.brand}</p>
-              <p className="text-xs text-muted-foreground">{product.product_type}</p>
-              <p className="text-sm font-bold mt-1">${product.price.toFixed(2)}</p>
+              <p className="text-xs font-semibold text-foreground">{product.brand || '—'}</p>
+              <p className="text-xs text-muted-foreground">{product.product_type || '—'}</p>
+              <p className="text-sm font-bold mt-1">${(product.price || 0).toFixed(2)}</p>
             </CardContent>
           </Card>
 
@@ -300,7 +300,7 @@ export default function FeedProductDetailPage({
             </CardHeader>
             <CardContent className="px-4 pb-3">
               <div className="flex flex-wrap gap-1.5">
-                {product.top_search_terms.map(term => (
+                {(product.top_search_terms ?? []).map(term => (
                   <Badge key={term} variant="outline" className="text-xs">{term}</Badge>
                 ))}
               </div>
@@ -313,8 +313,8 @@ export default function FeedProductDetailPage({
               <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">搜索词覆盖分析</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-3 space-y-2">
-              {product.top_search_terms.map(term => {
-                const inCurrent = getSearchCoverage(term, product.current_title);
+              {(product.top_search_terms ?? []).map(term => {
+                const inCurrent = getSearchCoverage(term, product.current_title ?? '');
                 const inSuggested = getSearchCoverage(term, displayTitle);
                 return (
                   <div key={term} className="flex items-center justify-between gap-2">

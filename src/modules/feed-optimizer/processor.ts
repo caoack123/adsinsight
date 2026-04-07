@@ -10,8 +10,14 @@ function analyzeOneTitle(product: FeedProduct): TitleAnalysis {
   const issues: TitleIssue[] = [];
   let score = 100;
 
+  // Null-safe field access — real DB data may have empty/null fields
+  const title = product.current_title || '';
+  const brand = product.brand || '';
+  const productType = product.product_type || '';
+  const topSearchTerms = Array.isArray(product.top_search_terms) ? product.top_search_terms : [];
+
   // Rule-based checks (these stay even after adding AI)
-  const words = product.current_title.split(' ');
+  const words = title.split(' ').filter(Boolean);
 
   // Check: keyword stuffing (too many generic words)
   if (words.length > 15) {
@@ -23,8 +29,18 @@ function analyzeOneTitle(product: FeedProduct): TitleAnalysis {
     score -= 20;
   }
 
+  // Check: missing title entirely
+  if (!title) {
+    issues.push({
+      type: 'poor_structure',
+      description_zh: '产品标题为空，无法在 Shopping 广告中正常展示',
+      severity: 'high',
+    });
+    score -= 40;
+  }
+
   // Check: missing color
-  const hasColor = /\b(black|white|red|blue|green|gold|silver|pink|purple|ice blue|sage|rose)\b/i.test(product.current_title);
+  const hasColor = /\b(black|white|red|blue|green|gold|silver|pink|purple|ice blue|sage|rose)\b/i.test(title);
   if (!hasColor) {
     issues.push({
       type: 'missing_color',
@@ -35,8 +51,8 @@ function analyzeOneTitle(product: FeedProduct): TitleAnalysis {
   }
 
   // Check: missing material specifics
-  const hasMaterial = /\b(925 silver|sterling silver|14k gold|stainless steel|titanium|leather|suede)\b/i.test(product.current_title);
-  if (!hasMaterial && (product.product_type.includes('Jewelry') || product.product_type.includes('Shoes'))) {
+  const hasMaterial = /\b(925 silver|sterling silver|14k gold|stainless steel|titanium|leather|suede)\b/i.test(title);
+  if (!hasMaterial && (productType.includes('Jewelry') || productType.includes('Shoes'))) {
     issues.push({
       type: 'missing_material',
       description_zh: '缺少具体材质信息（如 "Sterling Silver" 比 "Silver Plated" 更有吸引力）',
@@ -46,9 +62,9 @@ function analyzeOneTitle(product: FeedProduct): TitleAnalysis {
   }
 
   // Check: missing occasion/use case
-  const searchTermsText = product.top_search_terms.join(' ');
+  const searchTermsText = topSearchTerms.join(' ');
   const hasOccasionInSearch = /\b(wedding|gift|christmas|birthday|party|daily|casual|outdoor)\b/i.test(searchTermsText);
-  const hasOccasionInTitle = /\b(wedding|gift|christmas|birthday|party|daily|casual|outdoor)\b/i.test(product.current_title);
+  const hasOccasionInTitle = /\b(wedding|gift|christmas|birthday|party|daily|casual|outdoor)\b/i.test(title);
   if (hasOccasionInSearch && !hasOccasionInTitle) {
     issues.push({
       type: 'missing_occasion',
@@ -59,7 +75,7 @@ function analyzeOneTitle(product: FeedProduct): TitleAnalysis {
   }
 
   // Check: brand not prominent
-  if (!product.current_title.startsWith(product.brand)) {
+  if (brand && title && !title.startsWith(brand)) {
     issues.push({
       type: 'missing_brand',
       description_zh: '品牌名未放在标题开头，影响品牌辨识度',
@@ -69,8 +85,8 @@ function analyzeOneTitle(product: FeedProduct): TitleAnalysis {
   }
 
   // Check: poor structure (no clear hierarchy)
-  const hasDash = product.current_title.includes(' - ');
-  const hasPipe = product.current_title.includes(' | ');
+  const hasDash = title.includes(' - ');
+  const hasPipe = title.includes(' | ');
   if (!hasDash && !hasPipe && words.length > 8) {
     issues.push({
       type: 'poor_structure',
@@ -122,8 +138,8 @@ function generateHardcodedSuggestion(product: FeedProduct): { title: string; rea
   };
 
   return suggestions[product.item_group_id] || {
-    title: product.current_title,
-    reasoning: '暂无优化建议',
+    title: product.current_title || '',
+    reasoning: '暂无针对该产品的具体优化建议，建议补充颜色、材质、使用场景等关键信息。',
   };
 }
 

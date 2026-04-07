@@ -1,21 +1,21 @@
 export interface FeedProduct {
   item_id: string;
   item_group_id: string;
-  current_title: string;
+  current_title: string | null;
   current_title_bad_reason?: string;
-  current_description: string;
-  brand: string;
-  product_type: string;
-  image_url: string;
+  current_description: string | null;
+  brand: string | null;
+  product_type: string | null;
+  image_url: string | null;
   price: number;
-  currency: string;
+  currency: string | null;
   impressions: number;
   clicks: number;
   ctr: number;
   cost: number;
   conversions: number;
   conversions_value: number;
-  top_search_terms: string[];
+  top_search_terms: string[] | null;
 }
 
 export interface TitleAnalysis {

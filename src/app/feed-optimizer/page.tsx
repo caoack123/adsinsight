@@ -130,10 +130,10 @@ export default function FeedOptimizerPage() {
                   <TableRow key={a.product.item_group_id} className="border-border hover:bg-accent/30">
                     <TableCell className="text-sm font-medium pl-4 whitespace-nowrap">
                       <Link href={`/feed-optimizer/${a.product.item_group_id}`} className="text-blue-400 hover:underline">
-                        {a.product.product_type?.split('>').pop()?.trim() || a.product.brand || a.product.item_group_id}
+                        {(a.product.product_type ?? '').split('>').pop()?.trim() || a.product.brand || a.product.item_group_id}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-xs truncate" title={a.product.current_title}>
+                    <TableCell className="text-xs text-muted-foreground max-w-xs truncate" title={a.product.current_title ?? undefined}>
                       {a.product.current_title}
                     </TableCell>
                     <TableCell>
