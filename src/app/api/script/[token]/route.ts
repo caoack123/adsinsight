@@ -108,7 +108,7 @@ function exportChangeHistory() {
     '  campaign.name ' +
     'FROM change_event ' +
     'WHERE change_event.change_date_time >= "' + daysAgo(CONFIG.CHANGE_DAYS) + '" ' +
-    '  AND change_event.change_date_time <= "' + daysAgo(0) + '" ' +
+    '  AND change_event.change_date_time <= "' + dateOnly(0) + ' 23:59:59" ' +
     'ORDER BY change_event.change_date_time DESC ' +
     'LIMIT ' + CONFIG.MAX_CHANGES;
 
@@ -125,7 +125,8 @@ function exportChangeHistory() {
       var campName = (row.campaign && row.campaign.name) ? row.campaign.name : '';
       var changedFields = evt.changedFields || '';
       var changedAt = evt.changeDateTime || new Date().toISOString();
-      var changedDate = changedAt.split('T')[0];
+      // changeDateTime can be "2026-03-25 13:13:15.949402" (space) or ISO "2026-03-25T13:13:15Z"
+      var changedDate = changedAt.split(/[T ]/)[0];
       records.push({
         change_id: changeId,
         change_type: mapChangeType(evt.changeResourceType, evt.resourceChangeOperation),
@@ -164,34 +165,40 @@ function exportChangeHistory() {
       Logger.log('Campaign metrics before: ' + Object.keys(beforeMetrics).length + ' campaigns ('+beforeStart+' to '+beforeEnd+')');
       Logger.log('Campaign metrics after:  ' + Object.keys(afterMetrics).length + ' campaigns ('+afterStart+' to '+afterEnd+')');
 
+      // Zero-metric template for campaigns paused/inactive after the change
+      var emptyMetrics = { impressions: 0, clicks: 0, ctr: 0, cost: 0, conversions: 0, conv_value: 0 };
       for (var k = 0; k < records.length; k++) {
         var camp = records[k]._campaign;
         delete records[k]._change_date;
         delete records[k]._campaign;
-        if (camp && beforeMetrics[camp] && afterMetrics[camp]) {
+        // Require before metrics; after metrics default to 0 if campaign had no activity
+        if (camp && beforeMetrics[camp]) {
+          var bm = beforeMetrics[camp];
+          var am = afterMetrics[camp] || emptyMetrics;
           records[k].performance_before = {
             window_days: 14,
-            impressions: beforeMetrics[camp].impressions,
-            clicks: beforeMetrics[camp].clicks,
-            ctr: beforeMetrics[camp].ctr,
-            cost: beforeMetrics[camp].cost,
-            conversions: beforeMetrics[camp].conversions,
-            conversions_value: beforeMetrics[camp].conv_value,
-            roas: beforeMetrics[camp].cost > 0 ? beforeMetrics[camp].conv_value / beforeMetrics[camp].cost : 0
+            date_start: beforeStart,
+            date_end: beforeEnd,
+            impressions: bm.impressions,
+            clicks: bm.clicks,
+            ctr: bm.ctr,
+            cost: bm.cost,
+            conversions: bm.conversions,
+            conversions_value: bm.conv_value,
+            roas: bm.cost > 0 ? bm.conv_value / bm.cost : 0
           };
           records[k].performance_after = {
-            window_days: 7,
-            impressions: afterMetrics[camp].impressions,
-            clicks: afterMetrics[camp].clicks,
-            ctr: afterMetrics[camp].ctr,
-            cost: afterMetrics[camp].cost,
-            conversions: afterMetrics[camp].conversions,
-            conversions_value: afterMetrics[camp].conv_value,
-            roas: afterMetrics[camp].cost > 0 ? afterMetrics[camp].conv_value / afterMetrics[camp].cost : 0
+            window_days: afterStart <= yesterday ? 7 : 0,
+            date_start: afterStart,
+            date_end: afterEnd,
+            impressions: am.impressions,
+            clicks: am.clicks,
+            ctr: am.ctr,
+            cost: am.cost,
+            conversions: am.conversions,
+            conversions_value: am.conv_value,
+            roas: am.cost > 0 ? am.conv_value / am.cost : 0
           };
-        } else {
-          delete records[k]._change_date;
-          delete records[k]._campaign;
         }
       }
     }
@@ -289,8 +296,7 @@ function getCampaignMetrics(startDate, endDate) {
     '  metrics.conversions, ' +
     '  metrics.conversions_value ' +
     'FROM campaign ' +
-    'WHERE segments.date BETWEEN "' + startDate + '" AND "' + endDate + '" ' +
-    '  AND metrics.impressions > 0';
+    'WHERE segments.date BETWEEN "' + startDate + '" AND "' + endDate + '"';
 
   var result = {};
   try {

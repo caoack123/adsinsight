@@ -152,6 +152,13 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand }: { accountId: st
       }
       const analysis: ABCDAnalysis = await res.json();
       setResult({ videoId, analysis });
+      // Persist so the detail page can render this video even though it's not in DB
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(
+          `video_abcd_manual_${videoId}`,
+          JSON.stringify({ videoId, youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`, analysis }),
+        );
+      }
     } catch (e) {
       setError(String(e));
     } finally {

@@ -16,6 +16,8 @@ export type ResourceType = 'CAMPAIGN' | 'AD_GROUP' | 'AD' | 'KEYWORD';
 
 export interface PerformanceSnapshot {
   window_days: number;
+  date_start?: string;   // YYYY-MM-DD
+  date_end?: string;     // YYYY-MM-DD
   impressions: number;
   clicks: number;
   ctr: number;

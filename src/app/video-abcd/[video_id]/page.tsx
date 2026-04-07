@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import { useSettings } from '@/context/settings-context';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -104,6 +104,119 @@ function CategoryBlock({ catScore }: { catScore: CategoryScore }) {
   );
 }
 
+// ── Manual-analysis-only view (no performance data) ──────────────────────────
+function ManualVideoDetail({ videoId, youtubeUrl, analysis }: { videoId: string; youtubeUrl: string; analysis: ABCDAnalysis }) {
+  const thumbUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <Link href="/video-abcd" className="text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft size={16} />
+        </Link>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-base font-semibold">YouTube 视频分析</h1>
+          <p className="text-xs text-muted-foreground font-mono">{videoId}</p>
+        </div>
+        <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+          <ExternalLink size={12} /> YouTube
+        </a>
+      </div>
+
+      <div className="grid grid-cols-5 gap-4">
+        <div className="col-span-3 space-y-4">
+          <Card className={cn('border', analysis.overall_rating === 'excellent' ? 'border-emerald-500/40 bg-emerald-950/10' : analysis.overall_rating === 'might_improve' ? 'border-amber-500/40 bg-amber-950/10' : 'border-red-500/40 bg-red-950/10')}>
+            <CardContent className="px-4 py-4">
+              <div className="flex items-center gap-4">
+                <div className="text-4xl font-black tabular-nums text-foreground">
+                  {analysis.overall_score}
+                  <span className="text-base font-normal text-muted-foreground">/100</span>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="outline" className={cn('text-xs', RATING_META[analysis.overall_rating].badge)}>
+                      {RATING_META[analysis.overall_rating].label_zh}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">by {analysis.model} · {new Date(analysis.analyzed_at).toLocaleDateString('zh-CN')}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{analysis.summary_zh}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-2 gap-3">
+            {analysis.categories.map(cat => <CategoryBlock key={cat.category} catScore={cat} />)}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="border-emerald-500/30 bg-emerald-950/10">
+              <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-emerald-400 uppercase tracking-wider">优势亮点</CardTitle></CardHeader>
+              <CardContent className="px-4 pb-4">
+                <ul className="space-y-2">
+                  {analysis.top_strengths_zh.map((s, i) => (
+                    <li key={i} className="flex gap-2 text-xs text-muted-foreground">
+                      <CheckCircle2 size={12} className="text-emerald-400 mt-0.5 shrink-0" />{s}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+            <Card className="border-amber-500/30 bg-amber-950/10">
+              <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-amber-400 uppercase tracking-wider">待改进方向</CardTitle></CardHeader>
+              <CardContent className="px-4 pb-4">
+                <ul className="space-y-2">
+                  {analysis.top_improvements_zh.map((s, i) => (
+                    <li key={i} className="flex gap-2 text-xs text-muted-foreground">
+                      <XCircle size={12} className="text-amber-400 mt-0.5 shrink-0" />{s}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <div className="col-span-2 space-y-4">
+          <Card className="border-border overflow-hidden">
+            <div className="relative w-full aspect-video bg-muted">
+              <Image src={thumbUrl} alt="thumbnail" fill className="object-cover" unoptimized />
+            </div>
+            <CardContent className="p-3">
+              <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-blue-400 hover:underline">
+                <ExternalLink size={11} /> 在 YouTube 中打开
+              </a>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border">
+            <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">ABCD 分类得分</CardTitle></CardHeader>
+            <CardContent className="px-4 pb-4 space-y-2">
+              {analysis.categories.map(cat => {
+                const m = CATEGORY_META[cat.category];
+                const r = RATING_META[cat.rating];
+                return (
+                  <div key={cat.category}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={cn('text-xs font-semibold', m.color)}>{m.label_zh}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs tabular-nums text-foreground font-semibold">{cat.score}</span>
+                        <Badge variant="outline" className={cn('text-xs px-1 py-0', r.badge)}>{r.label_zh}</Badge>
+                      </div>
+                    </div>
+                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                      <div className={cn('h-full rounded-full transition-all', m.color.replace('text-', 'bg-'))} style={{ width: `${cat.score}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function VideoDetailPage({
   params,
@@ -118,7 +231,26 @@ export default function VideoDetailPage({
   const [error, setError] = useState<string | null>(null);
   const { settings } = useSettings();
 
+  // For manually-analyzed videos not in static data — check sessionStorage
+  const [manualData, setManualData] = useState<{ youtubeUrl: string; analysis: ABCDAnalysis } | null>(null);
+  const [manualChecked, setManualChecked] = useState(!!video); // skip check if video found in static data
+  useEffect(() => {
+    if (!video) {
+      const stored = typeof window !== 'undefined'
+        ? sessionStorage.getItem(`video_abcd_manual_${video_id}`)
+        : null;
+      if (stored) {
+        try { setManualData(JSON.parse(stored)); } catch { /* ignore */ }
+      }
+      setManualChecked(true);
+    }
+  }, [video_id, video]);
+
   if (!video) {
+    if (!manualChecked) return null; // wait for sessionStorage check
+    if (manualData) {
+      return <ManualVideoDetail videoId={video_id} youtubeUrl={manualData.youtubeUrl} analysis={manualData.analysis} />;
+    }
     return (
       <div className="space-y-4">
         <Link href="/video-abcd" className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm">

@@ -129,6 +129,15 @@ function windowDateRange(changeTimestamp: string, windowDays: number, isBefore: 
   }
 }
 
+/** Format "YYYY-MM-DD" to "M/D" */
+function fmtDateRange(start: string, end: string): string {
+  const fmt = (s: string) => {
+    const [, m, d] = s.split('-');
+    return `${parseInt(m)}/${parseInt(d)}`;
+  };
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+
 function DeltaCell({ value, good, bad }: { value: string; good: boolean; bad: boolean }) {
   return (
     <span className={cn('tabular-nums text-xs font-medium', good && 'text-green-400', bad && 'text-red-400', !good && !bad && 'text-muted-foreground')}>
@@ -203,7 +212,9 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               变更前 {before.window_days} 天
               <span className="ml-1 normal-case font-normal text-muted-foreground/70">
-                ({windowDateRange(change.timestamp, before.window_days, true)})
+                ({before.date_start && before.date_end
+                  ? fmtDateRange(before.date_start, before.date_end)
+                  : windowDateRange(change.timestamp, before.window_days, true)})
               </span>
             </p>
             <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
@@ -227,7 +238,9 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               变更后 {after.window_days} 天
               <span className="ml-1 normal-case font-normal text-muted-foreground/70">
-                ({windowDateRange(change.timestamp, after.window_days, false)})
+                ({after.date_start && after.date_end
+                  ? fmtDateRange(after.date_start, after.date_end)
+                  : windowDateRange(change.timestamp, after.window_days, false)})
               </span>
               <span className="ml-1 normal-case font-normal text-muted-foreground/50 text-[10px]">已换算同期</span>
             </p>
