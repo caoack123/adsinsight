@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useSettings } from '@/context/settings-context';
 import { MODULE_REGISTRY } from '@/lib/modules';
@@ -10,10 +10,90 @@ import { getScoreTone } from '@/lib/feed-optimizer';
 import { getVerdictConfig } from '@/lib/change-tracker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingBag, Video, Eye, Scale, History, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
+import { ShoppingBag, Video, Eye, Scale, History, ChevronRight, AlertCircle, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+} from 'recharts';
 
 const ICON_MAP: Record<string, React.ElementType> = { ShoppingBag, Video, Eye, Scale, History };
+
+// ── Time range options ─────────────────────────────────────────────────────────
+const TIME_RANGES = [
+  { label: '7天', days: 7 },
+  { label: '30天', days: 30 },
+  { label: '90天', days: 90 },
+  { label: '365天', days: 365 },
+] as const;
+
+type DailyRow = {
+  date: string; cost: number; impressions: number; clicks: number;
+  ctr: number; conversions: number; conversions_value: number; roas: number;
+  cpc: number; cvr: number;
+};
+
+// Group daily rows by week or month for cleaner charts when range > 30d
+function groupData(rows: DailyRow[], days: number): { label: string; cost: number; roas: number; ctr: number; cpc: number; cvr: number }[] {
+  if (days <= 30) {
+    return rows.map(r => ({
+      label: r.date.slice(5), // MM-DD
+      cost: r.cost, roas: r.roas, ctr: +(r.ctr * 100).toFixed(2),
+      cpc: r.cpc, cvr: +(r.cvr * 100).toFixed(2),
+    }));
+  }
+
+  // Group by week (for 90d) or month (for 365d)
+  const buckets: Record<string, { cost: number; conv_val: number; clicks: number; impressions: number; conversions: number }> = {};
+  for (const r of rows) {
+    const d = new Date(r.date);
+    let key: string;
+    if (days <= 90) {
+      // Week key: year-week
+      const startOfWeek = new Date(d);
+      startOfWeek.setDate(d.getDate() - d.getDay());
+      key = startOfWeek.toISOString().split('T')[0].slice(5); // MM-DD of week start
+    } else {
+      key = r.date.slice(0, 7); // YYYY-MM
+    }
+    if (!buckets[key]) buckets[key] = { cost: 0, conv_val: 0, clicks: 0, impressions: 0, conversions: 0 };
+    buckets[key].cost += r.cost;
+    buckets[key].conv_val += r.conversions_value;
+    buckets[key].clicks += r.clicks;
+    buckets[key].impressions += r.impressions;
+    buckets[key].conversions += r.conversions;
+  }
+
+  return Object.entries(buckets).sort(([a], [b]) => a.localeCompare(b)).map(([label, b]) => ({
+    label,
+    cost: +b.cost.toFixed(2),
+    roas: b.cost > 0 ? +(b.conv_val / b.cost).toFixed(2) : 0,
+    ctr: b.impressions > 0 ? +((b.clicks / b.impressions) * 100).toFixed(2) : 0,
+    cpc: b.clicks > 0 ? +(b.cost / b.clicks).toFixed(2) : 0,
+    cvr: b.clicks > 0 ? +((b.conversions / b.clicks) * 100).toFixed(2) : 0,
+  }));
+}
+
+// Compute period totals for KPI comparison
+function periodTotals(rows: DailyRow[]) {
+  const half = Math.floor(rows.length / 2);
+  const prev = rows.slice(0, half);
+  const curr = rows.slice(half);
+  function agg(arr: DailyRow[]) {
+    const cost = arr.reduce((s, r) => s + r.cost, 0);
+    const clicks = arr.reduce((s, r) => s + r.clicks, 0);
+    const impressions = arr.reduce((s, r) => s + r.impressions, 0);
+    const conversions = arr.reduce((s, r) => s + r.conversions, 0);
+    const conv_val = arr.reduce((s, r) => s + r.conversions_value, 0);
+    return {
+      cost, clicks, impressions, conversions, conv_val,
+      roas: cost > 0 ? conv_val / cost : 0,
+      cpc: clicks > 0 ? cost / clicks : 0,
+      ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
+      cvr: clicks > 0 ? (conversions / clicks) * 100 : 0,
+    };
+  }
+  return { curr: agg(curr), prev: agg(prev) };
+}
 
 export default function OverviewPage() {
   const { selectedAccountId } = useSettings();
@@ -24,6 +104,12 @@ export default function OverviewPage() {
   const [feedAlerts, setFeedAlerts] = useState<{ id: string; title: string; score: number; summary: string; estimatedCtrLift: string }[]>([]);
   const [changeAlerts, setChangeAlerts] = useState<{ id: string; resource: string; verdict: string; insight_zh: string }[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Performance chart state
+  const [perfDays, setPerfDays] = useState(30);
+  const [perfData, setPerfData] = useState<DailyRow[]>([]);
+  const [perfLoading, setPerfLoading] = useState(true);
+  const [activeMetric, setActiveMetric] = useState<'cost' | 'roas' | 'ctr' | 'cpc' | 'cvr'>('cost');
 
   useEffect(() => {
     setLoading(true);
@@ -86,8 +172,29 @@ export default function OverviewPage() {
       .finally(() => setLoading(false));
   }, [selectedAccountId]);
 
+  // Fetch performance data separately (re-runs when account or range changes)
+  useEffect(() => {
+    setPerfLoading(true);
+    fetch(`/api/data/performance?account_id=${selectedAccountId}&days=${perfDays}`)
+      .then(r => r.json())
+      .then(d => setPerfData(d.data ?? []))
+      .catch(() => setPerfData([]))
+      .finally(() => setPerfLoading(false));
+  }, [selectedAccountId, perfDays]);
+
   const enabledModules = Object.entries(MODULE_REGISTRY).filter(([, m]) => m.enabled);
   const disabledModules = Object.entries(MODULE_REGISTRY).filter(([, m]) => !m.enabled);
+
+  const chartData = useMemo(() => groupData(perfData, perfDays), [perfData, perfDays]);
+  const kpi = useMemo(() => perfData.length > 0 ? periodTotals(perfData) : null, [perfData]);
+
+  const METRIC_CONFIG = {
+    cost:  { label: '消耗 ($)', color: '#60a5fa', format: (v: number) => `$${v.toFixed(2)}`, unit: '$' },
+    roas:  { label: 'ROAS',     color: '#34d399', format: (v: number) => `${v.toFixed(2)}x`,  unit: 'x' },
+    ctr:   { label: 'CTR (%)',  color: '#f472b6', format: (v: number) => `${v.toFixed(2)}%`,  unit: '%' },
+    cpc:   { label: 'CPC ($)',  color: '#fb923c', format: (v: number) => `$${v.toFixed(2)}`,  unit: '$' },
+    cvr:   { label: 'CVR (%)',  color: '#a78bfa', format: (v: number) => `${v.toFixed(2)}%`,  unit: '%' },
+  } as const;
 
   return (
     <div className="space-y-6">
@@ -194,6 +301,138 @@ export default function OverviewPage() {
           })}
         </div>
       </div>
+
+      {/* Account Performance Chart */}
+      <Card className="border-border">
+        <CardHeader className="pb-2 pt-4 px-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <TrendingUp size={14} className="text-blue-400" />
+              账户整体表现
+              {perfLoading && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
+            </CardTitle>
+            {/* Time range tabs */}
+            <div className="flex gap-1">
+              {TIME_RANGES.map(tr => (
+                <button
+                  key={tr.days}
+                  onClick={() => setPerfDays(tr.days)}
+                  className={cn(
+                    'text-xs px-2.5 py-1 rounded border transition-colors',
+                    perfDays === tr.days
+                      ? 'border-blue-500/60 bg-blue-950/30 text-blue-300'
+                      : 'border-border text-muted-foreground hover:border-border/80 hover:bg-accent/20'
+                  )}
+                >
+                  {tr.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Metric selector */}
+          <div className="flex gap-1 mt-2 flex-wrap">
+            {(Object.entries(METRIC_CONFIG) as [keyof typeof METRIC_CONFIG, (typeof METRIC_CONFIG)[keyof typeof METRIC_CONFIG]][]).map(([key, cfg]) => (
+              <button
+                key={key}
+                onClick={() => setActiveMetric(key)}
+                className={cn(
+                  'text-xs px-2.5 py-1 rounded transition-colors',
+                  activeMetric === key ? 'bg-accent text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {cfg.label}
+              </button>
+            ))}
+          </div>
+        </CardHeader>
+        <CardContent className="px-2 pb-4">
+          {/* KPI comparison row */}
+          {kpi && (
+            <div className="grid grid-cols-5 gap-2 mb-4 px-2">
+              {([
+                { key: 'cost',  label: '消耗',  curr: kpi.curr.cost,  prev: kpi.prev.cost,  fmt: (v: number) => `$${v.toFixed(0)}`,  higherIsBad: true },
+                { key: 'roas',  label: 'ROAS',  curr: kpi.curr.roas,  prev: kpi.prev.roas,  fmt: (v: number) => `${v.toFixed(2)}x`,  higherIsBad: false },
+                { key: 'cpc',   label: 'CPC',   curr: kpi.curr.cpc,   prev: kpi.prev.cpc,   fmt: (v: number) => `$${v.toFixed(2)}`,  higherIsBad: true },
+                { key: 'ctr',   label: 'CTR',   curr: kpi.curr.ctr,   prev: kpi.prev.ctr,   fmt: (v: number) => `${v.toFixed(2)}%`,  higherIsBad: false },
+                { key: 'cvr',   label: 'CVR',   curr: kpi.curr.cvr,   prev: kpi.prev.cvr,   fmt: (v: number) => `${v.toFixed(2)}%`,  higherIsBad: false },
+              ] as const).map(({ key, label, curr, prev, fmt, higherIsBad }) => {
+                const delta = prev > 0 ? ((curr - prev) / prev) * 100 : 0;
+                const isUp = delta > 0.5;
+                const isDown = delta < -0.5;
+                const isGood = higherIsBad ? isDown : isUp;
+                const isBad = higherIsBad ? isUp : isDown;
+                return (
+                  <div key={key} className={cn(
+                    'rounded p-2 border',
+                    activeMetric === key ? 'border-blue-500/40 bg-blue-950/20' : 'border-border bg-card/50'
+                  )}>
+                    <p className="text-xs text-muted-foreground">{label}</p>
+                    <p className="text-sm font-bold tabular-nums">{fmt(curr)}</p>
+                    {Math.abs(delta) > 0.5 && (
+                      <div className={cn(
+                        'flex items-center gap-0.5 text-xs',
+                        isGood && 'text-green-400',
+                        isBad && 'text-red-400',
+                        !isGood && !isBad && 'text-muted-foreground'
+                      )}>
+                        {isUp ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                        {delta > 0 ? '+' : ''}{delta.toFixed(1)}%
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Chart */}
+          {perfData.length === 0 && !perfLoading ? (
+            <div className="h-40 flex items-center justify-center text-xs text-muted-foreground">
+              暂无性能数据。运行 Google Ads 脚本后将显示 {perfDays} 天趋势图。
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="perfGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={METRIC_CONFIG[activeMetric].color} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={METRIC_CONFIG[activeMetric].color} stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 10, fill: '#6b7280' }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: '#6b7280' }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={v => METRIC_CONFIG[activeMetric].unit === '$' ? `$${v}` : `${v}${METRIC_CONFIG[activeMetric].unit}`}
+                  width={48}
+                />
+                <Tooltip
+                  contentStyle={{ background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', fontSize: '11px' }}
+                  formatter={(value) => [METRIC_CONFIG[activeMetric].format(Number(value ?? 0)), METRIC_CONFIG[activeMetric].label]}
+                  labelStyle={{ color: '#9ca3af' }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey={activeMetric}
+                  stroke={METRIC_CONFIG[activeMetric].color}
+                  strokeWidth={1.5}
+                  fill="url(#perfGrad)"
+                  dot={false}
+                  activeDot={{ r: 3 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Coming soon */}
       <div>

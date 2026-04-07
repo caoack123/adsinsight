@@ -185,6 +185,34 @@ export async function upsertVideoAds(
   return data?.length ?? 0;
 }
 
+// ─── Performance Daily ────────────────────────────────────────────────────────
+
+export async function upsertPerformanceDaily(
+  accountId: string,
+  records: Array<Record<string, unknown>>
+): Promise<number> {
+  const db = createServerClient();
+  const rows = records.map(r => ({ ...r, account_id: accountId }));
+  const { data, error } = await db
+    .from('performance_daily')
+    .upsert(rows, { onConflict: 'account_id,date,campaign_name' })
+    .select('id');
+  if (error) throw error;
+  return data?.length ?? 0;
+}
+
+export async function getPerformanceDaily(accountId: string, startDate: string) {
+  const db = createServerClient();
+  const { data, error } = await db
+    .from('performance_daily')
+    .select('*')
+    .eq('account_id', accountId)
+    .gte('date', startDate)
+    .order('date', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getVideoAds(accountId: string) {
   const db = createServerClient();
   const { data, error } = await db

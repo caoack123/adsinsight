@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useSettings } from '@/context/settings-context';
 import {
-  CLAUDE_MODELS,
+  TEXT_MODELS,
   GEMINI_MODELS,
-  type ClaudeModel,
+  type TextModel,
   type GeminiModel,
 } from '@/lib/settings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -182,11 +182,11 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <div>
               <p className="text-xs font-medium text-foreground">Feed 智能优化 — 标题生成</p>
-              <p className="text-xs text-muted-foreground">通过 OpenRouter 调用，生成优化后的 Product Title</p>
+              <p className="text-xs text-muted-foreground">Claude 需要 OpenRouter Key；Google 模型可直接使用 Google AI Key</p>
             </div>
             <div className="space-y-1.5">
-              {CLAUDE_MODELS.map(m => (
-                <ModelCard<ClaudeModel>
+              {TEXT_MODELS.map(m => (
+                <ModelCard<TextModel>
                   key={m.value}
                   value={m.value}
                   current={settings.feedOptimizerModel}
@@ -204,11 +204,11 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <div>
               <p className="text-xs font-medium text-foreground">变更追踪 — 效果分析</p>
-              <p className="text-xs text-muted-foreground">通过 OpenRouter 调用，解读变更前后的效果数据</p>
+              <p className="text-xs text-muted-foreground">Claude 需要 OpenRouter Key；Google 模型可直接使用 Google AI Key（无需额外配置）</p>
             </div>
             <div className="space-y-1.5">
-              {CLAUDE_MODELS.map(m => (
-                <ModelCard<ClaudeModel>
+              {TEXT_MODELS.map(m => (
+                <ModelCard<TextModel>
                   key={m.value}
                   value={m.value}
                   current={settings.changeTrackerModel}

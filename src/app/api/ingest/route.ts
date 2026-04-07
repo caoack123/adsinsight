@@ -14,6 +14,7 @@ import {
   upsertFeedProducts,
   upsertChangeRecords,
   upsertVideoAds,
+  upsertPerformanceDaily,
 } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
@@ -51,17 +52,22 @@ export async function POST(request: NextRequest) {
       upserted = await upsertChangeRecords(account.id, records);
     } else if (data_type === 'videos') {
       upserted = await upsertVideoAds(account.id, records);
+    } else if (data_type === 'performance') {
+      upserted = await upsertPerformanceDaily(account.id, records);
     } else {
       return NextResponse.json({ error: `Unknown data_type: ${data_type}` }, { status: 400 });
     }
 
     await touchAccountSync(account.id);
-    await writeSyncLog({
-      account_id: account.id,
-      data_type: data_type as 'feed' | 'changes' | 'videos',
-      records_upserted: upserted,
-      status: 'success',
-    });
+    // Only log to sync_logs for the main data types (performance logs separately)
+    if (['feed', 'changes', 'videos'].includes(data_type)) {
+      await writeSyncLog({
+        account_id: account.id,
+        data_type: data_type as 'feed' | 'changes' | 'videos',
+        records_upserted: upserted,
+        status: 'success',
+      });
+    }
 
     return NextResponse.json({
       ok: true,
@@ -70,13 +76,15 @@ export async function POST(request: NextRequest) {
       records_upserted: upserted,
     });
   } catch (err) {
-    await writeSyncLog({
-      account_id: account.id,
-      data_type: data_type as 'feed' | 'changes' | 'videos',
-      records_upserted: 0,
-      status: 'error',
-      error_message: String(err),
-    }).catch(() => {});
+    if (['feed', 'changes', 'videos'].includes(data_type)) {
+      await writeSyncLog({
+        account_id: account.id,
+        data_type: data_type as 'feed' | 'changes' | 'videos',
+        records_upserted: 0,
+        status: 'error',
+        error_message: String(err),
+      }).catch(() => {});
+    }
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }

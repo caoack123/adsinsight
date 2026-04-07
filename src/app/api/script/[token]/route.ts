@@ -34,6 +34,7 @@ function main() {
   Logger.log('=== AdInsight AI export started ===');
   exportFeedProducts();
   exportChangeHistory();
+  exportDailyPerformance();
   Logger.log('=== AdInsight AI export finished ===');
 }
 
@@ -90,7 +91,7 @@ function exportFeedProducts() {
   }
 }
 
-// ── 2. Account Change History ─────────────────────────────────────────────────
+// ── 2. Account Change History (with before/after performance) ─────────────────
 function exportChangeHistory() {
   var query =
     'SELECT ' +
@@ -121,6 +122,8 @@ function exportChangeHistory() {
 
       var campName = (row.campaign && row.campaign.name) ? row.campaign.name : '';
       var changedFields = evt.changedFields || '';
+      var changedAt = evt.changeDateTimeAsString || new Date().toISOString();
+      var changedDate = changedAt.split('T')[0];
       records.push({
         change_id: changeId,
         change_type: mapChangeType(evt.changeResourceType, evt.resourceChangeOperation),
@@ -129,13 +132,62 @@ function exportChangeHistory() {
         campaign: campName,
         ad_group: null,
         changed_by: evt.userEmail || 'Google Ads',
-        changed_at: evt.changeDateTimeAsString || new Date().toISOString(),
+        changed_at: changedAt,
         old_value: extractChangedFields(changedFields, evt.oldResource),
         new_value: extractChangedFields(changedFields, evt.newResource),
+        _change_date: changedDate,      // temp field for perf lookup
+        _campaign: campName,
         performance_before: null,
         performance_after: null
       });
     }
+
+    // Attach before/after performance snapshots
+    if (records.length > 0) {
+      // Find the earliest change date to anchor the before/after windows
+      var changeDate = records[0]._change_date || daysAgo(0);
+      var beforeStart = daysBeforeDate(changeDate, 14);
+      var beforeEnd   = daysBeforeDate(changeDate, 1);
+      var afterStart  = changeDate;
+      var afterEnd    = daysAfterDate(changeDate, 7);
+
+      var beforeMetrics = getCampaignMetrics(beforeStart, beforeEnd);
+      var afterMetrics  = getCampaignMetrics(afterStart, afterEnd);
+      Logger.log('Campaign metrics before: ' + Object.keys(beforeMetrics).length + ' campaigns');
+      Logger.log('Campaign metrics after:  ' + Object.keys(afterMetrics).length + ' campaigns');
+
+      for (var k = 0; k < records.length; k++) {
+        var camp = records[k]._campaign;
+        delete records[k]._change_date;
+        delete records[k]._campaign;
+        if (camp && beforeMetrics[camp] && afterMetrics[camp]) {
+          records[k].performance_before = {
+            window_days: 14,
+            impressions: beforeMetrics[camp].impressions,
+            clicks: beforeMetrics[camp].clicks,
+            ctr: beforeMetrics[camp].ctr,
+            cost: beforeMetrics[camp].cost,
+            conversions: beforeMetrics[camp].conversions,
+            conversions_value: beforeMetrics[camp].conv_value,
+            roas: beforeMetrics[camp].cost > 0 ? beforeMetrics[camp].conv_value / beforeMetrics[camp].cost : 0
+          };
+          records[k].performance_after = {
+            window_days: 7,
+            impressions: afterMetrics[camp].impressions,
+            clicks: afterMetrics[camp].clicks,
+            ctr: afterMetrics[camp].ctr,
+            cost: afterMetrics[camp].cost,
+            conversions: afterMetrics[camp].conversions,
+            conversions_value: afterMetrics[camp].conv_value,
+            roas: afterMetrics[camp].cost > 0 ? afterMetrics[camp].conv_value / afterMetrics[camp].cost : 0
+          };
+        } else {
+          delete records[k]._change_date;
+          delete records[k]._campaign;
+        }
+      }
+    }
+
     Logger.log('Changes: ' + records.length + ' events');
     postData('changes', records);
   } catch (e) {
@@ -203,6 +255,103 @@ function daysAgo(n) {
   var d = new Date();
   d.setDate(d.getDate() - n);
   return d.toISOString().split('T')[0] + ' 00:00:00';
+}
+
+function daysBeforeDate(dateStr, n) {
+  var d = new Date(dateStr);
+  d.setDate(d.getDate() - n);
+  return d.toISOString().split('T')[0];
+}
+
+function daysAfterDate(dateStr, n) {
+  var d = new Date(dateStr);
+  d.setDate(d.getDate() + n);
+  var today = new Date().toISOString().split('T')[0];
+  var result = d.toISOString().split('T')[0];
+  return result < today ? result : today;
+}
+
+// Returns map of campaign_name → aggregated metrics
+function getCampaignMetrics(startDate, endDate) {
+  var query =
+    'SELECT campaign.name, ' +
+    '  metrics.impressions, ' +
+    '  metrics.clicks, ' +
+    '  metrics.cost_micros, ' +
+    '  metrics.conversions, ' +
+    '  metrics.conversions_value ' +
+    'FROM campaign ' +
+    'WHERE segments.date BETWEEN "' + startDate + '" AND "' + endDate + '" ' +
+    '  AND metrics.impressions > 0';
+
+  var result = {};
+  try {
+    var report = AdsApp.search(query);
+    while (report.hasNext()) {
+      var row = report.next();
+      var name = (row.campaign && row.campaign.name) ? row.campaign.name : '';
+      if (!name) continue;
+      if (!result[name]) {
+        result[name] = { impressions: 0, clicks: 0, cost: 0, conversions: 0, conv_value: 0 };
+      }
+      result[name].impressions += parseInt(row.metrics.impressions) || 0;
+      result[name].clicks     += parseInt(row.metrics.clicks) || 0;
+      result[name].cost       += (parseInt(row.metrics.costMicros) || 0) / 1000000;
+      result[name].conversions += parseFloat(row.metrics.conversions) || 0;
+      result[name].conv_value += parseFloat(row.metrics.conversionsValue) || 0;
+    }
+    // Derive CTR and ROAS
+    Object.keys(result).forEach(function(n) {
+      var m = result[n];
+      m.ctr  = m.impressions > 0 ? m.clicks / m.impressions : 0;
+      m.roas = m.cost > 0 ? m.conv_value / m.cost : 0;
+    });
+  } catch (e) {
+    Logger.log('getCampaignMetrics error: ' + e.message);
+  }
+  return result;
+}
+
+// ── 3. Daily Performance (last 365 days) ─────────────────────────────────────
+function exportDailyPerformance() {
+  var query =
+    'SELECT segments.date, campaign.name, ' +
+    '  metrics.impressions, ' +
+    '  metrics.clicks, ' +
+    '  metrics.cost_micros, ' +
+    '  metrics.conversions, ' +
+    '  metrics.conversions_value, ' +
+    '  metrics.ctr, ' +
+    '  metrics.average_cpc ' +
+    'FROM campaign ' +
+    'WHERE segments.date DURING LAST_365_DAYS ' +
+    '  AND metrics.cost_micros > 0 ' +
+    'ORDER BY segments.date ASC';
+
+  var records = [];
+  try {
+    var report = AdsApp.search(query);
+    while (report.hasNext()) {
+      var row = report.next();
+      var cost = (parseInt(row.metrics.costMicros) || 0) / 1000000;
+      var avgCpc = (parseInt(row.metrics.averageCpc) || 0) / 1000000;
+      records.push({
+        date: row.segments.date,
+        campaign_name: (row.campaign && row.campaign.name) ? row.campaign.name : '',
+        impressions: parseInt(row.metrics.impressions) || 0,
+        clicks: parseInt(row.metrics.clicks) || 0,
+        cost: parseFloat(cost.toFixed(4)),
+        conversions: parseFloat(row.metrics.conversions) || 0,
+        conversions_value: parseFloat(row.metrics.conversionsValue) || 0,
+        ctr: parseFloat(row.metrics.ctr) || 0,
+        average_cpc: parseFloat(avgCpc.toFixed(4))
+      });
+    }
+    Logger.log('Daily performance: ' + records.length + ' rows');
+    postData('performance', records);
+  } catch (e) {
+    Logger.log('Daily performance export error: ' + e.message);
+  }
 }
 
 // ── Auto-execute when eval'd by loader script ─────────────────────────────────
