@@ -312,19 +312,23 @@ function getCampaignMetrics(startDate, endDate) {
   return result;
 }
 
-// ── 3. Daily Performance (last 365 days) ─────────────────────────────────────
+// ── 3. Daily Performance (last 365 days, batched) ────────────────────────────
 function exportDailyPerformance() {
+  // GAQL BETWEEN needs plain YYYY-MM-DD (not the datetime format daysAgo() returns)
+  var startDate = dateOnly(365);
+  var endDate   = dateOnly(0);
+
   var query =
-    'SELECT segments.date, campaign.name, ' +
+    'SELECT ' +
+    '  segments.date, ' +
+    '  campaign.name, ' +
     '  metrics.impressions, ' +
     '  metrics.clicks, ' +
     '  metrics.cost_micros, ' +
     '  metrics.conversions, ' +
-    '  metrics.conversions_value, ' +
-    '  metrics.ctr, ' +
-    '  metrics.average_cpc ' +
+    '  metrics.conversions_value ' +
     'FROM campaign ' +
-    'WHERE segments.date DURING LAST_365_DAYS ' +
+    'WHERE segments.date BETWEEN "' + startDate + '" AND "' + endDate + '" ' +
     '  AND metrics.cost_micros > 0 ' +
     'ORDER BY segments.date ASC';
 
@@ -334,24 +338,38 @@ function exportDailyPerformance() {
     while (report.hasNext()) {
       var row = report.next();
       var cost = (parseInt(row.metrics.costMicros) || 0) / 1000000;
-      var avgCpc = (parseInt(row.metrics.averageCpc) || 0) / 1000000;
+      var clicks = parseInt(row.metrics.clicks) || 0;
       records.push({
         date: row.segments.date,
         campaign_name: (row.campaign && row.campaign.name) ? row.campaign.name : '',
         impressions: parseInt(row.metrics.impressions) || 0,
-        clicks: parseInt(row.metrics.clicks) || 0,
+        clicks: clicks,
         cost: parseFloat(cost.toFixed(4)),
         conversions: parseFloat(row.metrics.conversions) || 0,
-        conversions_value: parseFloat(row.metrics.conversionsValue) || 0,
-        ctr: parseFloat(row.metrics.ctr) || 0,
-        average_cpc: parseFloat(avgCpc.toFixed(4))
+        conversions_value: parseFloat((parseFloat(row.metrics.conversionsValue) || 0).toFixed(2)),
+        ctr: clicks > 0 ? parseFloat(((parseInt(row.metrics.clicks) || 0) / (parseInt(row.metrics.impressions) || 1)).toFixed(6)) : 0,
+        average_cpc: clicks > 0 ? parseFloat((cost / clicks).toFixed(4)) : 0
       });
     }
-    Logger.log('Daily performance: ' + records.length + ' rows');
-    postData('performance', records);
+    Logger.log('Daily performance: ' + records.length + ' rows, sending in batches...');
+
+    // Send in batches of 200 to avoid payload size / timeout issues
+    var BATCH = 200;
+    for (var i = 0; i < records.length; i += BATCH) {
+      var batch = records.slice(i, i + BATCH);
+      Logger.log('Performance batch ' + (Math.floor(i / BATCH) + 1) + ': ' + batch.length + ' rows');
+      postData('performance', batch);
+    }
   } catch (e) {
     Logger.log('Daily performance export error: ' + e.message);
   }
+}
+
+// Returns plain YYYY-MM-DD, n days ago
+function dateOnly(n) {
+  var d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().split('T')[0];
 }
 
 // ── Auto-execute when eval'd by loader script ─────────────────────────────────
