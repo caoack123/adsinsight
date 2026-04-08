@@ -37,13 +37,53 @@ interface GroupRow {
   priceMax: number;
 }
 
-// Extract the parent product name — strips variant info after " | " (Shopify format)
-// e.g. "3L Baggy Realm Down Ski Jacket - Unisex | Doorek Black / M" → "3L Baggy Realm Down Ski Jacket - Unisex"
+// ── Variant option detection ──────────────────────────────────────────────────
+// Returns true if a slash-separated segment looks like a variant attribute
+// (size code, color word, or any short ≤15-char / ≤2-word string)
+const SIZES = new Set(['xs','s','m','l','xl','xxl','2xl','3xl','xxxl','os','one size','regular','slim','wide','petite','plus','free size','universal']);
+
+function isVariantSegment(seg: string): boolean {
+  const s = seg.trim();
+  if (!s) return false;
+  const lower = s.toLowerCase();
+  if (SIZES.has(lower)) return true;                          // exact size token
+  if (/^\d{1,3}$/.test(lower)) return true;                  // numeric size: 32, 38, 10
+  if (s.length <= 3) return true;                             // very short: "M", "XL", "EU"
+  if (s.length <= 15 && s.split(/\s+/).length <= 2) return true; // "Sky Blue", "Dark Navy"
+  return false;
+}
+
+// Extract parent product title by stripping variant suffixes.
+// Handles three common Shopify/GMC patterns:
+//  1. Pipe:  "Jacket - Unisex | Doorek Black / M"   → "Jacket - Unisex"
+//  2. Slash: "Linen Dress / Ivory / S"               → "Linen Dress"
+//  3. Slash: "Rain Jacket / FPA Cream White / M"     → "Rain Jacket"
 function extractParentTitle(analysis: TitleAnalysis): string {
-  const title = analysis.product.current_title ?? '';
+  const title = (analysis.product.current_title ?? '').trim();
+  if (!title) return analysis.product.item_group_id;
+
+  // Pattern 1: pipe separator (common for Doorek/snowoutfit style)
   const pipeIdx = title.indexOf(' | ');
-  if (pipeIdx > 0) return title.slice(0, pipeIdx).trim();
-  return title || analysis.product.item_group_id;
+  if (pipeIdx > 5) return title.slice(0, pipeIdx).trim();
+
+  // Pattern 2: slash separator — strip trailing short segments from the right
+  // Split on " / " (with spaces) so slashes inside words like "50/50" are safe
+  const parts = title.split(' / ');
+  if (parts.length >= 2) {
+    let cutAt = parts.length;
+    for (let i = parts.length - 1; i >= 1; i--) {
+      if (isVariantSegment(parts[i])) {
+        cutAt = i;
+      } else {
+        break; // stop as soon as a segment doesn't look like a variant option
+      }
+    }
+    if (cutAt < parts.length) {
+      return parts.slice(0, cutAt).join(' / ').trim();
+    }
+  }
+
+  return title;
 }
 
 // Aggregate variants by parent product title (strips color/size suffix)
