@@ -33,6 +33,7 @@ var CONFIG = {
 function main() {
   Logger.log('=== AdInsight AI export started ===');
   exportFeedProducts();
+  exportSearchTerms();
   exportChangeHistory();
   exportDailyPerformance();
   Logger.log('=== AdInsight AI export finished ===');
@@ -71,9 +72,10 @@ function exportFeedProducts() {
       var conversions = parseFloat(row.metrics.conversions) || 0;
       var convValue = parseFloat(row.metrics.conversionsValue) || 0;
 
+      var variantId = row.segments.productItemId || '';
       records.push({
-        item_group_id: row.segments.productItemId || '',
-        item_id: row.segments.productItemId || '',
+        item_id: variantId,
+        item_group_id: extractGroupId(variantId),
         current_title: row.segments.productTitle || '',
         brand: row.segments.productBrand || '',
         product_type: row.segments.productTypeL1 || '',
@@ -93,7 +95,64 @@ function exportFeedProducts() {
   }
 }
 
-// ── 2. Account Change History (with before/after performance) ─────────────────
+// ── 2. Search Terms (last 90 days) ───────────────────────────────────────────
+function exportSearchTerms() {
+  var startDate = dateOnly(90);
+  var endDate   = dateOnly(0);
+
+  var query =
+    'SELECT ' +
+    '  search_term_view.search_term, ' +
+    '  search_term_view.status, ' +
+    '  campaign.name, ' +
+    '  ad_group.name, ' +
+    '  metrics.impressions, ' +
+    '  metrics.clicks, ' +
+    '  metrics.cost_micros, ' +
+    '  metrics.conversions, ' +
+    '  metrics.conversions_value ' +
+    'FROM search_term_view ' +
+    'WHERE segments.date BETWEEN "' + startDate + '" AND "' + endDate + '" ' +
+    '  AND metrics.clicks > 0 ' +
+    'ORDER BY metrics.clicks DESC ' +
+    'LIMIT 3000';
+
+  var records = [];
+  try {
+    var report = AdsApp.search(query);
+    while (report.hasNext()) {
+      var row = report.next();
+      var cost = (parseInt(row.metrics.costMicros) || 0) / 1000000;
+      var clicks = parseInt(row.metrics.clicks) || 0;
+      var impr = parseInt(row.metrics.impressions) || 0;
+      var conversions = parseFloat(row.metrics.conversions) || 0;
+      var convValue = parseFloat(row.metrics.conversionsValue) || 0;
+      records.push({
+        search_term: (row.searchTermView && row.searchTermView.searchTerm) ? row.searchTermView.searchTerm : '',
+        status: (row.searchTermView && row.searchTermView.status) ? row.searchTermView.status : '',
+        campaign: (row.campaign && row.campaign.name) ? row.campaign.name : '',
+        ad_group: (row.adGroup && row.adGroup.name) ? row.adGroup.name : '',
+        impressions: impr,
+        clicks: clicks,
+        cost: parseFloat(cost.toFixed(4)),
+        conversions: parseFloat(conversions.toFixed(2)),
+        conversions_value: parseFloat(convValue.toFixed(2)),
+        ctr: impr > 0 ? parseFloat((clicks / impr).toFixed(6)) : 0,
+        cvr: clicks > 0 ? parseFloat((conversions / clicks).toFixed(6)) : 0
+      });
+    }
+    Logger.log('Search terms: ' + records.length + ' terms');
+    // Send in batches to avoid payload limits
+    var BATCH = 500;
+    for (var i = 0; i < records.length; i += BATCH) {
+      postData('search_terms', records.slice(i, i + BATCH));
+    }
+  } catch (e) {
+    Logger.log('Search terms export error: ' + e.message);
+  }
+}
+
+// ── 3. Account Change History (with before/after performance) ─────────────────
 function exportChangeHistory() {
   var query =
     'SELECT ' +
@@ -211,6 +270,21 @@ function exportChangeHistory() {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+// Extract parent product group ID from a variant item ID.
+// Shopify IDs look like "shopify_US_8823064191278_47476012286254"
+// → group ID = "shopify_US_8823064191278" (drop last segment)
+// WooCommerce: "woocommerce_12345_67890" → "woocommerce_12345"
+// If format is unknown, return the ID as-is (single variant = its own group)
+function extractGroupId(itemId) {
+  if (!itemId) return itemId;
+  var parts = itemId.split('_');
+  // Shopify format: platform_locale_productId_variantId (≥4 parts)
+  if (parts.length >= 4 && (parts[0] === 'shopify' || parts[0] === 'woocommerce')) {
+    return parts.slice(0, parts.length - 1).join('_');
+  }
+  return itemId;
+}
 
 function mapChangeType(resourceType, operation) {
   var op = (operation || '').toUpperCase();

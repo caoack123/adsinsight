@@ -125,7 +125,7 @@ export async function upsertFeedProducts(
   const rows = products.map(p => ({ ...p, account_id: accountId }));
   const { data, error } = await db
     .from('feed_products')
-    .upsert(rows, { onConflict: 'account_id,item_group_id' })
+    .upsert(rows, { onConflict: 'account_id,item_id' })
     .select('id');
   if (error) throw error;
   return data?.length ?? 0;
@@ -220,6 +220,33 @@ export async function getVideoAds(accountId: string) {
     .select('*')
     .eq('account_id', accountId)
     .order('synced_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+// ─── Search Terms ─────────────────────────────────────────────────────────────
+
+export async function upsertSearchTerms(
+  accountId: string,
+  records: Array<Record<string, unknown>>
+): Promise<number> {
+  const db = createServerClient();
+  const rows = records.map(r => ({ ...r, account_id: accountId }));
+  const { data, error } = await db
+    .from('search_terms')
+    .upsert(rows, { onConflict: 'account_id,search_term,campaign' })
+    .select('id');
+  if (error) throw error;
+  return data?.length ?? 0;
+}
+
+export async function getSearchTerms(accountId: string) {
+  const db = createServerClient();
+  const { data, error } = await db
+    .from('search_terms')
+    .select('*')
+    .eq('account_id', accountId)
+    .order('clicks', { ascending: false });
   if (error) throw error;
   return data ?? [];
 }

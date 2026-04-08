@@ -15,6 +15,7 @@ import {
   upsertChangeRecords,
   upsertVideoAds,
   upsertPerformanceDaily,
+  upsertSearchTerms,
 } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
@@ -54,6 +55,8 @@ export async function POST(request: NextRequest) {
       upserted = await upsertVideoAds(account.id, records);
     } else if (data_type === 'performance') {
       upserted = await upsertPerformanceDaily(account.id, records);
+    } else if (data_type === 'search_terms') {
+      upserted = await upsertSearchTerms(account.id, records);
     } else {
       return NextResponse.json({ error: `Unknown data_type: ${data_type}` }, { status: 400 });
     }

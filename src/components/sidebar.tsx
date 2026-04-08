@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingBag, Settings, Wrench, History, Video, Building2 } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Settings, Wrench, History, Video, Building2, SearchCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/', label: '总览', icon: LayoutDashboard },
   { href: '/feed-optimizer', label: 'Feed 智能优化', icon: ShoppingBag },
+  { href: '/search-terms', label: '搜索词分析', icon: SearchCode },
   { href: '/change-tracker', label: '变更追踪', icon: History },
   { href: '/video-abcd', label: '视频素材分析', icon: Video },
   { href: '/accounts', label: '账户管理', icon: Building2 },

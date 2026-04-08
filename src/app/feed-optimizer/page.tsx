@@ -9,24 +9,50 @@ import { MetricCard } from '@/components/metric-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowUpDown, Loader2, Search, Layers, List } from 'lucide-react';
+import { ArrowUpDown, Loader2, Search, Layers, List, ChevronRight, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { TitleAnalysis, FeedOptimizerSummary } from '@/modules/feed-optimizer/schema';
 
-type SortKey = 'score' | 'ctr' | 'cost' | 'roas' | 'issues';
+type SortKey = 'score' | 'ctr' | 'cost' | 'roas' | 'issues' | 'price' | 'cvr' | 'cpc';
 type SortDir = 'asc' | 'desc';
 
-// Aggregate variants of the same product type into one row
-function groupByProductType(analyses: TitleAnalysis[]) {
-  const groups: Record<string, {
-    label: string; count: number; cost: number; clicks: number;
-    impressions: number; conversions: number; conversions_value: number;
-    minScore: number; totalIssues: number; items: TitleAnalysis[];
-  }> = {};
+interface GroupRow {
+  item_group_id: string;
+  label: string;
+  count: number;
+  cost: number;
+  clicks: number;
+  impressions: number;
+  conversions: number;
+  conversions_value: number;
+  minScore: number;
+  totalIssues: number;
+  items: TitleAnalysis[];
+  ctr: number;
+  roas: number;
+  cvr: number;
+  cpc: number;
+  priceMin: number;
+  priceMax: number;
+}
+
+// Aggregate variants by item_group_id
+function groupByItemGroup(analyses: TitleAnalysis[]): GroupRow[] {
+  const groups: Record<string, GroupRow> = {};
   for (const a of analyses) {
-    const key = (a.product.product_type ?? '').split('>').pop()?.trim() || a.product.brand || a.product.item_group_id;
-    if (!groups[key]) groups[key] = { label: key, count: 0, cost: 0, clicks: 0, impressions: 0, conversions: 0, conversions_value: 0, minScore: 100, totalIssues: 0, items: [] };
+    const key = a.product.item_group_id;
+    if (!groups[key]) {
+      groups[key] = {
+        item_group_id: key,
+        label: a.product.current_title ?? key,
+        count: 0, cost: 0, clicks: 0, impressions: 0,
+        conversions: 0, conversions_value: 0,
+        minScore: 100, totalIssues: 0, items: [],
+        ctr: 0, roas: 0, cvr: 0, cpc: 0,
+        priceMin: a.product.price, priceMax: a.product.price,
+      };
+    }
     const g = groups[key];
     g.count++;
     g.cost += a.product.cost;
@@ -37,11 +63,15 @@ function groupByProductType(analyses: TitleAnalysis[]) {
     g.minScore = Math.min(g.minScore, a.score);
     g.totalIssues += a.issues.length;
     g.items.push(a);
+    if (a.product.price < g.priceMin) g.priceMin = a.product.price;
+    if (a.product.price > g.priceMax) g.priceMax = a.product.price;
   }
   return Object.values(groups).map(g => ({
     ...g,
     ctr: g.impressions > 0 ? g.clicks / g.impressions : 0,
     roas: g.cost > 0 ? g.conversions_value / g.cost : 0,
+    cvr: g.clicks > 0 ? g.conversions / g.clicks : 0,
+    cpc: g.clicks > 0 ? g.cost / g.clicks : 0,
   }));
 }
 
@@ -63,6 +93,7 @@ export default function FeedOptimizerPage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [search, setSearch] = useState('');
   const [grouped, setGrouped] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [exportedAt, setExportedAt] = useState<string | null>(null);
 
   useEffect(() => {
@@ -99,26 +130,41 @@ export default function FeedOptimizerPage() {
       else if (sortKey === 'cost') { av = a.product.cost; bv = b.product.cost; }
       else if (sortKey === 'roas') { av = getRoas(a.product); bv = getRoas(b.product); }
       else if (sortKey === 'issues') { av = a.issues.length; bv = b.issues.length; }
+      else if (sortKey === 'price') { av = a.product.price; bv = b.product.price; }
+      else if (sortKey === 'cvr') { av = a.product.clicks > 0 ? a.product.conversions / a.product.clicks : 0; bv = b.product.clicks > 0 ? b.product.conversions / b.product.clicks : 0; }
+      else if (sortKey === 'cpc') { av = a.product.clicks > 0 ? a.product.cost / a.product.clicks : 0; bv = b.product.clicks > 0 ? b.product.cost / b.product.clicks : 0; }
       return sortDir === 'asc' ? av - bv : bv - av;
     });
   }, [filtered, sortKey, sortDir]);
 
   const groupedRows = useMemo(() => {
     if (!grouped) return null;
-    const g = groupByProductType(filtered);
+    const g = groupByItemGroup(filtered);
     return [...g].sort((a, b) => {
       if (sortKey === 'score') return sortDir === 'asc' ? a.minScore - b.minScore : b.minScore - a.minScore;
       if (sortKey === 'ctr') return sortDir === 'asc' ? a.ctr - b.ctr : b.ctr - a.ctr;
       if (sortKey === 'cost') return sortDir === 'asc' ? a.cost - b.cost : b.cost - a.cost;
       if (sortKey === 'roas') return sortDir === 'asc' ? a.roas - b.roas : b.roas - a.roas;
       if (sortKey === 'issues') return sortDir === 'asc' ? a.totalIssues - b.totalIssues : b.totalIssues - a.totalIssues;
+      if (sortKey === 'cvr') return sortDir === 'asc' ? a.cvr - b.cvr : b.cvr - a.cvr;
+      if (sortKey === 'cpc') return sortDir === 'asc' ? a.cpc - b.cpc : b.cpc - a.cpc;
+      if (sortKey === 'price') return sortDir === 'asc' ? a.priceMin - b.priceMin : b.priceMin - a.priceMin;
       return 0;
     });
   }, [filtered, grouped, sortKey, sortDir]);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortKey(key); setSortDir('asc'); }
+    else { setSortKey(key); setSortDir('desc'); }
+  }
+
+  function toggleGroup(id: string) {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   const issueChartData = summary?.top_issues.map(i => ({
@@ -200,11 +246,14 @@ export default function FeedOptimizerPage() {
           <Table>
             <TableHeader>
               <TableRow className="border-border">
-                <TableHead className="text-xs pl-4">{grouped ? '产品类型' : '产品名称'}</TableHead>
-                {!grouped && <TableHead className="text-xs max-w-xs">当前标题</TableHead>}
+                <TableHead className="text-xs pl-4 w-8"></TableHead>
+                <TableHead className="text-xs">产品名称</TableHead>
                 {grouped && <TableHead className="text-xs">SKU 数</TableHead>}
+                <SortTh col="price" label="价格" sortKey={sortKey} onSort={handleSort} />
                 <SortTh col="score" label={grouped ? '最低质量分' : '质量分'} sortKey={sortKey} onSort={handleSort} />
                 <SortTh col="ctr" label="CTR" sortKey={sortKey} onSort={handleSort} />
+                <SortTh col="cpc" label="CPC" sortKey={sortKey} onSort={handleSort} />
+                <SortTh col="cvr" label="CVR" sortKey={sortKey} onSort={handleSort} />
                 <SortTh col="cost" label="花费" sortKey={sortKey} onSort={handleSort} />
                 <SortTh col="roas" label="ROAS" sortKey={sortKey} onSort={handleSort} />
                 <SortTh col="issues" label="问题数" sortKey={sortKey} onSort={handleSort} />
@@ -213,36 +262,88 @@ export default function FeedOptimizerPage() {
             <TableBody>
               {grouped && groupedRows ? groupedRows.map(g => {
                 const tone = getScoreTone(g.minScore);
+                const isExpanded = expandedGroups.has(g.item_group_id);
                 return (
-                  <TableRow key={g.label} className="border-border hover:bg-accent/30">
-                    <TableCell className="text-sm font-medium pl-4 whitespace-nowrap text-foreground">{g.label}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{g.count} 个</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', tone.badgeClassName)}>{g.minScore}</Badge>
-                    </TableCell>
-                    <TableCell className={cn('text-xs tabular-nums', g.ctr < 0.01 && 'text-red-400')}>{(g.ctr * 100).toFixed(1)}%</TableCell>
-                    <TableCell className="text-xs tabular-nums">${g.cost.toFixed(2)}</TableCell>
-                    <TableCell className={cn('text-xs tabular-nums font-medium', g.roas >= 2 ? 'text-green-400' : g.roas < 1 ? 'text-red-400' : 'text-foreground')}>{g.roas.toFixed(2)}x</TableCell>
-                    <TableCell><span className={cn('text-xs font-semibold', g.totalIssues >= 4 ? 'text-red-400' : g.totalIssues >= 2 ? 'text-amber-400' : 'text-muted-foreground')}>{g.totalIssues}</span></TableCell>
-                  </TableRow>
+                  <>
+                    <TableRow
+                      key={g.item_group_id}
+                      className="border-border hover:bg-accent/30 cursor-pointer"
+                      onClick={() => toggleGroup(g.item_group_id)}
+                    >
+                      <TableCell className="pl-4 py-2 w-8">
+                        {isExpanded
+                          ? <ChevronDown size={13} className="text-muted-foreground" />
+                          : <ChevronRight size={13} className="text-muted-foreground" />}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium whitespace-nowrap text-foreground max-w-xs truncate" title={g.label}>
+                        {g.label}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{g.count} 个</TableCell>
+                      <TableCell className="text-xs tabular-nums text-muted-foreground">
+                        {g.priceMin === g.priceMax
+                          ? `$${g.priceMin.toFixed(2)}`
+                          : `$${g.priceMin.toFixed(0)}–${g.priceMax.toFixed(0)}`}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', tone.badgeClassName)}>{g.minScore}</Badge>
+                      </TableCell>
+                      <TableCell className={cn('text-xs tabular-nums', g.ctr < 0.01 && 'text-red-400')}>{(g.ctr * 100).toFixed(2)}%</TableCell>
+                      <TableCell className="text-xs tabular-nums">{g.cpc > 0 ? `$${g.cpc.toFixed(2)}` : '—'}</TableCell>
+                      <TableCell className="text-xs tabular-nums">{g.cvr > 0 ? `${(g.cvr * 100).toFixed(1)}%` : '—'}</TableCell>
+                      <TableCell className="text-xs tabular-nums">${g.cost.toFixed(2)}</TableCell>
+                      <TableCell className={cn('text-xs tabular-nums font-medium', g.roas >= 2 ? 'text-green-400' : g.roas < 1 ? 'text-red-400' : 'text-foreground')}>{g.roas.toFixed(2)}x</TableCell>
+                      <TableCell><span className={cn('text-xs font-semibold', g.totalIssues >= 4 ? 'text-red-400' : g.totalIssues >= 2 ? 'text-amber-400' : 'text-muted-foreground')}>{g.totalIssues}</span></TableCell>
+                    </TableRow>
+                    {isExpanded && g.items.map(a => {
+                      const vtone = getScoreTone(a.score);
+                      const vroas = getRoas(a.product);
+                      const vcvr = a.product.clicks > 0 ? a.product.conversions / a.product.clicks : 0;
+                      const vcpc = a.product.clicks > 0 ? a.product.cost / a.product.clicks : 0;
+                      return (
+                        <TableRow key={a.product.item_id} className="border-border bg-muted/20 hover:bg-accent/20">
+                          <TableCell className="pl-4 py-1.5"></TableCell>
+                          <TableCell className="text-xs text-muted-foreground pl-5 max-w-xs truncate" title={a.product.current_title ?? undefined}>
+                            <Link href={`/feed-optimizer/${a.product.item_group_id}`} className="text-blue-400 hover:underline" onClick={e => e.stopPropagation()}>
+                              {a.product.current_title ?? a.product.item_id}
+                            </Link>
+                          </TableCell>
+                          {/* empty SKU count cell */}
+                          <TableCell />
+                          <TableCell className="text-xs tabular-nums text-muted-foreground">${a.product.price.toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', vtone.badgeClassName)}>{a.score}</Badge>
+                          </TableCell>
+                          <TableCell className={cn('text-xs tabular-nums', a.product.ctr < 0.01 && 'text-red-400')}>{(a.product.ctr * 100).toFixed(2)}%</TableCell>
+                          <TableCell className="text-xs tabular-nums">{vcpc > 0 ? `$${vcpc.toFixed(2)}` : '—'}</TableCell>
+                          <TableCell className="text-xs tabular-nums">{vcvr > 0 ? `${(vcvr * 100).toFixed(1)}%` : '—'}</TableCell>
+                          <TableCell className="text-xs tabular-nums">${a.product.cost.toFixed(2)}</TableCell>
+                          <TableCell className={cn('text-xs tabular-nums font-medium', vroas >= 2 ? 'text-green-400' : vroas < 1 ? 'text-red-400' : 'text-foreground')}>{vroas.toFixed(2)}x</TableCell>
+                          <TableCell><span className={cn('text-xs font-semibold', a.issues.length >= 4 ? 'text-red-400' : a.issues.length >= 2 ? 'text-amber-400' : 'text-muted-foreground')}>{a.issues.length}</span></TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </>
                 );
               }) : sorted.map(a => {
                 const tone = getScoreTone(a.score);
                 const roas = getRoas(a.product);
+                const cvr = a.product.clicks > 0 ? a.product.conversions / a.product.clicks : 0;
+                const cpc = a.product.clicks > 0 ? a.product.cost / a.product.clicks : 0;
                 return (
-                  <TableRow key={a.product.item_group_id} className="border-border hover:bg-accent/30">
-                    <TableCell className="text-sm font-medium pl-4 whitespace-nowrap">
+                  <TableRow key={a.product.item_id ?? a.product.item_group_id} className="border-border hover:bg-accent/30">
+                    <TableCell className="pl-4 py-2 w-8"></TableCell>
+                    <TableCell className="text-sm font-medium max-w-xs truncate" title={a.product.current_title ?? undefined}>
                       <Link href={`/feed-optimizer/${a.product.item_group_id}`} className="text-blue-400 hover:underline">
-                        {(a.product.product_type ?? '').split('>').pop()?.trim() || a.product.brand || a.product.item_group_id}
+                        {a.product.current_title ?? a.product.item_group_id}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-xs truncate" title={a.product.current_title ?? undefined}>
-                      {a.product.current_title}
-                    </TableCell>
+                    <TableCell className="text-xs tabular-nums text-muted-foreground">${a.product.price.toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', tone.badgeClassName)}>{a.score}</Badge>
                     </TableCell>
-                    <TableCell className={cn('text-xs tabular-nums', a.product.ctr < 0.01 && 'text-red-400')}>{(a.product.ctr * 100).toFixed(1)}%</TableCell>
+                    <TableCell className={cn('text-xs tabular-nums', a.product.ctr < 0.01 && 'text-red-400')}>{(a.product.ctr * 100).toFixed(2)}%</TableCell>
+                    <TableCell className="text-xs tabular-nums">{cpc > 0 ? `$${cpc.toFixed(2)}` : '—'}</TableCell>
+                    <TableCell className="text-xs tabular-nums">{cvr > 0 ? `${(cvr * 100).toFixed(1)}%` : '—'}</TableCell>
                     <TableCell className="text-xs tabular-nums">${a.product.cost.toFixed(2)}</TableCell>
                     <TableCell className={cn('text-xs tabular-nums font-medium', roas >= 2 ? 'text-green-400' : roas < 1 ? 'text-red-400' : 'text-foreground')}>{roas.toFixed(2)}x</TableCell>
                     <TableCell><span className={cn('text-xs font-semibold', a.issues.length >= 4 ? 'text-red-400' : a.issues.length >= 2 ? 'text-amber-400' : 'text-muted-foreground')}>{a.issues.length}</span></TableCell>
