@@ -30,37 +30,37 @@ export const CATEGORY_META: Record<ABCDCategory, { label_zh: string; label_en: s
   A: {
     label_zh: 'A — 吸引注意',
     label_en: 'Attract',
-    color: 'text-violet-400',
-    bg: 'bg-violet-950/20',
-    border: 'border-violet-500/40',
+    color: 'text-violet-600 dark:text-violet-400',
+    bg: 'bg-violet-50 dark:bg-violet-950/20',
+    border: 'border-violet-300 dark:border-violet-500/40',
   },
   B: {
     label_zh: 'B — 品牌植入',
     label_en: 'Brand',
-    color: 'text-blue-400',
-    bg: 'bg-blue-950/20',
-    border: 'border-blue-500/40',
+    color: 'text-blue-600 dark:text-blue-400',
+    bg: 'bg-blue-50 dark:bg-blue-950/20',
+    border: 'border-blue-300 dark:border-blue-500/40',
   },
   C: {
     label_zh: 'C — 情感连接',
     label_en: 'Connect',
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-950/20',
-    border: 'border-emerald-500/40',
+    color: 'text-emerald-700 dark:text-emerald-400',
+    bg: 'bg-emerald-50 dark:bg-emerald-950/20',
+    border: 'border-emerald-300 dark:border-emerald-500/40',
   },
   D: {
     label_zh: 'D — 行动引导',
     label_en: 'Direct',
-    color: 'text-amber-400',
-    bg: 'bg-amber-950/20',
-    border: 'border-amber-500/40',
+    color: 'text-amber-600 dark:text-amber-400',
+    bg: 'bg-amber-50 dark:bg-amber-950/20',
+    border: 'border-amber-300 dark:border-amber-500/40',
   },
 };
 
 export const RATING_META: Record<CategoryRating, { label_zh: string; badge: string }> = {
-  excellent:     { label_zh: '优秀', badge: 'border-emerald-500/40 bg-emerald-950/20 text-emerald-300' },
-  might_improve: { label_zh: '可提升', badge: 'border-amber-500/40 bg-amber-950/20 text-amber-300' },
-  needs_review:  { label_zh: '需改进', badge: 'border-red-500/40 bg-red-950/20 text-red-300' },
+  excellent:     { label_zh: '优秀',  badge: 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-950/20 dark:text-emerald-300' },
+  might_improve: { label_zh: '可提升', badge: 'border-amber-400  bg-amber-50  text-amber-700  dark:border-amber-500/40  dark:bg-amber-950/20  dark:text-amber-300' },
+  needs_review:  { label_zh: '需改进', badge: 'border-red-400    bg-red-50    text-red-700    dark:border-red-500/40    dark:bg-red-950/20    dark:text-red-300' },
 };
 
 export function getSignalDef(key: string) {

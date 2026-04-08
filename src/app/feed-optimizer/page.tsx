@@ -37,15 +37,24 @@ interface GroupRow {
   priceMax: number;
 }
 
-// Aggregate variants by item_group_id
+// Extract the parent product name — strips variant info after " | " (Shopify format)
+// e.g. "3L Baggy Realm Down Ski Jacket - Unisex | Doorek Black / M" → "3L Baggy Realm Down Ski Jacket - Unisex"
+function extractParentTitle(analysis: TitleAnalysis): string {
+  const title = analysis.product.current_title ?? '';
+  const pipeIdx = title.indexOf(' | ');
+  if (pipeIdx > 0) return title.slice(0, pipeIdx).trim();
+  return title || analysis.product.item_group_id;
+}
+
+// Aggregate variants by parent product title (strips color/size suffix)
 function groupByItemGroup(analyses: TitleAnalysis[]): GroupRow[] {
   const groups: Record<string, GroupRow> = {};
   for (const a of analyses) {
-    const key = a.product.item_group_id;
+    const key = extractParentTitle(a);
     if (!groups[key]) {
       groups[key] = {
         item_group_id: key,
-        label: a.product.current_title ?? key,
+        label: key,  // the extracted parent title
         count: 0, cost: 0, clicks: 0, impressions: 0,
         conversions: 0, conversions_value: 0,
         minScore: 100, totalIssues: 0, items: [],
@@ -287,12 +296,12 @@ export default function FeedOptimizerPage() {
                       <TableCell>
                         <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', tone.badgeClassName)}>{g.minScore}</Badge>
                       </TableCell>
-                      <TableCell className={cn('text-xs tabular-nums', g.ctr < 0.01 && 'text-red-400')}>{(g.ctr * 100).toFixed(2)}%</TableCell>
+                      <TableCell className={cn('text-xs tabular-nums', g.ctr < 0.01 && 'text-red-600 dark:text-red-400')}>{(g.ctr * 100).toFixed(2)}%</TableCell>
                       <TableCell className="text-xs tabular-nums">{g.cpc > 0 ? `$${g.cpc.toFixed(2)}` : '—'}</TableCell>
                       <TableCell className="text-xs tabular-nums">{g.cvr > 0 ? `${(g.cvr * 100).toFixed(1)}%` : '—'}</TableCell>
                       <TableCell className="text-xs tabular-nums">${g.cost.toFixed(2)}</TableCell>
-                      <TableCell className={cn('text-xs tabular-nums font-medium', g.roas >= 2 ? 'text-green-400' : g.roas < 1 ? 'text-red-400' : 'text-foreground')}>{g.roas.toFixed(2)}x</TableCell>
-                      <TableCell><span className={cn('text-xs font-semibold', g.totalIssues >= 4 ? 'text-red-400' : g.totalIssues >= 2 ? 'text-amber-400' : 'text-muted-foreground')}>{g.totalIssues}</span></TableCell>
+                      <TableCell className={cn('text-xs tabular-nums font-medium', g.roas >= 2 ? 'text-green-600 dark:text-green-400' : g.roas < 1 ? 'text-red-600 dark:text-red-400' : 'text-foreground')}>{g.roas.toFixed(2)}x</TableCell>
+                      <TableCell><span className={cn('text-xs font-semibold', g.totalIssues >= 4 ? 'text-red-600 dark:text-red-400' : g.totalIssues >= 2 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>{g.totalIssues}</span></TableCell>
                     </TableRow>
                     {isExpanded && g.items.map(a => {
                       const vtone = getScoreTone(a.score);
@@ -313,12 +322,12 @@ export default function FeedOptimizerPage() {
                           <TableCell>
                             <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', vtone.badgeClassName)}>{a.score}</Badge>
                           </TableCell>
-                          <TableCell className={cn('text-xs tabular-nums', a.product.ctr < 0.01 && 'text-red-400')}>{(a.product.ctr * 100).toFixed(2)}%</TableCell>
+                          <TableCell className={cn('text-xs tabular-nums', a.product.ctr < 0.01 && 'text-red-600 dark:text-red-400')}>{(a.product.ctr * 100).toFixed(2)}%</TableCell>
                           <TableCell className="text-xs tabular-nums">{vcpc > 0 ? `$${vcpc.toFixed(2)}` : '—'}</TableCell>
                           <TableCell className="text-xs tabular-nums">{vcvr > 0 ? `${(vcvr * 100).toFixed(1)}%` : '—'}</TableCell>
                           <TableCell className="text-xs tabular-nums">${a.product.cost.toFixed(2)}</TableCell>
                           <TableCell className={cn('text-xs tabular-nums font-medium', vroas >= 2 ? 'text-green-400' : vroas < 1 ? 'text-red-400' : 'text-foreground')}>{vroas.toFixed(2)}x</TableCell>
-                          <TableCell><span className={cn('text-xs font-semibold', a.issues.length >= 4 ? 'text-red-400' : a.issues.length >= 2 ? 'text-amber-400' : 'text-muted-foreground')}>{a.issues.length}</span></TableCell>
+                          <TableCell><span className={cn('text-xs font-semibold', a.issues.length >= 4 ? 'text-red-600 dark:text-red-400' : a.issues.length >= 2 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>{a.issues.length}</span></TableCell>
                         </TableRow>
                       );
                     })}
@@ -341,12 +350,12 @@ export default function FeedOptimizerPage() {
                     <TableCell>
                       <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', tone.badgeClassName)}>{a.score}</Badge>
                     </TableCell>
-                    <TableCell className={cn('text-xs tabular-nums', a.product.ctr < 0.01 && 'text-red-400')}>{(a.product.ctr * 100).toFixed(2)}%</TableCell>
+                    <TableCell className={cn('text-xs tabular-nums', a.product.ctr < 0.01 && 'text-red-600 dark:text-red-400')}>{(a.product.ctr * 100).toFixed(2)}%</TableCell>
                     <TableCell className="text-xs tabular-nums">{cpc > 0 ? `$${cpc.toFixed(2)}` : '—'}</TableCell>
                     <TableCell className="text-xs tabular-nums">{cvr > 0 ? `${(cvr * 100).toFixed(1)}%` : '—'}</TableCell>
                     <TableCell className="text-xs tabular-nums">${a.product.cost.toFixed(2)}</TableCell>
-                    <TableCell className={cn('text-xs tabular-nums font-medium', roas >= 2 ? 'text-green-400' : roas < 1 ? 'text-red-400' : 'text-foreground')}>{roas.toFixed(2)}x</TableCell>
-                    <TableCell><span className={cn('text-xs font-semibold', a.issues.length >= 4 ? 'text-red-400' : a.issues.length >= 2 ? 'text-amber-400' : 'text-muted-foreground')}>{a.issues.length}</span></TableCell>
+                    <TableCell className={cn('text-xs tabular-nums font-medium', roas >= 2 ? 'text-green-600 dark:text-green-400' : roas < 1 ? 'text-red-600 dark:text-red-400' : 'text-foreground')}>{roas.toFixed(2)}x</TableCell>
+                    <TableCell><span className={cn('text-xs font-semibold', a.issues.length >= 4 ? 'text-red-600 dark:text-red-400' : a.issues.length >= 2 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>{a.issues.length}</span></TableCell>
                   </TableRow>
                 );
               })}

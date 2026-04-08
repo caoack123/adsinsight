@@ -80,15 +80,15 @@ function CategoryBlock({ catScore }: { catScore: CategoryScore }) {
             return (
               <div key={def.key} className="flex items-center gap-2.5 py-0.5">
                 {result === 'YES'
-                  ? <CheckCircle2 size={13} className="text-green-400 shrink-0" />
+                  ? <CheckCircle2 size={13} className="text-green-600 dark:text-green-400 shrink-0" />
                   : result === 'NO'
-                  ? <XCircle size={13} className="text-red-400 shrink-0" />
+                  ? <XCircle size={13} className="text-red-600 dark:text-red-400 shrink-0" />
                   : <HelpCircle size={13} className="text-muted-foreground shrink-0" />
                 }
                 <span className="text-xs text-foreground flex-1">{def.label_zh}</span>
                 <span className="text-xs text-muted-foreground">{def.label_en}</span>
                 {ev?.note_zh && (
-                  <span className={cn('text-xs', result === 'YES' ? 'text-green-400' : 'text-red-400')}>
+                  <span className={cn('text-xs', result === 'YES' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
                     {ev.note_zh}
                   </span>
                 )}
@@ -150,24 +150,24 @@ function ManualVideoDetail({ videoId, youtubeUrl, analysis }: { videoId: string;
 
           <div className="grid grid-cols-2 gap-3">
             <Card className="border-emerald-500/30 bg-emerald-950/10">
-              <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-emerald-400 uppercase tracking-wider">优势亮点</CardTitle></CardHeader>
+              <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">优势亮点</CardTitle></CardHeader>
               <CardContent className="px-4 pb-4">
                 <ul className="space-y-2">
                   {analysis.top_strengths_zh.map((s, i) => (
                     <li key={i} className="flex gap-2 text-xs text-muted-foreground">
-                      <CheckCircle2 size={12} className="text-emerald-400 mt-0.5 shrink-0" />{s}
+                      <CheckCircle2 size={12} className="text-emerald-700 dark:text-emerald-400 mt-0.5 shrink-0" />{s}
                     </li>
                   ))}
                 </ul>
               </CardContent>
             </Card>
             <Card className="border-amber-400 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/10">
-              <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-amber-400 uppercase tracking-wider">待改进方向</CardTitle></CardHeader>
+              <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-amber-600 dark:text-amber-600 dark:text-amber-400 uppercase tracking-wider">待改进方向</CardTitle></CardHeader>
               <CardContent className="px-4 pb-4">
                 <ul className="space-y-2">
                   {analysis.top_improvements_zh.map((s, i) => (
                     <li key={i} className="flex gap-2 text-xs text-muted-foreground">
-                      <XCircle size={12} className="text-amber-400 mt-0.5 shrink-0" />{s}
+                      <XCircle size={12} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />{s}
                     </li>
                   ))}
                 </ul>
@@ -392,13 +392,13 @@ export default function VideoDetailPage({
             <div className="grid grid-cols-2 gap-3">
               <Card className="border-emerald-500/30 bg-emerald-950/10">
                 <CardHeader className="pb-1 pt-3 px-4">
-                  <CardTitle className="text-xs text-emerald-400 uppercase tracking-wider">优势亮点</CardTitle>
+                  <CardTitle className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">优势亮点</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
                   <ul className="space-y-2">
                     {analysis.top_strengths_zh.map((s, i) => (
                       <li key={i} className="flex gap-2 text-xs text-muted-foreground">
-                        <CheckCircle2 size={12} className="text-emerald-400 mt-0.5 shrink-0" />
+                        <CheckCircle2 size={12} className="text-emerald-700 dark:text-emerald-400 mt-0.5 shrink-0" />
                         {s}
                       </li>
                     ))}
@@ -407,13 +407,13 @@ export default function VideoDetailPage({
               </Card>
               <Card className="border-amber-400 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/10">
                 <CardHeader className="pb-1 pt-3 px-4">
-                  <CardTitle className="text-xs text-amber-400 uppercase tracking-wider">待改进方向</CardTitle>
+                  <CardTitle className="text-xs text-amber-600 dark:text-amber-600 dark:text-amber-400 uppercase tracking-wider">待改进方向</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
                   <ul className="space-y-2">
                     {analysis.top_improvements_zh.map((s, i) => (
                       <li key={i} className="flex gap-2 text-xs text-muted-foreground">
-                        <XCircle size={12} className="text-amber-400 mt-0.5 shrink-0" />
+                        <XCircle size={12} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                         {s}
                       </li>
                     ))}
@@ -484,7 +484,7 @@ export default function VideoDetailPage({
                     <div key={label}>
                       <p className="text-xs text-muted-foreground">{label}</p>
                       <p className={cn('text-sm font-semibold tabular-nums',
-                        good ? 'text-green-400' : warn ? 'text-red-400' : 'text-foreground'
+                        good ? 'text-green-600 dark:text-green-400' : warn ? 'text-red-600 dark:text-red-400' : 'text-foreground'
                       )}>{value}</p>
                     </div>
                   ))}

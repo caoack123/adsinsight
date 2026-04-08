@@ -81,7 +81,7 @@ function AbcdResultCard({ analysis, videoId }: { analysis: ABCDAnalysis; videoId
                   {cat.evaluations.map(ev => (
                     <div key={ev.key} className="flex items-center gap-2 py-0.5 border-b border-border/30">
                       <span className={cn('text-[10px] font-semibold w-8 shrink-0',
-                        ev.result === 'YES' ? 'text-green-400' : ev.result === 'NO' ? 'text-red-400' : 'text-zinc-500'
+                        ev.result === 'YES' ? 'text-green-600 dark:text-green-400' : ev.result === 'NO' ? 'text-red-600 dark:text-red-400' : 'text-zinc-500'
                       )}>{ev.result}</span>
                       <span className="text-[10px] text-muted-foreground truncate">{ev.note_zh ?? ev.key}</span>
                     </div>
@@ -96,13 +96,13 @@ function AbcdResultCard({ analysis, videoId }: { analysis: ABCDAnalysis; videoId
         <div>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">优势</p>
           {analysis.top_strengths_zh.map(s => (
-            <p key={s} className="text-xs text-green-400/90">✓ {s}</p>
+            <p key={s} className="text-xs text-green-700 dark:text-green-400/90">✓ {s}</p>
           ))}
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">改进点</p>
           {analysis.top_improvements_zh.map(s => (
-            <p key={s} className="text-xs text-amber-400/90">△ {s}</p>
+            <p key={s} className="text-xs text-amber-700 dark:text-amber-400/90">△ {s}</p>
           ))}
         </div>
       </div>

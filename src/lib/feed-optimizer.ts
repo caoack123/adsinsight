@@ -81,24 +81,24 @@ export function getProductDisplayName(product: FeedProduct) {
 export function getScoreTone(score: number) {
   if (score < 50) {
     return {
-      badgeClassName: 'border-red-500/40 bg-red-500/10 text-red-200',
-      borderClassName: 'border-red-500/40',
-      textClassName: 'text-red-300',
+      badgeClassName: 'border-red-400 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300',
+      borderClassName: 'border-red-400 dark:border-red-500/40',
+      textClassName: 'text-red-600 dark:text-red-300',
     };
   }
 
   if (score <= 70) {
     return {
-      badgeClassName: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
-      borderClassName: 'border-amber-500/40',
-      textClassName: 'text-amber-300',
+      badgeClassName: 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300',
+      borderClassName: 'border-amber-400 dark:border-amber-500/40',
+      textClassName: 'text-amber-600 dark:text-amber-300',
     };
   }
 
   return {
-    badgeClassName: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
-    borderClassName: 'border-emerald-500/40',
-    textClassName: 'text-emerald-300',
+    badgeClassName: 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300',
+    borderClassName: 'border-emerald-500 dark:border-emerald-500/40',
+    textClassName: 'text-emerald-700 dark:text-emerald-300',
   };
 }
 
