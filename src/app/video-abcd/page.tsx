@@ -196,7 +196,7 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { acco
   const previewId = extractYouTubeId(url.trim());
 
   return (
-    <Card className="border-blue-500/30 bg-blue-950/10">
+    <Card className="border-blue-400/50 bg-blue-50 dark:border-blue-500/30 dark:bg-blue-950/10">
       <CardHeader className="pb-2 pt-4 px-4">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <Link2 size={14} className="text-blue-400" />
@@ -228,7 +228,7 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { acco
           <button
             onClick={handleAnalyze}
             disabled={loading || !url.trim()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-700/30 border border-blue-500/50 text-blue-300 text-xs hover:bg-blue-700/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-600 border border-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
             {loading ? '分析中…' : 'ABCD 分析'}
@@ -344,7 +344,7 @@ function VideoCard({ video }: { video: VideoAd }) {
               <div className="flex items-center gap-2">
                 <Link
                   href={`/video-abcd/${video.video_id}`}
-                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-blue-700/20 border border-blue-500/40 text-blue-300 hover:bg-blue-700/40 transition-colors"
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-blue-600 border border-blue-600 text-white hover:bg-blue-700 transition-colors"
                 >
                   <Sparkles size={11} />用 Gemini 分析 ABCD
                 </Link>

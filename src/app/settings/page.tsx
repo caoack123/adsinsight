@@ -68,7 +68,7 @@ function ModelCard<T extends string>({
       className={cn(
         'w-full text-left px-3 py-2.5 rounded border transition-colors',
         selected
-          ? 'border-blue-500/60 bg-blue-950/20 text-foreground'
+          ? 'border-blue-400 bg-blue-50 text-foreground dark:border-blue-500/60 dark:bg-blue-950/20'
           : 'border-border hover:border-border/80 hover:bg-accent/30 text-muted-foreground'
       )}
     >

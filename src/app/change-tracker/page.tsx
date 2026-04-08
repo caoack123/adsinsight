@@ -282,7 +282,7 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
           <button
             onClick={handleGenerateAI}
             disabled={aiLoading}
-            className="flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-blue-700/20 border border-blue-500/40 text-blue-300 hover:bg-blue-700/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-blue-600 border border-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {aiLoading
               ? <><Loader2 size={11} className="animate-spin" /> 生成中…</>

@@ -124,7 +124,7 @@ function ManualVideoDetail({ videoId, youtubeUrl, analysis }: { videoId: string;
 
       <div className="grid grid-cols-5 gap-4">
         <div className="col-span-3 space-y-4">
-          <Card className={cn('border', analysis.overall_rating === 'excellent' ? 'border-emerald-500/40 bg-emerald-950/10' : analysis.overall_rating === 'might_improve' ? 'border-amber-500/40 bg-amber-950/10' : 'border-red-500/40 bg-red-950/10')}>
+          <Card className={cn('border', analysis.overall_rating === 'excellent' ? 'border-emerald-500 bg-emerald-50 dark:border-emerald-500/40 dark:bg-emerald-950/10' : analysis.overall_rating === 'might_improve' ? 'border-amber-400 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-950/10' : 'border-red-400 bg-red-50 dark:border-red-500/40 dark:bg-red-950/10')}>
             <CardContent className="px-4 py-4">
               <div className="flex items-center gap-4">
                 <div className="text-4xl font-black tabular-nums text-foreground">
@@ -161,7 +161,7 @@ function ManualVideoDetail({ videoId, youtubeUrl, analysis }: { videoId: string;
                 </ul>
               </CardContent>
             </Card>
-            <Card className="border-amber-500/30 bg-amber-950/10">
+            <Card className="border-amber-400 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/10">
               <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-amber-400 uppercase tracking-wider">待改进方向</CardTitle></CardHeader>
               <CardContent className="px-4 pb-4">
                 <ul className="space-y-2">
@@ -332,7 +332,7 @@ export default function VideoDetailPage({
                 <button
                   onClick={handleAnalyze}
                   disabled={loading}
-                  className="flex items-center gap-2 px-4 py-2 rounded bg-blue-600/30 border border-blue-500/50 text-blue-300 text-sm font-medium hover:bg-blue-600/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-4 py-2 rounded bg-blue-600 border border-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading
                     ? <><Loader2 size={14} className="animate-spin" /> 分析中…</>
@@ -349,7 +349,7 @@ export default function VideoDetailPage({
           ) : (
             <>
               {/* Overall score banner */}
-              <Card className={cn('border', analysis.overall_rating === 'excellent' ? 'border-emerald-500/40 bg-emerald-950/10' : analysis.overall_rating === 'might_improve' ? 'border-amber-500/40 bg-amber-950/10' : 'border-red-500/40 bg-red-950/10')}>
+              <Card className={cn('border', analysis.overall_rating === 'excellent' ? 'border-emerald-500 bg-emerald-50 dark:border-emerald-500/40 dark:bg-emerald-950/10' : analysis.overall_rating === 'might_improve' ? 'border-amber-400 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-950/10' : 'border-red-400 bg-red-50 dark:border-red-500/40 dark:bg-red-950/10')}>
                 <CardContent className="px-4 py-4">
                   <div className="flex items-center gap-4">
                     {/* Big score */}
@@ -405,7 +405,7 @@ export default function VideoDetailPage({
                   </ul>
                 </CardContent>
               </Card>
-              <Card className="border-amber-500/30 bg-amber-950/10">
+              <Card className="border-amber-400 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/10">
                 <CardHeader className="pb-1 pt-3 px-4">
                   <CardTitle className="text-xs text-amber-400 uppercase tracking-wider">待改进方向</CardTitle>
                 </CardHeader>

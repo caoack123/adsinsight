@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Fragment } from 'react';
 import Link from 'next/link';
 import { useSettings } from '@/context/settings-context';
 import { analyzeTitles, computeSummary } from '@/modules/feed-optimizer/processor';
@@ -233,7 +233,7 @@ export default function FeedOptimizerPage() {
                 onClick={() => setGrouped(v => !v)}
                 className={cn(
                   'flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs transition-colors',
-                  grouped ? 'border-blue-500/60 bg-blue-950/30 text-blue-300' : 'border-border text-muted-foreground hover:text-foreground'
+                  grouped ? 'border-blue-500 bg-blue-600 text-white' : 'border-border text-muted-foreground hover:text-foreground'
                 )}
               >
                 {grouped ? <Layers size={12} /> : <List size={12} />}
@@ -264,7 +264,7 @@ export default function FeedOptimizerPage() {
                 const tone = getScoreTone(g.minScore);
                 const isExpanded = expandedGroups.has(g.item_group_id);
                 return (
-                  <>
+                  <Fragment key={g.item_group_id}>
                     <TableRow
                       key={g.item_group_id}
                       className="border-border hover:bg-accent/30 cursor-pointer"
@@ -303,13 +303,13 @@ export default function FeedOptimizerPage() {
                         <TableRow key={a.product.item_id} className="border-border bg-muted/20 hover:bg-accent/20">
                           <TableCell className="pl-4 py-1.5"></TableCell>
                           <TableCell className="text-xs text-muted-foreground pl-5 max-w-xs truncate" title={a.product.current_title ?? undefined}>
-                            <Link href={`/feed-optimizer/${a.product.item_group_id}`} className="text-blue-400 hover:underline" onClick={e => e.stopPropagation()}>
+                            <Link href={`/feed-optimizer/${a.product.item_group_id}`} className="text-blue-600 dark:text-blue-400 hover:underline" onClick={e => e.stopPropagation()}>
                               {a.product.current_title ?? a.product.item_id}
                             </Link>
                           </TableCell>
                           {/* empty SKU count cell */}
                           <TableCell />
-                          <TableCell className="text-xs tabular-nums text-muted-foreground">${a.product.price.toFixed(2)}</TableCell>
+                          <TableCell className="text-xs tabular-nums text-muted-foreground">${(a.product.price ?? 0).toFixed(2)}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', vtone.badgeClassName)}>{a.score}</Badge>
                           </TableCell>
@@ -322,7 +322,7 @@ export default function FeedOptimizerPage() {
                         </TableRow>
                       );
                     })}
-                  </>
+                  </Fragment>
                 );
               }) : sorted.map(a => {
                 const tone = getScoreTone(a.score);
@@ -333,11 +333,11 @@ export default function FeedOptimizerPage() {
                   <TableRow key={a.product.item_id ?? a.product.item_group_id} className="border-border hover:bg-accent/30">
                     <TableCell className="pl-4 py-2 w-8"></TableCell>
                     <TableCell className="text-sm font-medium max-w-xs truncate" title={a.product.current_title ?? undefined}>
-                      <Link href={`/feed-optimizer/${a.product.item_group_id}`} className="text-blue-400 hover:underline">
+                      <Link href={`/feed-optimizer/${a.product.item_group_id}`} className="text-blue-600 dark:text-blue-400 hover:underline">
                         {a.product.current_title ?? a.product.item_group_id}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-xs tabular-nums text-muted-foreground">${a.product.price.toFixed(2)}</TableCell>
+                    <TableCell className="text-xs tabular-nums text-muted-foreground">${(a.product.price ?? 0).toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', tone.badgeClassName)}>{a.score}</Badge>
                     </TableCell>

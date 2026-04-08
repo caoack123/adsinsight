@@ -16,7 +16,7 @@ export function MetricCard({ title, value, subtitle, trend, trendLabel, highligh
   const trendNegative = trend !== undefined && trend < 0;
 
   return (
-    <Card className={cn('border-border', highlight && 'border-blue-500/50 bg-blue-950/20')}>
+    <Card className={cn('border-border', highlight && 'border-blue-400 bg-blue-50 dark:border-blue-500/50 dark:bg-blue-950/20')}>
       <CardHeader className="pb-1 pt-3 px-4">
         <CardTitle className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{title}</CardTitle>
       </CardHeader>

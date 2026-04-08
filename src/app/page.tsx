@@ -265,7 +265,7 @@ export default function OverviewPage() {
             const Icon = ICON_MAP[mod.icon] || ShoppingBag;
             return (
               <Link key={key} href={mod.path}>
-                <Card className="border-blue-500/30 bg-blue-950/10 hover:bg-blue-950/20 transition-colors cursor-pointer h-full">
+                <Card className="border-blue-400/50 bg-blue-50 hover:bg-blue-100/80 dark:border-blue-500/30 dark:bg-blue-950/10 dark:hover:bg-blue-950/20 transition-colors cursor-pointer h-full">
                   <CardHeader className="pb-1 pt-4 px-4">
                     <div className="flex items-center gap-2 mb-1">
                       <Icon size={16} className="text-blue-400" />
@@ -322,7 +322,7 @@ export default function OverviewPage() {
                   className={cn(
                     'text-xs px-2.5 py-1 rounded border transition-colors',
                     perfDays === tr.days
-                      ? 'border-blue-500/60 bg-blue-950/30 text-blue-300'
+                      ? 'border-blue-500 bg-blue-600 text-white'
                       : 'border-border text-muted-foreground hover:border-border/80 hover:bg-accent/20'
                   )}
                 >
@@ -366,7 +366,7 @@ export default function OverviewPage() {
                 return (
                   <div key={key} className={cn(
                     'rounded p-2 border',
-                    activeMetric === key ? 'border-blue-500/40 bg-blue-950/20' : 'border-border bg-card/50'
+                    activeMetric === key ? 'border-blue-400 bg-blue-50 dark:border-blue-500/40 dark:bg-blue-950/20' : 'border-border bg-card/50'
                   )}>
                     <p className="text-xs text-muted-foreground">{label}</p>
                     <p className="text-sm font-bold tabular-nums">{fmt(curr)}</p>

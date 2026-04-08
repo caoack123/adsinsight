@@ -223,7 +223,7 @@ export default function SearchTermsPage() {
 
       {/* Negative keywords export box */}
       {negKeywords.length > 0 && (
-        <Card className="border-amber-500/30 bg-amber-500/5">
+        <Card className="border-amber-400 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/5">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold text-amber-400">建议否定关键词（{negKeywords.length} 个）</CardTitle>
@@ -289,7 +289,7 @@ export default function SearchTermsPage() {
               className={cn(
                 'flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs transition-colors',
                 showNegOnly
-                  ? 'border-amber-500/60 bg-amber-950/30 text-amber-300'
+                  ? 'border-amber-500 bg-amber-500 text-white'
                   : 'border-border text-muted-foreground hover:text-foreground'
               )}
             >

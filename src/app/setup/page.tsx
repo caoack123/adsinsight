@@ -152,9 +152,9 @@ function SetupContent() {
       </Card>
 
       {/* Note */}
-      <Card className="border-amber-500/30 bg-amber-950/10">
+      <Card className="border-amber-400 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/10">
         <CardContent className="px-4 py-3">
-          <p className="text-xs text-amber-300 leading-relaxed">
+          <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
             <span className="font-semibold">注意：</span>
             视频素材分析需要 YouTube 视频权限，首次授权时请同时开启 "YouTube Advanced API"。
             如需管理多个账户，在账户管理页面分别创建账户，每个账户有独立 Token 和独立数据。
