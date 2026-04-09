@@ -24,7 +24,7 @@ var CONFIG = {
   API_ENDPOINT: '${appUrl}/api/ingest',
   TOKEN: '${token}',
   DATE_RANGE: 'LAST_30_DAYS',
-  CHANGE_DAYS: 14,      // days of change history to export
+  CHANGE_DAYS: 90,      // days of change history to export
   MAX_PRODUCTS: 500,    // cap to avoid timeout
   MAX_CHANGES: 200
 };
@@ -69,58 +69,106 @@ function getProductPrices() {
 
 function exportFeedProducts() {
   var prices = getProductPrices();
-  var query =
-    'SELECT ' +
-    '  segments.product_item_id, ' +
-    '  segments.product_title, ' +
-    '  segments.product_brand, ' +
-    '  segments.product_type_l1, ' +
-    '  metrics.impressions, ' +
-    '  metrics.clicks, ' +
-    '  metrics.cost_micros, ' +
-    '  metrics.conversions, ' +
-    '  metrics.conversions_value, ' +
-    '  metrics.ctr ' +
-    'FROM shopping_performance_view ' +
-    'WHERE segments.date DURING ' + CONFIG.DATE_RANGE + ' ' +
-    '  AND metrics.impressions > 0 ' +
-    'ORDER BY metrics.impressions DESC ' +
-    'LIMIT ' + CONFIG.MAX_PRODUCTS;
 
-  var records = [];
-  try {
-    var report = AdsApp.search(query);
-    while (report.hasNext()) {
-      var row = report.next();
-      // Guard: some rows (e.g. PMax) may return null segments
-      if (!row.segments || !row.segments.productItemId) continue;
-      var cost = (row.metrics.costMicros || 0) / 1000000;
-      var impressions = parseInt(row.metrics.impressions) || 0;
-      var clicks = parseInt(row.metrics.clicks) || 0;
-      var conversions = parseFloat(row.metrics.conversions) || 0;
-      var convValue = parseFloat(row.metrics.conversionsValue) || 0;
+  // ── Collect metrics across 6 date ranges ────────────────────────────────────
+  var DATE_RANGES = [
+    { key: '7d',   days: 7   },
+    { key: '14d',  days: 14  },
+    { key: '30d',  days: 30  },
+    { key: '90d',  days: 90  },
+    { key: '180d', days: 180 },
+    { key: '365d', days: 365 },
+  ];
 
-      var variantId = row.segments.productItemId || '';
-      records.push({
-        item_id: variantId,
-        item_group_id: extractGroupId(variantId),
-        current_title: row.segments.productTitle || '',
-        brand: row.segments.productBrand || '',
-        product_type: row.segments.productTypeL1 || '',
-        price: prices[variantId] || 0,
-        impressions: impressions,
-        clicks: clicks,
-        ctr: impressions > 0 ? clicks / impressions : 0,
-        cost: parseFloat(cost.toFixed(4)),
-        conversions: parseFloat(conversions.toFixed(2)),
-        conversions_value: parseFloat(convValue.toFixed(2)),
-        top_search_terms: []
-      });
+  // metricsMap[variantId] = { meta: {...}, ranges: { '7d': {...}, '30d': {...} } }
+  var metricsMap = {};
+
+  for (var ri = 0; ri < DATE_RANGES.length; ri++) {
+    var dr = DATE_RANGES[ri];
+    var startDate = dateOnly(dr.days);
+    var endDate   = dateOnly(0);
+    var query =
+      'SELECT ' +
+      '  segments.product_item_id, ' +
+      '  segments.product_title, ' +
+      '  segments.product_brand, ' +
+      '  segments.product_type_l1, ' +
+      '  metrics.impressions, ' +
+      '  metrics.clicks, ' +
+      '  metrics.cost_micros, ' +
+      '  metrics.conversions, ' +
+      '  metrics.conversions_value ' +
+      'FROM shopping_performance_view ' +
+      'WHERE segments.date BETWEEN "' + startDate + '" AND "' + endDate + '" ' +
+      '  AND metrics.impressions > 0 ' +
+      'ORDER BY metrics.impressions DESC ' +
+      'LIMIT ' + CONFIG.MAX_PRODUCTS;
+    try {
+      var report = AdsApp.search(query);
+      while (report.hasNext()) {
+        var row = report.next();
+        if (!row.segments || !row.segments.productItemId) continue;
+        var variantId = row.segments.productItemId || '';
+        var cost = (row.metrics.costMicros || 0) / 1000000;
+        var impressions = parseInt(row.metrics.impressions) || 0;
+        var clicks = parseInt(row.metrics.clicks) || 0;
+        var conversions = parseFloat(row.metrics.conversions) || 0;
+        var convValue = parseFloat(row.metrics.conversionsValue) || 0;
+        if (!metricsMap[variantId]) {
+          metricsMap[variantId] = {
+            title: row.segments.productTitle || '',
+            brand: row.segments.productBrand || '',
+            product_type: row.segments.productTypeL1 || '',
+            ranges: {}
+          };
+        }
+        metricsMap[variantId].ranges[dr.key] = {
+          impressions: impressions,
+          clicks: clicks,
+          ctr: impressions > 0 ? parseFloat((clicks / impressions).toFixed(6)) : 0,
+          cost: parseFloat(cost.toFixed(4)),
+          conversions: parseFloat(conversions.toFixed(2)),
+          conversions_value: parseFloat(convValue.toFixed(2))
+        };
+      }
+      Logger.log('Feed range ' + dr.key + ': ' + Object.keys(metricsMap).length + ' products');
+    } catch (e) {
+      Logger.log('Feed range ' + dr.key + ' error: ' + e.message);
     }
-    Logger.log('Feed: ' + records.length + ' products');
-    postData('feed', records);
-  } catch (e) {
-    Logger.log('Feed export error: ' + e.message);
+  }
+
+  // ── Build final records — use 30d as primary metrics ────────────────────────
+  var records = [];
+  var empty = { impressions: 0, clicks: 0, ctr: 0, cost: 0, conversions: 0, conversions_value: 0 };
+  var itemIds = Object.keys(metricsMap);
+  for (var ii = 0; ii < itemIds.length; ii++) {
+    var vid = itemIds[ii];
+    var data = metricsMap[vid];
+    var m30 = data.ranges['30d'] || empty;
+    var variantId2 = vid;  // keep var name distinct
+    records.push({
+      item_id: variantId2,
+      item_group_id: extractGroupId(variantId2),
+      current_title: data.title,
+      brand: data.brand,
+      product_type: data.product_type,
+      price: prices[variantId2] || 0,
+      impressions: m30.impressions,
+      clicks: m30.clicks,
+      ctr: m30.ctr,
+      cost: m30.cost,
+      conversions: m30.conversions,
+      conversions_value: m30.conversions_value,
+      metrics_by_range: data.ranges,
+      top_search_terms: []
+    });
+  }
+
+  Logger.log('Feed: ' + records.length + ' products with ' + DATE_RANGES.length + ' date ranges');
+  // Send in batches
+  var BATCH = 200;
+  for (var bi = 0; bi < records.length; bi += BATCH) {
+    postData('feed', records.slice(bi, bi + BATCH));
   }
 }
 

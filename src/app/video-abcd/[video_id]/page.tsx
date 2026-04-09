@@ -149,7 +149,7 @@ function ManualVideoDetail({ videoId, youtubeUrl, analysis }: { videoId: string;
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Card className="border-emerald-500/30 bg-emerald-950/10">
+            <Card className="border-emerald-400 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-950/10">
               <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">优势亮点</CardTitle></CardHeader>
               <CardContent className="px-4 pb-4">
                 <ul className="space-y-2">
@@ -162,7 +162,7 @@ function ManualVideoDetail({ videoId, youtubeUrl, analysis }: { videoId: string;
               </CardContent>
             </Card>
             <Card className="border-amber-400 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/10">
-              <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-amber-600 dark:text-amber-600 dark:text-amber-400 uppercase tracking-wider">待改进方向</CardTitle></CardHeader>
+              <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wider">待改进方向</CardTitle></CardHeader>
               <CardContent className="px-4 pb-4">
                 <ul className="space-y-2">
                   {analysis.top_improvements_zh.map((s, i) => (
@@ -370,7 +370,7 @@ export default function VideoDetailPage({
               </CardContent>
               {error && (
                 <div className="px-4 pb-3">
-                  <p className="text-xs text-red-400">分析失败：{error}。请确认 GOOGLE_AI_API_KEY 已配置。</p>
+                  <p className="text-xs text-red-600 dark:text-red-400">分析失败：{error}。请确认 GOOGLE_AI_API_KEY 已配置。</p>
                 </div>
               )}
             </Card>
@@ -418,7 +418,7 @@ export default function VideoDetailPage({
           {/* Strengths + improvements */}
           {analysis && (
             <div className="grid grid-cols-2 gap-3">
-              <Card className="border-emerald-500/30 bg-emerald-950/10">
+              <Card className="border-emerald-400 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-950/10">
                 <CardHeader className="pb-1 pt-3 px-4">
                   <CardTitle className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">优势亮点</CardTitle>
                 </CardHeader>
@@ -435,7 +435,7 @@ export default function VideoDetailPage({
               </Card>
               <Card className="border-amber-400 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/10">
                 <CardHeader className="pb-1 pt-3 px-4">
-                  <CardTitle className="text-xs text-amber-600 dark:text-amber-600 dark:text-amber-400 uppercase tracking-wider">待改进方向</CardTitle>
+                  <CardTitle className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wider">待改进方向</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
                   <ul className="space-y-2">
@@ -452,7 +452,7 @@ export default function VideoDetailPage({
           )}
 
           {error && !loading && (
-            <p className="text-xs text-red-400 px-1">分析失败：{error}</p>
+            <p className="text-xs text-red-600 dark:text-red-400 px-1">分析失败：{error}</p>
           )}
         </div>
 

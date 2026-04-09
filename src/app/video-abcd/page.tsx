@@ -64,7 +64,7 @@ function AbcdResultCard({ analysis, videoId }: { analysis: ABCDAnalysis; videoId
       <p className="text-xs text-muted-foreground leading-relaxed">{analysis.summary_zh}</p>
       <button
         onClick={() => setExpanded(v => !v)}
-        className="mt-2 flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+        className="mt-2 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
       >
         {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
         {expanded ? '收起细节' : '展开 22 个信号'}
@@ -256,7 +256,7 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { acco
         )}
 
         {error && (
-          <div className="flex items-center gap-2 text-xs text-red-400 bg-red-950/20 border border-red-500/30 rounded p-2">
+          <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-300 dark:border-red-500/30 rounded p-2">
             <AlertCircle size={12} /> {error}
           </div>
         )}
@@ -318,7 +318,7 @@ function VideoCard({ video }: { video: VideoAd }) {
               ].map(({ label, value, warn, good }) => (
                 <div key={label}>
                   <p className="text-xs text-muted-foreground">{label}</p>
-                  <p className={cn('text-sm font-semibold tabular-nums', good && 'text-green-400', warn && 'text-red-400')}>{value}</p>
+                  <p className={cn('text-sm font-semibold tabular-nums', good && 'text-green-600 dark:text-green-400', warn && 'text-red-600 dark:text-red-400')}>{value}</p>
                 </div>
               ))}
             </div>
@@ -406,7 +406,7 @@ export default function VideoAbcdPage() {
           </p>
         </div>
         {isDemo && (
-          <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-400">演示数据</Badge>
+          <Badge variant="outline" className="text-xs border-amber-400 text-amber-600 dark:border-amber-500/40 dark:text-amber-400">演示数据</Badge>
         )}
       </div>
 

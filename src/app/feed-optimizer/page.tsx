@@ -17,6 +17,30 @@ import type { TitleAnalysis, FeedOptimizerSummary } from '@/modules/feed-optimiz
 
 type SortKey = 'score' | 'ctr' | 'cost' | 'roas' | 'issues' | 'price' | 'cvr' | 'cpc';
 type SortDir = 'asc' | 'desc';
+type DateRange = '7d' | '14d' | '30d' | '90d' | '180d' | '365d';
+const DATE_RANGE_OPTIONS: { key: DateRange; label: string }[] = [
+  { key: '7d',   label: '7天'  },
+  { key: '14d',  label: '14天' },
+  { key: '30d',  label: '30天' },
+  { key: '90d',  label: '90天' },
+  { key: '180d', label: '180天'},
+  { key: '365d', label: '365天'},
+];
+
+// Get metrics for a specific date range, falling back to product-level metrics
+function getRangeMetrics(product: TitleAnalysis['product'], range: DateRange) {
+  const rm = product.metrics_by_range?.[range];
+  if (rm) return rm;
+  // fallback: use the stored 30d metrics (primary)
+  return {
+    impressions: product.impressions,
+    clicks: product.clicks,
+    ctr: product.ctr,
+    cost: product.cost,
+    conversions: product.conversions,
+    conversions_value: product.conversions_value,
+  };
+}
 
 interface GroupRow {
   item_group_id: string;
@@ -88,7 +112,7 @@ function extractParentTitle(analysis: TitleAnalysis): string {
 }
 
 // Aggregate variants by item_group_id (uses extractParentTitle for display label)
-function groupByItemGroup(analyses: TitleAnalysis[]): GroupRow[] {
+function groupByItemGroup(analyses: TitleAnalysis[], dateRange: DateRange): GroupRow[] {
   const groups: Record<string, GroupRow> = {};
   for (const a of analyses) {
     const key = a.product.item_group_id;
@@ -104,12 +128,13 @@ function groupByItemGroup(analyses: TitleAnalysis[]): GroupRow[] {
       };
     }
     const g = groups[key];
+    const rm = getRangeMetrics(a.product, dateRange);
     g.count++;
-    g.cost += a.product.cost;
-    g.clicks += a.product.clicks;
-    g.impressions += a.product.impressions;
-    g.conversions += a.product.conversions;
-    g.conversions_value += a.product.conversions_value ?? 0;
+    g.cost += rm.cost;
+    g.clicks += rm.clicks;
+    g.impressions += rm.impressions;
+    g.conversions += rm.conversions;
+    g.conversions_value += rm.conversions_value;
     g.minScore = Math.min(g.minScore, a.score);
     g.totalIssues += a.issues.length;
     g.items.push(a);
@@ -146,6 +171,7 @@ export default function FeedOptimizerPage() {
   const [grouped, setGrouped] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [exportedAt, setExportedAt] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>('30d');
 
   useEffect(() => {
     setLoading(true);
@@ -176,21 +202,23 @@ export default function FeedOptimizerPage() {
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
       let av = 0, bv = 0;
+      const arm = getRangeMetrics(a.product, dateRange);
+      const brm = getRangeMetrics(b.product, dateRange);
       if (sortKey === 'score') { av = a.score; bv = b.score; }
-      else if (sortKey === 'ctr') { av = a.product.ctr; bv = b.product.ctr; }
-      else if (sortKey === 'cost') { av = a.product.cost; bv = b.product.cost; }
-      else if (sortKey === 'roas') { av = getRoas(a.product); bv = getRoas(b.product); }
+      else if (sortKey === 'ctr') { av = arm.ctr; bv = brm.ctr; }
+      else if (sortKey === 'cost') { av = arm.cost; bv = brm.cost; }
+      else if (sortKey === 'roas') { av = arm.cost > 0 ? arm.conversions_value / arm.cost : 0; bv = brm.cost > 0 ? brm.conversions_value / brm.cost : 0; }
       else if (sortKey === 'issues') { av = a.issues.length; bv = b.issues.length; }
       else if (sortKey === 'price') { av = a.product.price; bv = b.product.price; }
-      else if (sortKey === 'cvr') { av = a.product.clicks > 0 ? a.product.conversions / a.product.clicks : 0; bv = b.product.clicks > 0 ? b.product.conversions / b.product.clicks : 0; }
-      else if (sortKey === 'cpc') { av = a.product.clicks > 0 ? a.product.cost / a.product.clicks : 0; bv = b.product.clicks > 0 ? b.product.cost / b.product.clicks : 0; }
+      else if (sortKey === 'cvr') { av = arm.clicks > 0 ? arm.conversions / arm.clicks : 0; bv = brm.clicks > 0 ? brm.conversions / brm.clicks : 0; }
+      else if (sortKey === 'cpc') { av = arm.clicks > 0 ? arm.cost / arm.clicks : 0; bv = brm.clicks > 0 ? brm.cost / brm.clicks : 0; }
       return sortDir === 'asc' ? av - bv : bv - av;
     });
-  }, [filtered, sortKey, sortDir]);
+  }, [filtered, sortKey, sortDir, dateRange]);
 
   const groupedRows = useMemo(() => {
     if (!grouped) return null;
-    const g = groupByItemGroup(filtered);
+    const g = groupByItemGroup(filtered, dateRange);
     return [...g].sort((a, b) => {
       if (sortKey === 'score') return sortDir === 'asc' ? a.minScore - b.minScore : b.minScore - a.minScore;
       if (sortKey === 'ctr') return sortDir === 'asc' ? a.ctr - b.ctr : b.ctr - a.ctr;
@@ -202,7 +230,7 @@ export default function FeedOptimizerPage() {
       if (sortKey === 'price') return sortDir === 'asc' ? a.priceMin - b.priceMin : b.priceMin - a.priceMin;
       return 0;
     });
-  }, [filtered, grouped, sortKey, sortDir]);
+  }, [filtered, grouped, sortKey, sortDir, dateRange]);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -267,6 +295,23 @@ export default function FeedOptimizerPage() {
                 {t('feed_data_period')} {new Date(exportedAt).toLocaleDateString('zh-CN')}
               </span>
             )}
+            {/* Date range selector */}
+            <div className="flex items-center gap-0.5 rounded-md border border-border bg-muted/40 p-0.5">
+              {DATE_RANGE_OPTIONS.map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setDateRange(opt.key)}
+                  className={cn(
+                    'px-2 py-0.5 rounded text-xs transition-colors',
+                    dateRange === opt.key
+                      ? 'bg-background text-foreground font-medium shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
             <div className="ml-auto flex items-center gap-2">
               {/* Search */}
               <div className="relative">
@@ -347,9 +392,10 @@ export default function FeedOptimizerPage() {
                     </TableRow>
                     {isExpanded && g.items.map(a => {
                       const vtone = getScoreTone(a.score);
-                      const vroas = getRoas(a.product);
-                      const vcvr = a.product.clicks > 0 ? a.product.conversions / a.product.clicks : 0;
-                      const vcpc = a.product.clicks > 0 ? a.product.cost / a.product.clicks : 0;
+                      const vrm = getRangeMetrics(a.product, dateRange);
+                      const vroas = vrm.cost > 0 ? vrm.conversions_value / vrm.cost : 0;
+                      const vcvr = vrm.clicks > 0 ? vrm.conversions / vrm.clicks : 0;
+                      const vcpc = vrm.clicks > 0 ? vrm.cost / vrm.clicks : 0;
                       return (
                         <TableRow key={a.product.item_id} className="border-border bg-muted/20 hover:bg-accent/20">
                           <TableCell className="pl-4 py-1.5"></TableCell>
@@ -364,11 +410,11 @@ export default function FeedOptimizerPage() {
                           <TableCell>
                             <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', vtone.badgeClassName)}>{a.score}</Badge>
                           </TableCell>
-                          <TableCell className={cn('text-xs tabular-nums', a.product.ctr < 0.01 && 'text-red-600 dark:text-red-400')}>{(a.product.ctr * 100).toFixed(2)}%</TableCell>
+                          <TableCell className={cn('text-xs tabular-nums', vrm.ctr < 0.01 && 'text-red-600 dark:text-red-400')}>{(vrm.ctr * 100).toFixed(2)}%</TableCell>
                           <TableCell className="text-xs tabular-nums">{vcpc > 0 ? `$${vcpc.toFixed(2)}` : '—'}</TableCell>
                           <TableCell className="text-xs tabular-nums">{vcvr > 0 ? `${(vcvr * 100).toFixed(1)}%` : '—'}</TableCell>
-                          <TableCell className="text-xs tabular-nums">${(a.product.cost ?? 0).toFixed(2)}</TableCell>
-                          <TableCell className={cn('text-xs tabular-nums font-medium', vroas >= 2 ? 'text-green-400' : vroas < 1 ? 'text-red-400' : 'text-foreground')}>{vroas.toFixed(2)}x</TableCell>
+                          <TableCell className="text-xs tabular-nums">${vrm.cost.toFixed(2)}</TableCell>
+                          <TableCell className={cn('text-xs tabular-nums font-medium', vroas >= 2 ? 'text-green-600 dark:text-green-400' : vroas < 1 ? 'text-red-600 dark:text-red-400' : 'text-foreground')}>{vroas.toFixed(2)}x</TableCell>
                           <TableCell><span className={cn('text-xs font-semibold', a.issues.length >= 4 ? 'text-red-600 dark:text-red-400' : a.issues.length >= 2 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>{a.issues.length}</span></TableCell>
                         </TableRow>
                       );
@@ -377,9 +423,10 @@ export default function FeedOptimizerPage() {
                 );
               }) : sorted.map(a => {
                 const tone = getScoreTone(a.score);
-                const roas = getRoas(a.product);
-                const cvr = a.product.clicks > 0 ? a.product.conversions / a.product.clicks : 0;
-                const cpc = a.product.clicks > 0 ? a.product.cost / a.product.clicks : 0;
+                const rm = getRangeMetrics(a.product, dateRange);
+                const roas = rm.cost > 0 ? rm.conversions_value / rm.cost : 0;
+                const cvr = rm.clicks > 0 ? rm.conversions / rm.clicks : 0;
+                const cpc = rm.clicks > 0 ? rm.cost / rm.clicks : 0;
                 return (
                   <TableRow key={a.product.item_id ?? a.product.item_group_id} className="border-border hover:bg-accent/30">
                     <TableCell className="pl-4 py-2 w-8"></TableCell>
@@ -392,10 +439,10 @@ export default function FeedOptimizerPage() {
                     <TableCell>
                       <Badge variant="outline" className={cn('text-xs font-semibold px-1.5', tone.badgeClassName)}>{a.score}</Badge>
                     </TableCell>
-                    <TableCell className={cn('text-xs tabular-nums', a.product.ctr < 0.01 && 'text-red-600 dark:text-red-400')}>{(a.product.ctr * 100).toFixed(2)}%</TableCell>
+                    <TableCell className={cn('text-xs tabular-nums', rm.ctr < 0.01 && 'text-red-600 dark:text-red-400')}>{(rm.ctr * 100).toFixed(2)}%</TableCell>
                     <TableCell className="text-xs tabular-nums">{cpc > 0 ? `$${cpc.toFixed(2)}` : '—'}</TableCell>
                     <TableCell className="text-xs tabular-nums">{cvr > 0 ? `${(cvr * 100).toFixed(1)}%` : '—'}</TableCell>
-                    <TableCell className="text-xs tabular-nums">${(a.product.cost ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-xs tabular-nums">${rm.cost.toFixed(2)}</TableCell>
                     <TableCell className={cn('text-xs tabular-nums font-medium', roas >= 2 ? 'text-green-600 dark:text-green-400' : roas < 1 ? 'text-red-600 dark:text-red-400' : 'text-foreground')}>{roas.toFixed(2)}x</TableCell>
                     <TableCell><span className={cn('text-xs font-semibold', a.issues.length >= 4 ? 'text-red-600 dark:text-red-400' : a.issues.length >= 2 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>{a.issues.length}</span></TableCell>
                   </TableRow>

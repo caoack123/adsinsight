@@ -16,6 +16,14 @@ export interface FeedProduct {
   conversions: number;
   conversions_value: number;
   top_search_terms: string[] | null;
+  metrics_by_range?: Record<string, {
+    impressions: number;
+    clicks: number;
+    ctr: number;
+    cost: number;
+    conversions: number;
+    conversions_value: number;
+  }> | null;
 }
 
 export interface TitleAnalysis {

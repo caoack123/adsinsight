@@ -141,7 +141,7 @@ function fmtDateRange(start: string, end: string): string {
 
 function DeltaCell({ value, good, bad }: { value: string; good: boolean; bad: boolean }) {
   return (
-    <span className={cn('tabular-nums text-xs font-medium', good && 'text-green-400', bad && 'text-red-400', !good && !bad && 'text-muted-foreground')}>
+    <span className={cn('tabular-nums text-xs font-medium', good && 'text-green-600 dark:text-green-400', bad && 'text-red-600 dark:text-red-400', !good && !bad && 'text-muted-foreground')}>
       {value}
     </span>
   );
@@ -258,8 +258,8 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
                   <p className="text-xs text-muted-foreground">{label}</p>
                   <p className={cn(
                     'text-xs font-semibold',
-                    d > 0 && (label === '花费' ? 'text-amber-400' : 'text-green-400'),
-                    d < 0 && (label === '花费' ? 'text-green-400' : 'text-red-400')
+                    d > 0 && (label === '花费' ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'),
+                    d < 0 && (label === '花费' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')
                   )}>{value}</p>
                 </div>
               ))}
@@ -293,12 +293,20 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">{displayInsight}</p>
         {aiError && (
-          <p className="text-xs text-red-400 mt-1.5">生成失败：{aiError}。请确认 ANTHROPIC_API_KEY 已配置。</p>
+          <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">生成失败：{aiError}。请确认 ANTHROPIC_API_KEY 已配置。</p>
         )}
       </div>
     </div>
   );
 }
+
+type ChangeDateRange = '30d' | '90d' | '180d' | '365d';
+const CHANGE_DATE_RANGE_OPTIONS: { key: ChangeDateRange; label: string; days: number }[] = [
+  { key: '30d',  label: '近 30 天',  days: 30  },
+  { key: '90d',  label: '近 90 天',  days: 90  },
+  { key: '180d', label: '近 180 天', days: 180 },
+  { key: '365d', label: '近 365 天', days: 365 },
+];
 
 export default function ChangeTrackerPage() {
   const { selectedAccountId } = useSettings();
@@ -308,6 +316,7 @@ export default function ChangeTrackerPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [campaign, setCampaign] = useState('all');
   const [verdict, setVerdict] = useState('all');
+  const [dateRange, setDateRange] = useState<ChangeDateRange>('30d');
 
   useEffect(() => {
     setLoading(true);
@@ -340,12 +349,16 @@ export default function ChangeTrackerPage() {
   const allCampaigns = useMemo(() => [...new Set(allAnnotated.map(a => a.change.campaign))], [allAnnotated]);
 
   const filtered = useMemo(() => {
+    const rangeDays = CHANGE_DATE_RANGE_OPTIONS.find(o => o.key === dateRange)?.days ?? 30;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - rangeDays);
     return allAnnotated.filter(a => {
       if (campaign !== 'all' && a.change.campaign !== campaign) return false;
       if (verdict !== 'all' && a.delta.verdict !== verdict) return false;
+      if (new Date(a.change.timestamp) < cutoff) return false;
       return true;
     });
-  }, [allAnnotated, campaign, verdict]);
+  }, [allAnnotated, campaign, verdict, dateRange]);
 
   const sorted = useMemo(() =>
     [...filtered].sort((a, b) =>
@@ -373,7 +386,7 @@ export default function ChangeTrackerPage() {
         <MetricCard
           title="总变更次数"
           value={String(summary.total_changes)}
-          subtitle="近 30 天"
+          subtitle={CHANGE_DATE_RANGE_OPTIONS.find(o => o.key === dateRange)?.label ?? '近 30 天'}
         />
         <MetricCard
           title="正向变更"
@@ -394,7 +407,24 @@ export default function ChangeTrackerPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Date range tabs */}
+        <div className="flex items-center gap-0.5 rounded-md border border-border bg-muted/40 p-0.5">
+          {CHANGE_DATE_RANGE_OPTIONS.map(opt => (
+            <button
+              key={opt.key}
+              onClick={() => setDateRange(opt.key)}
+              className={cn(
+                'px-2.5 py-0.5 rounded text-xs transition-colors',
+                dateRange === opt.key
+                  ? 'bg-background text-foreground font-medium shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
         <Select value={campaign} onValueChange={(v) => setCampaign(v ?? 'all')}>
           <SelectTrigger className="w-52 h-8 text-xs">
             <SelectValue placeholder="全部广告系列" />

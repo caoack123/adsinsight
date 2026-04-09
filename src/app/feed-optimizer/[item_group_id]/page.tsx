@@ -164,8 +164,8 @@ export default function FeedProductDetailPage({
                   key={i}
                   className={cn(
                     'border rounded px-3 py-2.5 flex items-start gap-2.5',
-                    issue.severity === 'high' && 'border-red-500/30 bg-red-950/20',
-                    issue.severity === 'medium' && 'border-amber-500/30 bg-amber-950/20',
+                    issue.severity === 'high' && 'border-red-300 bg-red-50 dark:border-red-500/30 dark:bg-red-950/20',
+                    issue.severity === 'medium' && 'border-amber-300 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/20',
                     issue.severity === 'low' && 'border-border bg-card'
                   )}
                 >
@@ -176,8 +176,8 @@ export default function FeedProductDetailPage({
                         variant="outline"
                         className={cn(
                           'text-xs px-1 py-0',
-                          issue.severity === 'high' && 'border-red-500/50 text-red-400',
-                          issue.severity === 'medium' && 'border-amber-500/50 text-amber-400',
+                          issue.severity === 'high' && 'border-red-400 text-red-600 dark:border-red-500/50 dark:text-red-400',
+                          issue.severity === 'medium' && 'border-amber-400 text-amber-700 dark:border-amber-500/50 dark:text-amber-400',
                           issue.severity === 'low' && 'border-border text-muted-foreground'
                         )}
                       >
@@ -192,18 +192,18 @@ export default function FeedProductDetailPage({
           )}
 
           {/* Suggested title */}
-          <Card className="border-emerald-500/40 bg-emerald-950/10">
+          <Card className="border-emerald-400 bg-emerald-50 dark:border-emerald-500/40 dark:bg-emerald-950/10">
             <CardHeader className="pb-1 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <CardTitle className="text-xs text-emerald-400 uppercase tracking-wider">AI 优化标题</CardTitle>
+                  <CardTitle className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">AI 优化标题</CardTitle>
                   {isAiGenerated && (
-                    <Badge variant="outline" className="text-xs border-emerald-500/50 text-emerald-400 px-1.5">
+                    <Badge variant="outline" className="text-xs border-emerald-500/50 text-emerald-700 dark:text-emerald-400 px-1.5">
                       实时生成
                     </Badge>
                   )}
                 </div>
-                <span className="text-xs text-emerald-400 font-medium">预计 CTR 提升 {displayLift}</span>
+                <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">预计 CTR 提升 {displayLift}</span>
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-3">
@@ -211,7 +211,7 @@ export default function FeedProductDetailPage({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleCopy}
-                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-emerald-700/30 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-700/50 transition-colors"
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-emerald-100 border border-emerald-400 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-700/30 dark:border-emerald-500/40 dark:text-emerald-300 dark:hover:bg-emerald-700/50 transition-colors"
                 >
                   {copied ? <Check size={12} /> : <Copy size={12} />}
                   {copied ? '已复制！' : '复制优化标题'}
@@ -228,7 +228,7 @@ export default function FeedProductDetailPage({
                 </button>
               </div>
               {aiError && (
-                <p className="text-xs text-red-400 mt-2">
+                <p className="text-xs text-red-600 dark:text-red-400 mt-2">
                   生成失败：{aiError}。请确认 ANTHROPIC_API_KEY 已配置。
                 </p>
               )}
@@ -287,7 +287,7 @@ export default function FeedProductDetailPage({
                 ].map(({ label, value, warn, good }) => (
                   <div key={label}>
                     <p className="text-xs text-muted-foreground">{label}</p>
-                    <p className={cn('text-sm font-semibold tabular-nums', warn && 'text-red-400', good && 'text-green-400')}>{value}</p>
+                    <p className={cn('text-sm font-semibold tabular-nums', warn && 'text-red-600 dark:text-red-400', good && 'text-green-600 dark:text-green-400')}>{value}</p>
                   </div>
                 ))}
               </div>
@@ -322,9 +322,9 @@ export default function FeedProductDetailPage({
                     <span className="text-xs text-muted-foreground truncate">{term}</span>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs text-muted-foreground w-8 text-right">现在</span>
-                      {inCurrent ? <CheckCircle2 size={13} className="text-green-400" /> : <XCircle size={13} className="text-red-400" />}
+                      {inCurrent ? <CheckCircle2 size={13} className="text-green-600 dark:text-green-400" /> : <XCircle size={13} className="text-red-600 dark:text-red-400" />}
                       <span className="text-xs text-muted-foreground w-8 text-right">优化后</span>
-                      {inSuggested ? <CheckCircle2 size={13} className="text-green-400" /> : <XCircle size={13} className="text-red-400" />}
+                      {inSuggested ? <CheckCircle2 size={13} className="text-green-600 dark:text-green-400" /> : <XCircle size={13} className="text-red-600 dark:text-red-400" />}
                     </div>
                   </div>
                 );
