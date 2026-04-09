@@ -10,7 +10,7 @@
       "change_type": "BIDDING_STRATEGY_CHANGED",
       "resource_type": "CAMPAIGN",
       "resource_name": "Shopping - Ice Jewelry",
-      "changed_by": "alex@crownedice.com",
+      "changed_by": "alex@adinsight.demo",
       "old_value": "Manual CPC",
       "new_value": "Target ROAS: 300%",
       "performance_before": {
@@ -42,7 +42,7 @@
       "change_type": "BID_CHANGED",
       "resource_type": "AD_GROUP",
       "resource_name": "Ice Crystal Rings",
-      "changed_by": "alex@crownedice.com",
+      "changed_by": "alex@adinsight.demo",
       "old_value": "Max CPC: $0.45",
       "new_value": "Max CPC: $0.75",
       "performance_before": {
@@ -74,7 +74,7 @@
       "change_type": "BUDGET_CHANGED",
       "resource_type": "CAMPAIGN",
       "resource_name": "Search - Brand Terms",
-      "changed_by": "jenny@crownedice.com",
+      "changed_by": "jenny@adinsight.demo",
       "old_value": "Daily budget: $15.00",
       "new_value": "Daily budget: $30.00",
       "performance_before": {
@@ -106,7 +106,7 @@
       "change_type": "AD_PAUSED",
       "resource_type": "AD",
       "resource_name": "Iced Out Bracelet - Promo Creative",
-      "changed_by": "alex@crownedice.com",
+      "changed_by": "alex@adinsight.demo",
       "old_value": "Status: ENABLED",
       "new_value": "Status: PAUSED",
       "performance_before": {
@@ -138,7 +138,7 @@
       "change_type": "BID_CHANGED",
       "resource_type": "AD_GROUP",
       "resource_name": "Snow Boots",
-      "changed_by": "jenny@crownedice.com",
+      "changed_by": "jenny@adinsight.demo",
       "old_value": "Max CPC: $0.60",
       "new_value": "Max CPC: $0.90",
       "performance_before": {
@@ -169,10 +169,10 @@
       "ad_group": "Brand Keywords",
       "change_type": "KEYWORD_ADDED",
       "resource_type": "KEYWORD",
-      "resource_name": "[crowned ice jewelry]",
-      "changed_by": "alex@crownedice.com",
+      "resource_name": "[premium outerwear]",
+      "changed_by": "alex@adinsight.demo",
       "old_value": null,
-      "new_value": "Keyword: [crowned ice jewelry], Match: Exact, CPC bid: $0.80",
+      "new_value": "Keyword: [premium outerwear], Match: Exact, CPC bid: $0.80",
       "performance_before": {
         "window_days": 7,
         "impressions": 800,
@@ -202,7 +202,7 @@
       "change_type": "CAMPAIGN_PAUSED",
       "resource_type": "CAMPAIGN",
       "resource_name": "Shopping - Clearance Items",
-      "changed_by": "jenny@crownedice.com",
+      "changed_by": "jenny@adinsight.demo",
       "old_value": "Status: ENABLED",
       "new_value": "Status: PAUSED",
       "performance_before": {
@@ -234,7 +234,7 @@
       "change_type": "BID_CHANGED",
       "resource_type": "AD_GROUP",
       "resource_name": "Drop Earrings",
-      "changed_by": "alex@crownedice.com",
+      "changed_by": "alex@adinsight.demo",
       "old_value": "Max CPC: $0.55",
       "new_value": "Max CPC: $0.35",
       "performance_before": {
@@ -266,7 +266,7 @@
       "change_type": "BUDGET_CHANGED",
       "resource_type": "CAMPAIGN",
       "resource_name": "Shopping - Ice Jewelry",
-      "changed_by": "alex@crownedice.com",
+      "changed_by": "alex@adinsight.demo",
       "old_value": "Daily budget: $50.00",
       "new_value": "Daily budget: $80.00",
       "performance_before": {

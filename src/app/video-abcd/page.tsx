@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Play, Sparkles, ExternalLink, Link2, Loader2, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { useI18n } from '@/context/i18n-context';
 
 // ── YouTube URL helpers ───────────────────────────────────────────────────────
 
@@ -362,6 +363,7 @@ function VideoCard({ video }: { video: VideoAd }) {
 
 export default function VideoAbcdPage() {
   const { selectedAccountId } = useSettings();
+  const { t } = useI18n();
   const isDemo = selectedAccountId === 'demo';
 
   const [videos, setVideos] = useState<VideoAd[]>([]);
@@ -398,7 +400,7 @@ export default function VideoAbcdPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-base font-semibold">视频素材分析</h1>
+          <h1 className="text-base font-semibold">{t('video_title')}</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             基于 Google ABCD 框架，用 Gemini 自动评估每条视频广告素材
           </p>

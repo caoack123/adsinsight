@@ -16,7 +16,7 @@ import {
   getSignalDef,
   getSignalsByCategory,
 } from '@/lib/video-abcd';
-import type { ABCDAnalysis, ABCDCategory, CategoryScore } from '@/modules/video-abcd/schema';
+import type { VideoAd, ABCDAnalysis, ABCDCategory, CategoryScore } from '@/modules/video-abcd/schema';
 import type { AnalyzeVideoRequest } from '@/app/api/ai/analyze-video/route';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -229,7 +229,7 @@ export default function VideoDetailPage({
   const [analysis, setAnalysis] = useState<ABCDAnalysis | null>(video?.abcd_analysis ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { settings } = useSettings();
+  const { settings, selectedAccountId } = useSettings();
 
   // For manually-analyzed videos not in static data — check sessionStorage
   const [manualData, setManualData] = useState<{ youtubeUrl: string; analysis: ABCDAnalysis } | null>(null);
@@ -246,31 +246,59 @@ export default function VideoDetailPage({
     }
   }, [video_id, video]);
 
+  // For DB videos — fetch from API if not found in static data or sessionStorage
+  const [dbVideo, setDbVideo] = useState<VideoAd | null>(null);
+  const [dbLoading, setDbLoading] = useState(false);
+  useEffect(() => {
+    if (!video && manualChecked && !manualData) {
+      setDbLoading(true);
+      fetch(`/api/data/videos?account_id=${selectedAccountId}`)
+        .then(r => r.json())
+        .then(data => {
+          const found = (data.videos ?? []).find((v: VideoAd) => v.video_id === video_id);
+          if (found) setDbVideo(found);
+        })
+        .catch(console.error)
+        .finally(() => setDbLoading(false));
+    }
+  }, [video, manualChecked, manualData, video_id, selectedAccountId]);
+
   if (!video) {
     if (!manualChecked) return null; // wait for sessionStorage check
     if (manualData) {
       return <ManualVideoDetail videoId={video_id} youtubeUrl={manualData.youtubeUrl} analysis={manualData.analysis} />;
     }
-    return (
-      <div className="space-y-4">
-        <Link href="/video-abcd" className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm">
-          <ArrowLeft size={14} /> 返回列表
-        </Link>
-        <p className="text-sm text-muted-foreground">找不到该视频。</p>
-      </div>
-    );
+    if (dbLoading) {
+      return (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-12 justify-center">
+          <Loader2 size={16} className="animate-spin" /> 加载中...
+        </div>
+      );
+    }
+    if (!dbVideo) {
+      return (
+        <div className="space-y-4">
+          <Link href="/video-abcd" className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm">
+            <ArrowLeft size={14} /> 返回列表
+          </Link>
+          <p className="text-sm text-muted-foreground">找不到该视频。</p>
+        </div>
+      );
+    }
+    // fall through to normal detail view using dbVideo
   }
 
-  const roas = getRoas(video);
-  const cpv = getCpv(video);
+  const effectiveVideo = video ?? dbVideo!;
+  const roas = getRoas(effectiveVideo);
+  const cpv = getCpv(effectiveVideo);
 
   async function handleAnalyze() {
     setLoading(true);
     setError(null);
     try {
       const body: AnalyzeVideoRequest = {
-        youtube_url: video!.youtube_url,
-        video_id: video!.video_id,
+        youtube_url: effectiveVideo.youtube_url,
+        video_id: effectiveVideo.video_id,
         brand_name: videoAbcdData.brand_name,
         branded_products: videoAbcdData.branded_products,
         ...(settings.googleAiApiKey && { api_key: settings.googleAiApiKey }),
@@ -302,11 +330,11 @@ export default function VideoDetailPage({
           <ArrowLeft size={16} />
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-base font-semibold truncate">{video.ad_name}</h1>
-          <p className="text-xs text-muted-foreground">{video.campaign} · {video.ad_group}</p>
+          <h1 className="text-base font-semibold truncate">{effectiveVideo.ad_name}</h1>
+          <p className="text-xs text-muted-foreground">{effectiveVideo.campaign} · {effectiveVideo.ad_group}</p>
         </div>
         <a
-          href={video.youtube_url}
+          href={effectiveVideo.youtube_url}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
@@ -434,26 +462,26 @@ export default function VideoDetailPage({
           <Card className="border-border overflow-hidden">
             <div className="relative w-full aspect-video bg-muted">
               <Image
-                src={video.thumbnail_url ?? `https://img.youtube.com/vi/${video.video_id}/hqdefault.jpg`}
-                alt={video.ad_name}
+                src={effectiveVideo.thumbnail_url ?? `https://img.youtube.com/vi/${effectiveVideo.video_id}/hqdefault.jpg`}
+                alt={effectiveVideo.ad_name}
                 fill
                 className="object-cover"
                 unoptimized
               />
-              {video.duration_seconds != null && (
+              {effectiveVideo.duration_seconds != null && (
                 <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                  {formatDuration(video.duration_seconds)}
+                  {formatDuration(effectiveVideo.duration_seconds)}
                 </div>
               )}
-              {video.format && (
+              {effectiveVideo.format && (
                 <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                  {FORMAT_LABEL[video.format]}
+                  {FORMAT_LABEL[effectiveVideo.format]}
                 </div>
               )}
             </div>
             <CardContent className="p-3">
               <a
-                href={video.youtube_url}
+                href={effectiveVideo.youtube_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-xs text-blue-400 hover:underline"
@@ -464,7 +492,7 @@ export default function VideoDetailPage({
           </Card>
 
           {/* Performance — only shown if the video has real ad data */}
-          {video.performance && (video.performance.impressions > 0 || video.performance.cost > 0) && (
+          {effectiveVideo.performance && (effectiveVideo.performance.impressions > 0 || effectiveVideo.performance.cost > 0) && (
             <Card className="border-border">
               <CardHeader className="pb-1 pt-3 px-4">
                 <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">广告效果数据</CardTitle>
@@ -472,13 +500,13 @@ export default function VideoDetailPage({
               <CardContent className="px-4 pb-4">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
                   {[
-                    { label: '曝光量', value: ((video.performance.impressions ?? 0) / 1000).toFixed(0) + 'K' },
-                    { label: '视频观看', value: ((video.performance.views ?? 0) / 1000).toFixed(0) + 'K' },
-                    { label: '观看率 (VTR)', value: ((video.performance.view_rate ?? 0) * 100).toFixed(0) + '%', good: (video.performance.view_rate ?? 0) >= 0.3 },
-                    { label: '点击率 (CTR)', value: ((video.performance.ctr ?? 0) * 100).toFixed(2) + '%', warn: (video.performance.ctr ?? 0) < 0.008 },
+                    { label: '曝光量', value: ((effectiveVideo.performance.impressions ?? 0) / 1000).toFixed(0) + 'K' },
+                    { label: '视频观看', value: ((effectiveVideo.performance.views ?? 0) / 1000).toFixed(0) + 'K' },
+                    { label: '观看率 (VTR)', value: ((effectiveVideo.performance.view_rate ?? 0) * 100).toFixed(0) + '%', good: (effectiveVideo.performance.view_rate ?? 0) >= 0.3 },
+                    { label: '点击率 (CTR)', value: ((effectiveVideo.performance.ctr ?? 0) * 100).toFixed(2) + '%', warn: (effectiveVideo.performance.ctr ?? 0) < 0.008 },
                     { label: '单次观看成本 (CPV)', value: '$' + cpv.toFixed(3) },
-                    { label: '总花费', value: '$' + (video.performance.cost ?? 0).toLocaleString() },
-                    { label: '转化数', value: String(video.performance.conversions ?? 0) },
+                    { label: '总花费', value: '$' + (effectiveVideo.performance.cost ?? 0).toLocaleString() },
+                    { label: '转化数', value: String(effectiveVideo.performance.conversions ?? 0) },
                     { label: 'ROAS', value: roas.toFixed(2) + 'x', good: roas >= 2, warn: roas > 0 && roas < 1 },
                   ].map(({ label, value, warn, good }) => (
                     <div key={label}>

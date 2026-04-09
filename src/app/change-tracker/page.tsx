@@ -19,6 +19,7 @@ import { MetricCard } from '@/components/metric-card';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react';
 import type { AnalyzeChangeResponse } from '@/app/api/ai/analyze-change/route';
+import { useI18n } from '@/context/i18n-context';
 
 /** Flatten one level of nesting: {"campaign":{"status":"PAUSED"}} → {"status":"PAUSED"} */
 function flattenChangeObj(obj: Record<string, unknown>): Record<string, unknown> {
@@ -301,6 +302,7 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
 
 export default function ChangeTrackerPage() {
   const { selectedAccountId } = useSettings();
+  const { t } = useI18n();
   const [allAnnotated, setAllAnnotated] = useState<AnnotatedChange[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -364,7 +366,7 @@ export default function ChangeTrackerPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-base font-semibold">变更追踪</h1>
+      <h1 className="text-base font-semibold">{t('change_tracker_title')}</h1>
 
       {/* KPI cards */}
       <div className="grid grid-cols-4 gap-3">

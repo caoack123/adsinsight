@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { Sun, Moon } from 'lucide-react';
+import { useI18n } from '@/context/i18n-context';
 
 type Theme = 'dark' | 'light';
 
@@ -44,6 +45,19 @@ export function ThemeToggle() {
       title={theme === 'dark' ? '切换到亮色模式' : '切换到暗色模式'}
     >
       {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+    </button>
+  );
+}
+
+export function LangToggle() {
+  const { lang, setLang } = useI18n();
+  return (
+    <button
+      onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+      className="flex items-center gap-1 px-2 py-1 rounded border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+      title={lang === 'zh' ? 'Switch to English' : '切换为中文'}
+    >
+      {lang === 'zh' ? 'EN' : '中文'}
     </button>
   );
 }

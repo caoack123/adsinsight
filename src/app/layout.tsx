@@ -4,7 +4,7 @@ import './globals.css';
 import { Sidebar } from '@/components/sidebar';
 import { Providers } from '@/components/providers';
 import { AccountSwitcher } from '@/components/account-switcher';
-import { ThemeToggle } from '@/components/theme-provider';
+import { ThemeToggle, LangToggle } from '@/components/theme-provider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -33,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 AdInsight AI <span className="text-muted-foreground font-normal text-xs ml-1">广告洞察 AI</span>
               </span>
               <div className="flex items-center gap-2">
+                <LangToggle />
                 <ThemeToggle />
                 <AccountSwitcher />
               </div>

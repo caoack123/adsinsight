@@ -4,20 +4,22 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, ShoppingBag, Settings, Wrench, History, Video, Building2, SearchCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const navItems = [
-  { href: '/', label: '总览', icon: LayoutDashboard },
-  { href: '/feed-optimizer', label: 'Feed 智能优化', icon: ShoppingBag },
-  { href: '/search-terms', label: '搜索词分析', icon: SearchCode },
-  { href: '/change-tracker', label: '变更追踪', icon: History },
-  { href: '/video-abcd', label: '视频素材分析', icon: Video },
-  { href: '/accounts', label: '账户管理', icon: Building2 },
-  { href: '/setup', label: '安装脚本', icon: Wrench },
-  { href: '/settings', label: '设置', icon: Settings },
-];
+import { useI18n } from '@/context/i18n-context';
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { t } = useI18n();
+
+  const navItems = [
+    { href: '/', label: t('nav_overview'), icon: LayoutDashboard },
+    { href: '/feed-optimizer', label: t('nav_feed'), icon: ShoppingBag },
+    { href: '/search-terms', label: t('nav_search_terms'), icon: SearchCode },
+    { href: '/change-tracker', label: t('nav_change_tracker'), icon: History },
+    { href: '/video-abcd', label: t('nav_video'), icon: Video },
+    { href: '/accounts', label: t('nav_accounts'), icon: Building2 },
+    { href: '/setup', label: t('nav_setup'), icon: Wrench },
+    { href: '/settings', label: t('nav_settings'), icon: Settings },
+  ];
 
   return (
     <aside className="w-56 shrink-0 border-r border-border bg-card flex flex-col">

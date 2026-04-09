@@ -7,7 +7,7 @@
   "data": [
     {
       "campaign": "Shopping - Ice Jewelry",
-      "competitor": "You (crownedice.com)",
+      "competitor": "You (adinsight.demo)",
       "impression_share": 0.42,
       "overlap_rate": 1.0,
       "position_above_rate": 0,
@@ -73,7 +73,7 @@
     },
     {
       "campaign": "Shopping - Ice Jewelry",
-      "competitor": "You (crownedice.com)",
+      "competitor": "You (adinsight.demo)",
       "impression_share": 0.45,
       "overlap_rate": 1.0,
       "position_above_rate": 0,
@@ -139,7 +139,7 @@
     },
     {
       "campaign": "Shopping - Ice Jewelry",
-      "competitor": "You (crownedice.com)",
+      "competitor": "You (adinsight.demo)",
       "impression_share": 0.38,
       "overlap_rate": 1.0,
       "position_above_rate": 0,
@@ -216,7 +216,7 @@
     },
     {
       "campaign": "Search - Brand Terms",
-      "competitor": "You (crownedice.com)",
+      "competitor": "You (adinsight.demo)",
       "impression_share": 0.85,
       "overlap_rate": 1.0,
       "position_above_rate": 0,
