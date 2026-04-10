@@ -24,7 +24,7 @@ var CONFIG = {
   API_ENDPOINT: '${appUrl}/api/ingest',
   TOKEN: '${token}',
   DATE_RANGE: 'LAST_30_DAYS',
-  CHANGE_DAYS: 90,      // days of change history to export
+  CHANGE_DAYS: 28,      // days of change history to export (Google Ads API max is 30)
   MAX_PRODUCTS: 500,    // cap to avoid timeout
   MAX_CHANGES: 200
 };
@@ -41,34 +41,10 @@ function main() {
 
 // ── 1. Feed / Shopping products ───────────────────────────────────────────────
 
-// Fetch actual product prices from GMC via shopping_product resource
-function getProductPrices() {
-  var query =
-    'SELECT ' +
-    '  shopping_product.item_id, ' +
-    '  shopping_product.price ' +
-    'FROM shopping_product ' +
-    'LIMIT 5000';
-  var prices = {};
-  try {
-    var report = AdsApp.search(query);
-    while (report.hasNext()) {
-      var row = report.next();
-      var itemId = (row.shoppingProduct && row.shoppingProduct.itemId) || '';
-      var priceMicros = row.shoppingProduct && row.shoppingProduct.price && row.shoppingProduct.price.amountMicros;
-      if (itemId && priceMicros) {
-        prices[itemId] = parseFloat((parseInt(priceMicros) / 1000000).toFixed(2));
-      }
-    }
-    Logger.log('Prices fetched: ' + Object.keys(prices).length + ' products');
-  } catch (e) {
-    Logger.log('Price fetch error (non-critical): ' + e.message);
-  }
-  return prices;
-}
-
 function exportFeedProducts() {
-  var prices = getProductPrices();
+  // Price is not available via GAQL (shopping_product resource doesn't expose price micros).
+  // We default to 0 here; price can be enriched from a separate GMC data source if needed.
+  var prices = {};
 
   // ── Collect metrics across 6 date ranges ────────────────────────────────────
   var DATE_RANGES = [

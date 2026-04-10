@@ -67,7 +67,7 @@ function parseChangeValue(raw: string | null, lang: 'zh' | 'en' = 'zh'): string 
     // Bid / budget in micros
     if (obj.cpcBidMicros !== undefined) return `$${(Number(obj.cpcBidMicros) / 1_000_000).toFixed(2)} CPC`;
     if (obj.cpvBidMicros !== undefined) return `$${(Number(obj.cpvBidMicros) / 1_000_000).toFixed(4)} CPV`;
-    if (obj.amountMicros !== undefined) return `${lang === 'en' ? 'Budget' : '预算'} $${(Number(obj.amountMicros) / 1_000_000).toFixed(2)}/天`;
+    if (obj.amountMicros !== undefined) return `${lang === 'en' ? 'Budget' : '预算'} $${(Number(obj.amountMicros) / 1_000_000).toFixed(2)}${lang === 'en' ? '/day' : '/天'}`;
     if (obj.targetCpaMicros !== undefined) return `${lang === 'en' ? 'Target CPA' : '目标CPA'} $${(Number(obj.targetCpaMicros) / 1_000_000).toFixed(2)}`;
     // Target ROAS — can be nested {"targetRoas":{"targetRoas": 3.2}} or flat {"targetRoas": 3.2}
     if (obj.targetRoas !== undefined) {
@@ -241,7 +241,7 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
           {/* Before metrics */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              {t('ct_before')} {before.window_days} 天
+              {t('ct_before')} {before.window_days} {lang === 'en' ? 'd' : '天'}
               <span className="ml-1 normal-case font-normal text-muted-foreground/70">
                 ({before.date_start && before.date_end
                   ? fmtDateRange(before.date_start, before.date_end)
@@ -267,7 +267,7 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
           {/* After metrics */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              {t('ct_after')} {after.window_days} 天
+              {t('ct_after')} {after.window_days} {lang === 'en' ? 'd' : '天'}
               <span className="ml-1 normal-case font-normal text-muted-foreground/70">
                 ({after.date_start && after.date_end
                   ? fmtDateRange(after.date_start, after.date_end)
@@ -404,7 +404,7 @@ export default function ChangeTrackerPage() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground py-12 justify-center">
-        <Loader2 size={16} className="animate-spin" /> 加载中...
+        <Loader2 size={16} className="animate-spin" /> {t('loading')}
       </div>
     );
   }
@@ -470,14 +470,14 @@ export default function ChangeTrackerPage() {
         </Select>
         <Select value={verdict} onValueChange={(v) => setVerdict(v ?? 'all')}>
           <SelectTrigger className="w-36 h-8 text-xs">
-            <SelectValue placeholder="全部结果" />
+            <SelectValue placeholder={t('ct_all_verdicts')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部结果</SelectItem>
-            <SelectItem value="positive">正向</SelectItem>
-            <SelectItem value="negative">负向</SelectItem>
-            <SelectItem value="neutral">中性</SelectItem>
-            <SelectItem value="paused">已暂停</SelectItem>
+            <SelectItem value="all">{t('ct_all_verdicts')}</SelectItem>
+            <SelectItem value="positive">{t('ct_verdict_positive')}</SelectItem>
+            <SelectItem value="negative">{t('ct_verdict_negative')}</SelectItem>
+            <SelectItem value="neutral">{t('ct_verdict_neutral')}</SelectItem>
+            <SelectItem value="paused">{t('ct_verdict_paused')}</SelectItem>
           </SelectContent>
         </Select>
         <span className="text-xs text-muted-foreground ml-auto">{sorted.length} {t('ct_changes_suffix')}</span>

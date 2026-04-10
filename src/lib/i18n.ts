@@ -162,6 +162,11 @@ export const translations = {
     ct_change_range_90: '近 90 天',
     ct_change_range_180: '近 180 天',
     ct_change_range_365: '近 365 天',
+    ct_all_verdicts: '全部结果',
+    ct_verdict_positive: '正向',
+    ct_verdict_negative: '负向',
+    ct_verdict_neutral: '中性',
+    ct_verdict_paused: '已暂停',
     // Change value labels
     cv_enabled: '启用',
     cv_paused: '暂停',
@@ -471,6 +476,11 @@ export const translations = {
     ct_change_range_90: 'Last 90 days',
     ct_change_range_180: 'Last 180 days',
     ct_change_range_365: 'Last 365 days',
+    ct_all_verdicts: 'All results',
+    ct_verdict_positive: 'Positive',
+    ct_verdict_negative: 'Negative',
+    ct_verdict_neutral: 'Neutral',
+    ct_verdict_paused: 'Paused',
     // Change value labels
     cv_enabled: 'Enabled',
     cv_paused: 'Paused',
