@@ -44,6 +44,7 @@ function thumbUrl(videoId: string) {
 // ── Compact ABCD result display ──────────────────────────────────────────────
 
 function AbcdResultCard({ analysis, videoId }: { analysis: ABCDAnalysis; videoId: string }) {
+  const { t, lang } = useI18n();
   const [expanded, setExpanded] = useState(false);
   return (
     <div className="mt-4 rounded border border-border bg-card/60 p-3">
@@ -59,7 +60,7 @@ function AbcdResultCard({ analysis, videoId }: { analysis: ABCDAnalysis; videoId
             </div>
           );
         })}
-        <span className="text-xs text-muted-foreground ml-auto">总分 <span className="text-foreground font-semibold">{analysis.overall_score}/100</span></span>
+        <span className="text-xs text-muted-foreground ml-auto">{lang === 'en' ? 'Total' : '总分'} <span className="text-foreground font-semibold">{analysis.overall_score}/100</span></span>
       </div>
       <p className="text-xs text-muted-foreground leading-relaxed">{analysis.summary_zh}</p>
       <button
@@ -67,7 +68,7 @@ function AbcdResultCard({ analysis, videoId }: { analysis: ABCDAnalysis; videoId
         className="mt-2 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
       >
         {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-        {expanded ? '收起细节' : '展开 22 个信号'}
+        {expanded ? t('video_collapse') : t('video_expand_signals')}
       </button>
       {expanded && (
         <div className="mt-2 space-y-3">
@@ -95,20 +96,20 @@ function AbcdResultCard({ analysis, videoId }: { analysis: ABCDAnalysis; videoId
       )}
       <div className="mt-3 pt-2 border-t border-border/40 grid grid-cols-2 gap-3">
         <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">优势</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t('video_strengths')}</p>
           {analysis.top_strengths_zh.map(s => (
             <p key={s} className="text-xs text-green-700 dark:text-green-400/90">✓ {s}</p>
           ))}
         </div>
         <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">改进点</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t('video_improvements')}</p>
           {analysis.top_improvements_zh.map(s => (
             <p key={s} className="text-xs text-amber-700 dark:text-amber-400/90">△ {s}</p>
           ))}
         </div>
       </div>
       <Link href={`/video-abcd/${videoId}`} className="mt-2 block text-xs text-blue-400 hover:underline">
-        → 查看完整详情页
+        {t('video_view_detail')}
       </Link>
     </div>
   );
@@ -118,6 +119,7 @@ function AbcdResultCard({ analysis, videoId }: { analysis: ABCDAnalysis; videoId
 
 function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { accountId: string; brandName: string; onSaved: (videoId: string) => void }) {
   const { settings } = useSettings();
+  const { t } = useI18n();
   const [url, setUrl] = useState(() =>
     typeof window !== 'undefined' ? sessionStorage.getItem('yt_analyzer_url') ?? '' : ''
   );
@@ -139,7 +141,7 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { acco
   async function handleAnalyze() {
     const videoId = extractYouTubeId(url.trim());
     if (!videoId) {
-      setError('请输入有效的 YouTube URL（或 11 位 Video ID）');
+      setError(t('video_invalid_url'));
       return;
     }
     setLoading(true);
@@ -201,15 +203,15 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { acco
       <CardHeader className="pb-2 pt-4 px-4">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <Link2 size={14} className="text-blue-400" />
-          粘贴 YouTube 链接预分析
+          {t('video_paste_title')}
         </CardTitle>
-        <p className="text-xs text-muted-foreground">无需在 Google Ads 投放——直接输入 YouTube URL，Gemini 立即给出 ABCD 评分</p>
+        <p className="text-xs text-muted-foreground">{t('video_paste_subtitle')}</p>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-3">
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="https://www.youtube.com/watch?v=... 或直接粘贴 Video ID"
+            placeholder={t('video_url_placeholder')}
             value={url}
             onChange={e => {
               setUrl(e.target.value);
@@ -221,7 +223,7 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { acco
           />
           <input
             type="text"
-            placeholder="品牌名（可选）"
+            placeholder={t('video_brand_placeholder')}
             value={brand}
             onChange={e => setBrand(e.target.value)}
             className="w-32 bg-muted border border-border rounded px-3 py-1.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -232,7 +234,7 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { acco
             className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-600 border border-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-            {loading ? '分析中…' : 'ABCD 分析'}
+            {loading ? t('video_analyzing') : t('video_abcd_btn')}
           </button>
         </div>
 
@@ -249,7 +251,7 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { acco
               <p>Video ID: <span className="text-foreground font-mono">{previewId}</span></p>
               <a href={`https://www.youtube.com/watch?v=${previewId}`} target="_blank" rel="noopener noreferrer"
                 className="text-blue-400 hover:underline flex items-center gap-1 mt-0.5">
-                <ExternalLink size={10} /> 在 YouTube 打开
+                <ExternalLink size={10} /> {t('video_open_yt')}
               </a>
             </div>
           </div>
@@ -270,6 +272,7 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { acco
 // ── Video card (shared between demo & real) ───────────────────────────────────
 
 function VideoCard({ video }: { video: VideoAd }) {
+  const { t, lang } = useI18n();
   const roas = getRoas(video);
   const cpv = getCpv(video);
   const analysis = video.abcd_analysis;
@@ -310,8 +313,8 @@ function VideoCard({ video }: { video: VideoAd }) {
 
             <div className="flex gap-5 mb-3">
               {[
-                { label: '曝光', value: ((video.performance?.impressions ?? 0) / 1000).toFixed(0) + 'K' },
-                { label: '观看率', value: ((video.performance?.view_rate ?? 0) * 100).toFixed(0) + '%' },
+                { label: t('ct_impressions'), value: ((video.performance?.impressions ?? 0) / 1000).toFixed(0) + 'K' },
+                { label: 'VTR', value: ((video.performance?.view_rate ?? 0) * 100).toFixed(0) + '%' },
                 { label: 'CTR', value: ((video.performance?.ctr ?? 0) * 100).toFixed(1) + '%', warn: (video.performance?.ctr ?? 0) < 0.008 },
                 { label: 'CPV', value: '$' + cpv.toFixed(3) },
                 { label: 'ROAS', value: roas.toFixed(2) + 'x', good: roas >= 2, warn: roas < 1 },
@@ -338,8 +341,8 @@ function VideoCard({ video }: { video: VideoAd }) {
                     );
                   })}
                 </div>
-                <span className="text-xs text-muted-foreground ml-2">总分 {analysis.overall_score}/100</span>
-                <Link href={`/video-abcd/${video.video_id}`} className="ml-auto text-xs text-blue-400 hover:underline">查看详情 →</Link>
+                <span className="text-xs text-muted-foreground ml-2">{lang === 'en' ? 'Total' : '总分'} {analysis.overall_score}/100</span>
+                <Link href={`/video-abcd/${video.video_id}`} className="ml-auto text-xs text-blue-400 hover:underline">{lang === 'en' ? 'Details →' : '查看详情 →'}</Link>
               </div>
             ) : (
               <div className="flex items-center gap-2">
@@ -347,9 +350,9 @@ function VideoCard({ video }: { video: VideoAd }) {
                   href={`/video-abcd/${video.video_id}`}
                   className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-blue-600 border border-blue-600 text-white hover:bg-blue-700 transition-colors"
                 >
-                  <Sparkles size={11} />用 Gemini 分析 ABCD
+                  <Sparkles size={11} />{t('video_analyze_gemini')}
                 </Link>
-                <span className="text-xs text-muted-foreground">未分析</span>
+                <span className="text-xs text-muted-foreground">{t('video_not_analyzed')}</span>
               </div>
             )}
           </div>
@@ -363,7 +366,7 @@ function VideoCard({ video }: { video: VideoAd }) {
 
 export default function VideoAbcdPage() {
   const { selectedAccountId } = useSettings();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const isDemo = selectedAccountId === 'demo';
 
   const [videos, setVideos] = useState<VideoAd[]>([]);
@@ -402,11 +405,11 @@ export default function VideoAbcdPage() {
         <div>
           <h1 className="text-base font-semibold">{t('video_title')}</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            基于 Google ABCD 框架，用 Gemini 自动评估每条视频广告素材
+            {lang === 'en' ? 'Evaluate video ad creatives with Gemini using the Google ABCD framework' : '基于 Google ABCD 框架，用 Gemini 自动评估每条视频广告素材'}
           </p>
         </div>
         {isDemo && (
-          <Badge variant="outline" className="text-xs border-amber-400 text-amber-600 dark:border-amber-500/40 dark:text-amber-400">演示数据</Badge>
+          <Badge variant="outline" className="text-xs border-amber-400 text-amber-600 dark:border-amber-500/40 dark:text-amber-400">{t('video_demo_badge')}</Badge>
         )}
       </div>
 
@@ -416,17 +419,17 @@ export default function VideoAbcdPage() {
           <div className="grid grid-cols-4 gap-3">
             {isDemo ? (
               <>
-                <MetricCard title="视频广告数" value={String(demoSummary.total)} subtitle="已导入" />
-                <MetricCard title="已完成分析" value={`${demoSummary.analyzed} / ${demoSummary.total}`} subtitle="点击视频进入分析" />
-                <MetricCard title="平均 ABCD 分" value={demoSummary.avgScore !== null ? `${demoSummary.avgScore}/100` : '—'} subtitle="所有已分析素材" highlight={!!demoSummary.avgScore && demoSummary.avgScore >= 60} />
-                <MetricCard title="分析模型" value="Gemini 2.5 Flash" subtitle="1 次请求，22 个信号" />
+                <MetricCard title={t('video_kpi_total')} value={String(demoSummary.total)} subtitle={t('video_kpi_imported')} />
+                <MetricCard title={t('video_kpi_analyzed')} value={`${demoSummary.analyzed} / ${demoSummary.total}`} subtitle={t('video_kpi_click_hint')} />
+                <MetricCard title={t('video_kpi_score')} value={demoSummary.avgScore !== null ? `${demoSummary.avgScore}/100` : '—'} subtitle={t('video_kpi_all')} highlight={!!demoSummary.avgScore && demoSummary.avgScore >= 60} />
+                <MetricCard title={t('video_kpi_model')} value="Gemini 2.5 Flash" subtitle={t('video_kpi_signals')} />
               </>
             ) : (
               <>
-                <MetricCard title="视频广告数" value={String(videos.length)} subtitle="已同步" />
-                <MetricCard title="已完成分析" value={`${videos.filter(v => v.abcd_analysis).length} / ${videos.length}`} subtitle="点击视频进入分析" />
-                <MetricCard title="平均 ABCD 分" value={(() => { const s = videos.map(v => v.abcd_analysis?.overall_score).filter((n): n is number => typeof n === 'number'); return s.length ? `${Math.round(s.reduce((a,b)=>a+b,0)/s.length)}/100` : '—'; })()} subtitle="所有已分析素材" />
-                <MetricCard title="分析模型" value="Gemini 2.5 Flash" subtitle="1 次请求，22 个信号" />
+                <MetricCard title={t('video_kpi_total')} value={String(videos.length)} subtitle={t('video_kpi_imported')} />
+                <MetricCard title={t('video_kpi_analyzed')} value={`${videos.filter(v => v.abcd_analysis).length} / ${videos.length}`} subtitle={t('video_kpi_click_hint')} />
+                <MetricCard title={t('video_kpi_score')} value={(() => { const s = videos.map(v => v.abcd_analysis?.overall_score).filter((n): n is number => typeof n === 'number'); return s.length ? `${Math.round(s.reduce((a,b)=>a+b,0)/s.length)}/100` : '—'; })()} subtitle={t('video_kpi_all')} />
+                <MetricCard title={t('video_kpi_model')} value="Gemini 2.5 Flash" subtitle={t('video_kpi_signals')} />
               </>
             )}
           </div>
@@ -453,7 +456,7 @@ export default function VideoAbcdPage() {
           <div className="space-y-3">
             {loading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
-                <Loader2 size={16} className="animate-spin" /> 加载中…
+                <Loader2 size={16} className="animate-spin" /> {t('loading')}
               </div>
             ) : (
               videos.map(video => <VideoCard key={video.video_id} video={video} />)
@@ -467,11 +470,11 @@ export default function VideoAbcdPage() {
         <Card className="border-border">
           <CardContent className="py-10 text-center space-y-2">
             <Play size={32} className="text-muted-foreground/40 mx-auto mb-3" />
-            <p className="text-sm font-medium">该账户暂无视频广告数据</p>
+            <p className="text-sm font-medium">{t('video_no_data')}</p>
             <p className="text-xs text-muted-foreground">
-              如果你的 Google Ads 账户有视频广告，请确认脚本已运行，脚本会自动同步视频 URL 和效果数据。
+              {t('video_no_data_hint')}
             </p>
-            <Link href="/setup" className="text-xs text-blue-400 hover:underline block">→ 查看安装脚本</Link>
+            <Link href="/setup" className="text-xs text-blue-400 hover:underline block">{t('video_setup_link')}</Link>
           </CardContent>
         </Card>
       )}

@@ -44,8 +44,8 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
   AD_GROUP_PAUSED: '广告组暂停',
 };
 
-export function formatChangeDate(iso: string) {
-  return new Intl.DateTimeFormat('zh-CN', {
+export function formatChangeDate(iso: string, lang: 'zh' | 'en' = 'zh') {
+  return new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'zh-CN', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -53,42 +53,45 @@ export function formatChangeDate(iso: string) {
   }).format(new Date(iso));
 }
 
-export function formatChangeDateShort(iso: string) {
-  return new Intl.DateTimeFormat('zh-CN', {
+export function formatChangeDateShort(iso: string, lang: 'zh' | 'en' = 'zh') {
+  return new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'zh-CN', {
     month: 'short',
     day: 'numeric',
   }).format(new Date(iso));
 }
 
-export function getVerdictConfig(verdict: AnnotatedChange['delta']['verdict']) {
+export function getVerdictConfig(verdict: AnnotatedChange['delta']['verdict'], lang: 'zh' | 'en' = 'zh') {
+  const labels = lang === 'en'
+    ? { positive: 'Positive', negative: 'Negative', paused: 'Paused', neutral: 'Neutral' }
+    : { positive: '正向', negative: '负向', paused: '已暂停', neutral: '中性' };
   switch (verdict) {
     case 'positive':
       return {
-        label: '正向',
+        label: labels.positive,
         dotClass: 'bg-green-500',
-        badgeClass: 'border-green-500/40 bg-green-950/20 text-green-300',
-        textClass: 'text-green-400',
+        badgeClass: 'border-green-500/40 bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-300',
+        textClass: 'text-green-600 dark:text-green-400',
       };
     case 'negative':
       return {
-        label: '负向',
+        label: labels.negative,
         dotClass: 'bg-red-500',
-        badgeClass: 'border-red-500/40 bg-red-950/20 text-red-300',
-        textClass: 'text-red-400',
+        badgeClass: 'border-red-500/40 bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-300',
+        textClass: 'text-red-600 dark:text-red-400',
       };
     case 'paused':
       return {
-        label: '已暂停',
+        label: labels.paused,
         dotClass: 'bg-zinc-500',
-        badgeClass: 'border-border bg-zinc-800/50 text-zinc-400',
-        textClass: 'text-zinc-400',
+        badgeClass: 'border-border bg-zinc-100 text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400',
+        textClass: 'text-zinc-600 dark:text-zinc-400',
       };
     default:
       return {
-        label: '中性',
+        label: labels.neutral,
         dotClass: 'bg-zinc-500',
-        badgeClass: 'border-border bg-zinc-800/50 text-zinc-400',
-        textClass: 'text-zinc-400',
+        badgeClass: 'border-border bg-zinc-100 text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400',
+        textClass: 'text-zinc-600 dark:text-zinc-400',
       };
   }
 }

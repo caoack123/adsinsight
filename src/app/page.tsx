@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useSettings } from '@/context/settings-context';
+import { useI18n } from '@/context/i18n-context';
 import { MODULE_REGISTRY } from '@/lib/modules';
 import { analyzeTitles, computeSummary as computeFeedSummary } from '@/modules/feed-optimizer/processor';
 import { annotateChanges, computeSummary as computeChangeSummary } from '@/modules/change-tracker/processor';
@@ -20,11 +21,15 @@ const ICON_MAP: Record<string, React.ElementType> = { ShoppingBag, Video, Eye, S
 
 // ── Time range options ─────────────────────────────────────────────────────────
 const TIME_RANGES = [
-  { label: '7天', days: 7 },
-  { label: '30天', days: 30 },
-  { label: '90天', days: 90 },
-  { label: '365天', days: 365 },
+  { days: 7 },
+  { days: 30 },
+  { days: 90 },
+  { days: 365 },
 ] as const;
+
+function timeRangeLabel(days: number, lang: 'zh' | 'en'): string {
+  return lang === 'en' ? `${days}d` : `${days}天`;
+}
 
 type DailyRow = {
   date: string; cost: number; impressions: number; clicks: number;
@@ -97,6 +102,7 @@ function periodTotals(rows: DailyRow[]) {
 
 export default function OverviewPage() {
   const { selectedAccountId } = useSettings();
+  const { t, lang } = useI18n();
 
   const [feedSummary, setFeedSummary] = useState<ReturnType<typeof computeFeedSummary> | null>(null);
   const [changeSummary, setChangeSummary] = useState<ReturnType<typeof computeChangeSummary> | null>(null);
@@ -191,20 +197,20 @@ export default function OverviewPage() {
   const kpi = useMemo(() => perfData.length > 0 ? periodTotals(perfData) : null, [perfData]);
 
   const METRIC_CONFIG = {
-    cost:  { label: '消耗 ($)', color: '#60a5fa', format: (v: number) => `$${v.toFixed(2)}`, unit: '$' },
-    roas:  { label: 'ROAS',     color: '#34d399', format: (v: number) => `${v.toFixed(2)}x`,  unit: 'x' },
-    ctr:   { label: 'CTR (%)',  color: '#f472b6', format: (v: number) => `${v.toFixed(2)}%`,  unit: '%' },
-    cpc:   { label: 'CPC ($)',  color: '#fb923c', format: (v: number) => `$${v.toFixed(2)}`,  unit: '$' },
-    cvr:   { label: 'CVR (%)',  color: '#a78bfa', format: (v: number) => `${v.toFixed(2)}%`,  unit: '%' },
+    cost:  { label: lang === 'en' ? 'Spend ($)' : '消耗 ($)', color: '#60a5fa', format: (v: number) => `$${v.toFixed(2)}`, unit: '$' },
+    roas:  { label: 'ROAS',                                   color: '#34d399', format: (v: number) => `${v.toFixed(2)}x`,  unit: 'x' },
+    ctr:   { label: 'CTR (%)',                                color: '#f472b6', format: (v: number) => `${v.toFixed(2)}%`,  unit: '%' },
+    cpc:   { label: 'CPC ($)',                                color: '#fb923c', format: (v: number) => `$${v.toFixed(2)}`,  unit: '$' },
+    cvr:   { label: 'CVR (%)',                                color: '#a78bfa', format: (v: number) => `${v.toFixed(2)}%`,  unit: '%' },
   } as const;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-base font-semibold">
-          {selectedAccountId === 'demo' ? '演示数据概览' : '账户数据概览'}
+          {selectedAccountId === 'demo' ? t('ov_demo_title') : t('ov_account_title')}
         </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">Google Ads 智能诊断概览</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{t('ov_subtitle')}</p>
       </div>
 
       {/* Quick Diagnosis */}
@@ -212,7 +218,7 @@ export default function OverviewPage() {
         <CardHeader className="pb-2 pt-4 px-4">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <AlertCircle size={14} className="text-amber-400" />
-            快速诊断
+            {t('ov_quick_diag')}
             {loading && <Loader2 size={12} className="animate-spin text-muted-foreground ml-1" />}
           </CardTitle>
         </CardHeader>
@@ -224,7 +230,7 @@ export default function OverviewPage() {
                 className="flex items-start gap-3 p-2.5 rounded border border-border hover:bg-accent/30 transition-colors group">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <Badge variant="outline" className="text-xs border-blue-500/40 text-blue-400">Feed</Badge>
+                    <Badge variant="outline" className="text-xs border-blue-500/40 text-blue-400">{t('ov_feed_badge')}</Badge>
                     <span className="text-xs font-semibold text-foreground truncate">{alert.title}</span>
                     <Badge variant="outline" className={cn('text-xs px-1.5 shrink-0', tone.badgeClassName)}>{alert.score}/100</Badge>
                   </div>
@@ -241,7 +247,7 @@ export default function OverviewPage() {
                 className="flex items-start gap-3 p-2.5 rounded border border-border hover:bg-accent/30 transition-colors group">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-400">变更</Badge>
+                    <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-400">{t('ov_change_badge')}</Badge>
                     <span className="text-xs font-semibold text-foreground truncate">{alert.resource}</span>
                     <Badge variant="outline" className={cn('text-xs px-1.5 shrink-0', vc.badgeClass)}>{vc.label}</Badge>
                   </div>
@@ -252,14 +258,14 @@ export default function OverviewPage() {
             );
           })}
           {!loading && feedAlerts.length === 0 && changeAlerts.length === 0 && (
-            <p className="text-xs text-muted-foreground py-1">暂无需要关注的问题 🎉</p>
+            <p className="text-xs text-muted-foreground py-1">{t('ov_no_issues')}</p>
           )}
         </CardContent>
       </Card>
 
       {/* Enabled modules */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">已启用模块</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">{t('ov_enabled_modules')}</p>
         <div className="grid grid-cols-3 gap-3">
           {enabledModules.map(([key, mod]) => {
             const Icon = ICON_MAP[mod.icon] || ShoppingBag;
@@ -269,30 +275,30 @@ export default function OverviewPage() {
                   <CardHeader className="pb-1 pt-4 px-4">
                     <div className="flex items-center gap-2 mb-1">
                       <Icon size={16} className="text-blue-400" />
-                      <CardTitle className="text-sm font-semibold">{mod.label}</CardTitle>
+                      <CardTitle className="text-sm font-semibold">{lang === 'en' ? mod.label_en : mod.label}</CardTitle>
                     </div>
-                    <p className="text-xs text-muted-foreground">{mod.description}</p>
+                    <p className="text-xs text-muted-foreground">{lang === 'en' ? mod.description_en : mod.description}</p>
                   </CardHeader>
                   <CardContent className="px-4 pb-4">
                     {key === 'feed-optimizer' && feedSummary && (
                       <div className="flex gap-4 mt-1">
-                        <div><p className="text-xs text-muted-foreground">产品数</p><p className="text-lg font-bold">{feedSummary.total_products}</p></div>
-                        <div><p className="text-xs text-muted-foreground">平均质量分</p><p className={cn('text-lg font-bold', getScoreTone(feedSummary.avg_title_score).textClassName)}>{feedSummary.avg_title_score}</p></div>
-                        <div><p className="text-xs text-muted-foreground">需优化</p><p className="text-lg font-bold text-amber-400">{feedSummary.products_need_attention}</p></div>
+                        <div><p className="text-xs text-muted-foreground">{t('ov_products')}</p><p className="text-lg font-bold">{feedSummary.total_products}</p></div>
+                        <div><p className="text-xs text-muted-foreground">{t('ov_avg_score')}</p><p className={cn('text-lg font-bold', getScoreTone(feedSummary.avg_title_score).textClassName)}>{feedSummary.avg_title_score}</p></div>
+                        <div><p className="text-xs text-muted-foreground">{t('ov_needs_opt')}</p><p className="text-lg font-bold text-amber-400">{feedSummary.products_need_attention}</p></div>
                       </div>
                     )}
                     {key === 'change-tracker' && changeSummary && (
                       <div className="flex gap-4 mt-1">
-                        <div><p className="text-xs text-muted-foreground">总变更</p><p className="text-lg font-bold">{changeSummary.total_changes}</p></div>
-                        <div><p className="text-xs text-muted-foreground">正向</p><p className="text-lg font-bold text-green-400">{changeSummary.positive_changes}</p></div>
-                        <div><p className="text-xs text-muted-foreground">负向</p><p className="text-lg font-bold text-red-400">{changeSummary.negative_changes}</p></div>
+                        <div><p className="text-xs text-muted-foreground">{t('ov_total_changes')}</p><p className="text-lg font-bold">{changeSummary.total_changes}</p></div>
+                        <div><p className="text-xs text-muted-foreground">{t('ov_positive')}</p><p className="text-lg font-bold text-green-600 dark:text-green-400">{changeSummary.positive_changes}</p></div>
+                        <div><p className="text-xs text-muted-foreground">{t('ov_negative')}</p><p className="text-lg font-bold text-red-600 dark:text-red-400">{changeSummary.negative_changes}</p></div>
                       </div>
                     )}
                     {key === 'video-abcd' && (
                       <div className="flex gap-4 mt-1">
-                        <div><p className="text-xs text-muted-foreground">视频数</p><p className="text-lg font-bold">{videoSummary.total}</p></div>
-                        <div><p className="text-xs text-muted-foreground">已分析</p><p className="text-lg font-bold text-blue-400">{videoSummary.analyzed}</p></div>
-                        <div><p className="text-xs text-muted-foreground">平均分</p><p className="text-lg font-bold text-muted-foreground">{videoSummary.avgScore ?? '—'}</p></div>
+                        <div><p className="text-xs text-muted-foreground">{t('ov_videos')}</p><p className="text-lg font-bold">{videoSummary.total}</p></div>
+                        <div><p className="text-xs text-muted-foreground">{t('ov_analyzed')}</p><p className="text-lg font-bold text-blue-400">{videoSummary.analyzed}</p></div>
+                        <div><p className="text-xs text-muted-foreground">{t('ov_avg_score_v')}</p><p className="text-lg font-bold text-muted-foreground">{videoSummary.avgScore ?? '—'}</p></div>
                       </div>
                     )}
                     {loading && <div className="mt-2 h-8 bg-muted/30 rounded animate-pulse" />}
@@ -310,7 +316,7 @@ export default function OverviewPage() {
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <TrendingUp size={14} className="text-blue-400" />
-              账户整体表现
+              {t('ov_perf_title')}
               {perfLoading && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
             </CardTitle>
             {/* Time range tabs */}
@@ -326,7 +332,7 @@ export default function OverviewPage() {
                       : 'border-border text-muted-foreground hover:border-border/80 hover:bg-accent/20'
                   )}
                 >
-                  {tr.label}
+                  {timeRangeLabel(tr.days, lang)}
                 </button>
               ))}
             </div>
@@ -352,7 +358,7 @@ export default function OverviewPage() {
           {kpi && (
             <div className="grid grid-cols-5 gap-2 mb-4 px-2">
               {([
-                { key: 'cost',  label: '消耗',  curr: kpi.curr.cost,  prev: kpi.prev.cost,  fmt: (v: number) => `$${v.toFixed(0)}`,  higherIsBad: true },
+                { key: 'cost',  label: t('ov_spend_label'),  curr: kpi.curr.cost,  prev: kpi.prev.cost,  fmt: (v: number) => `$${v.toFixed(0)}`,  higherIsBad: true },
                 { key: 'roas',  label: 'ROAS',  curr: kpi.curr.roas,  prev: kpi.prev.roas,  fmt: (v: number) => `${v.toFixed(2)}x`,  higherIsBad: false },
                 { key: 'cpc',   label: 'CPC',   curr: kpi.curr.cpc,   prev: kpi.prev.cpc,   fmt: (v: number) => `$${v.toFixed(2)}`,  higherIsBad: true },
                 { key: 'ctr',   label: 'CTR',   curr: kpi.curr.ctr,   prev: kpi.prev.ctr,   fmt: (v: number) => `${v.toFixed(2)}%`,  higherIsBad: false },
@@ -373,8 +379,8 @@ export default function OverviewPage() {
                     {Math.abs(delta) > 0.5 && (
                       <div className={cn(
                         'flex items-center gap-0.5 text-xs',
-                        isGood && 'text-green-400',
-                        isBad && 'text-red-400',
+                        isGood && 'text-green-600 dark:text-green-400',
+                        isBad && 'text-red-600 dark:text-red-400',
                         !isGood && !isBad && 'text-muted-foreground'
                       )}>
                         {isUp ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
@@ -390,7 +396,7 @@ export default function OverviewPage() {
           {/* Chart */}
           {recentData.length === 0 && !perfLoading ? (
             <div className="h-40 flex items-center justify-center text-xs text-muted-foreground">
-              暂无性能数据。运行 Google Ads 脚本后将显示 {perfDays} 天趋势图。
+              {t('ov_no_perf')} {perfDays} {t('ov_trend_suffix')}
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
@@ -438,7 +444,7 @@ export default function OverviewPage() {
 
       {/* Coming soon */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">即将上线</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">{t('ov_coming_soon')}</p>
         <div className="grid grid-cols-3 gap-3">
           {disabledModules.map(([key, mod]) => {
             const Icon = ICON_MAP[mod.icon] || ShoppingBag;
@@ -447,10 +453,10 @@ export default function OverviewPage() {
                 <CardHeader className="pb-2 pt-4 px-4">
                   <div className="flex items-center gap-2 mb-1">
                     <Icon size={16} className="text-muted-foreground" />
-                    <CardTitle className="text-sm font-semibold text-muted-foreground">{mod.label}</CardTitle>
-                    <Badge variant="outline" className="text-xs ml-auto border-border text-muted-foreground">即将上线</Badge>
+                    <CardTitle className="text-sm font-semibold text-muted-foreground">{lang === 'en' ? mod.label_en : mod.label}</CardTitle>
+                    <Badge variant="outline" className="text-xs ml-auto border-border text-muted-foreground">{t('ov_coming_soon')}</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">{mod.description}</p>
+                  <p className="text-xs text-muted-foreground">{lang === 'en' ? mod.description_en : mod.description}</p>
                 </CardHeader>
               </Card>
             );

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSettings } from '@/context/settings-context';
+import { useI18n } from '@/context/i18n-context';
 import {
   TEXT_MODELS,
   GEMINI_MODELS,
@@ -93,18 +94,19 @@ function ModelCard<T extends string>({
 
 export default function SettingsPage() {
   const { settings, updateSettings, savedFlash } = useSettings();
+  const { t } = useI18n();
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-base font-semibold">设置</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">配置 API Key 和模型偏好，设置自动保存到本地浏览器</p>
+        <h1 className="text-base font-semibold">{t('settings_title')}</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">{t('s_subtitle')}</p>
       </div>
 
       {savedFlash && (
-        <div className="flex items-center gap-2 text-xs text-green-400 bg-green-950/20 border border-green-500/30 rounded px-3 py-2">
+        <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-300 rounded px-3 py-2 dark:bg-green-950/20 dark:border-green-500/30 dark:text-green-400">
           <CheckCircle2 size={13} />
-          已保存
+          {t('s_saved')}
         </div>
       )}
 
@@ -113,7 +115,7 @@ export default function SettingsPage() {
         <CardHeader className="pb-2 pt-4 px-4">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Key size={14} className="text-muted-foreground" />
-            API Key 配置
+            {t('s_api_keys_title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4 space-y-4">
@@ -121,7 +123,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium text-foreground">
                 OpenRouter API Key
-                <span className="ml-2 text-muted-foreground font-normal">Feed 优化 · 变更追踪</span>
+                <span className="ml-2 text-muted-foreground font-normal">{t('s_openrouter_usage')}</span>
               </label>
               <a
                 href="https://openrouter.ai/keys"
@@ -129,7 +131,7 @@ export default function SettingsPage() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-xs text-blue-400 hover:underline"
               >
-                获取 Key <ExternalLink size={10} />
+                {t('s_get_key')} <ExternalLink size={10} />
               </a>
             </div>
             <MaskedInput
@@ -138,7 +140,7 @@ export default function SettingsPage() {
               placeholder="sk-or-v1-..."
             />
             <p className="text-xs text-muted-foreground">
-              统一调用 Claude / GPT-4 / Gemini，一个 Key 管所有模型。未填写时回退到服务器端 <code className="bg-muted px-1 rounded">OPENROUTER_API_KEY</code> 或 <code className="bg-muted px-1 rounded">ANTHROPIC_API_KEY</code>
+              {t('s_openrouter_desc')} <code className="bg-muted px-1 rounded">OPENROUTER_API_KEY</code> 或 <code className="bg-muted px-1 rounded">ANTHROPIC_API_KEY</code>
             </p>
           </div>
 
@@ -146,7 +148,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium text-foreground">
                 Google AI API Key
-                <span className="ml-2 text-muted-foreground font-normal">视频素材分析</span>
+                <span className="ml-2 text-muted-foreground font-normal">{t('s_google_usage')}</span>
               </label>
               <a
                 href="https://aistudio.google.com/apikey"
@@ -154,7 +156,7 @@ export default function SettingsPage() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-xs text-blue-400 hover:underline"
               >
-                获取 Key <ExternalLink size={10} />
+                {t('s_get_key')} <ExternalLink size={10} />
               </a>
             </div>
             <MaskedInput
@@ -163,7 +165,7 @@ export default function SettingsPage() {
               placeholder="AIza..."
             />
             <p className="text-xs text-muted-foreground">
-              Gemini 原生支持 YouTube URL，无需下载视频。未填写时回退到 <code className="bg-muted px-1 rounded">GOOGLE_AI_API_KEY</code>
+              {t('s_google_desc')} <code className="bg-muted px-1 rounded">GOOGLE_AI_API_KEY</code>
             </p>
           </div>
         </CardContent>
@@ -174,15 +176,15 @@ export default function SettingsPage() {
         <CardHeader className="pb-2 pt-4 px-4">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Bot size={14} className="text-muted-foreground" />
-            模型选择
+            {t('s_model_title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4 space-y-5">
 
           <div className="space-y-2">
             <div>
-              <p className="text-xs font-medium text-foreground">Feed 智能优化 — 标题生成</p>
-              <p className="text-xs text-muted-foreground">Claude 需要 OpenRouter Key；Google 模型可直接使用 Google AI Key</p>
+              <p className="text-xs font-medium text-foreground">{t('s_feed_model')}</p>
+              <p className="text-xs text-muted-foreground">{t('s_feed_model_hint')}</p>
             </div>
             <div className="space-y-1.5">
               {TEXT_MODELS.map(m => (
@@ -203,8 +205,8 @@ export default function SettingsPage() {
 
           <div className="space-y-2">
             <div>
-              <p className="text-xs font-medium text-foreground">变更追踪 — 效果分析</p>
-              <p className="text-xs text-muted-foreground">Claude 需要 OpenRouter Key；Google 模型可直接使用 Google AI Key（无需额外配置）</p>
+              <p className="text-xs font-medium text-foreground">{t('s_change_model')}</p>
+              <p className="text-xs text-muted-foreground">{t('s_change_model_hint')}</p>
             </div>
             <div className="space-y-1.5">
               {TEXT_MODELS.map(m => (
@@ -225,8 +227,8 @@ export default function SettingsPage() {
 
           <div className="space-y-2">
             <div>
-              <p className="text-xs font-medium text-foreground">视频素材分析 — ABCD 评估</p>
-              <p className="text-xs text-muted-foreground">直接调用 Google AI，Gemini 原生理解 YouTube URL</p>
+              <p className="text-xs font-medium text-foreground">{t('s_video_model')}</p>
+              <p className="text-xs text-muted-foreground">{t('s_video_model_hint')}</p>
             </div>
             <div className="space-y-1.5">
               {GEMINI_MODELS.map(m => (
@@ -248,10 +250,10 @@ export default function SettingsPage() {
       {/* Env var reference */}
       <Card className="border-border">
         <CardHeader className="pb-2 pt-4 px-4">
-          <CardTitle className="text-sm font-semibold">Vercel 环境变量参考</CardTitle>
+          <CardTitle className="text-sm font-semibold">{t('s_env_title')}</CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4 text-xs text-muted-foreground space-y-2">
-          <p>部署到 Vercel 时，在 Settings → Environment Variables 添加以下变量。上方浏览器本地保存的 Key 优先级更高，两者均支持。</p>
+          <p>{t('s_env_desc')}</p>
           <div className="font-mono bg-muted/40 rounded p-3 space-y-1">
             <p><span className="text-blue-400">OPENROUTER_API_KEY</span>=sk-or-v1-...</p>
             <p><span className="text-blue-400">GOOGLE_AI_API_KEY</span>=AIza...</p>

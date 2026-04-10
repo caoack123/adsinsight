@@ -19,12 +19,12 @@ type SortKey = 'score' | 'ctr' | 'cost' | 'roas' | 'issues' | 'price' | 'cvr' | 
 type SortDir = 'asc' | 'desc';
 type DateRange = '7d' | '14d' | '30d' | '90d' | '180d' | '365d';
 const DATE_RANGE_OPTIONS: { key: DateRange; label: string }[] = [
-  { key: '7d',   label: '7天'  },
-  { key: '14d',  label: '14天' },
-  { key: '30d',  label: '30天' },
-  { key: '90d',  label: '90天' },
-  { key: '180d', label: '180天'},
-  { key: '365d', label: '365天'},
+  { key: '7d',   label: '7d'   },
+  { key: '14d',  label: '14d'  },
+  { key: '30d',  label: '30d'  },
+  { key: '90d',  label: '90d'  },
+  { key: '180d', label: '180d' },
+  { key: '365d', label: '365d' },
 ];
 
 // Get metrics for a specific date range, falling back to product-level metrics
@@ -161,7 +161,7 @@ const SortTh = ({ col, label, sortKey, onSort }: { col: SortKey; label: string; 
 
 export default function FeedOptimizerPage() {
   const { selectedAccountId } = useSettings();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [analyses, setAnalyses] = useState<TitleAnalysis[]>([]);
   const [summary, setSummary] = useState<FeedOptimizerSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -264,7 +264,7 @@ export default function FeedOptimizerPage() {
       <div className="space-y-4">
         <h1 className="text-base font-semibold">{t('feed_title')}</h1>
         <p className="text-sm text-muted-foreground">
-          {selectedAccountId === 'demo' ? '演示数据加载失败' : t('feed_no_data')}
+          {selectedAccountId === 'demo' ? t('feed_demo_fail') : t('feed_no_data')}
         </p>
       </div>
     );
@@ -275,15 +275,15 @@ export default function FeedOptimizerPage() {
       <h1 className="text-base font-semibold">{t('feed_title')}</h1>
 
       <div className="grid grid-cols-4 gap-3">
-        <MetricCard title={t('feed_total_products')} value={String(summary.total_products)} subtitle="已导入商品" />
+        <MetricCard title={t('feed_total_products')} value={String(summary.total_products)} subtitle={t('feed_imported')} />
         <MetricCard
           title={t('feed_avg_score')}
           value={`${summary.avg_title_score}/100`}
-          subtitle={summary.avg_title_score < 60 ? '需要优化' : summary.avg_title_score < 75 ? '尚可' : '良好'}
+          subtitle={summary.avg_title_score < 60 ? t('feed_needs_opt') : summary.avg_title_score < 75 ? t('feed_quality_ok') : t('feed_quality_good')}
           highlight={summary.avg_title_score >= 75}
         />
-        <MetricCard title={t('feed_needs_attention')} value={String(summary.products_need_attention)} subtitle="质量分 < 60" />
-        <MetricCard title={t('feed_ctr_lift')} value={summary.estimated_total_ctr_lift} subtitle="优化后估算" highlight />
+        <MetricCard title={t('feed_needs_attention')} value={String(summary.products_need_attention)} subtitle={lang === 'en' ? 'Score < 60' : '质量分 < 60'} />
+        <MetricCard title={t('feed_ctr_lift')} value={summary.estimated_total_ctr_lift} subtitle={lang === 'en' ? 'After optimization' : '优化后估算'} highlight />
       </div>
 
       <Card className="border-border">
@@ -374,7 +374,7 @@ export default function FeedOptimizerPage() {
                       <TableCell className="text-sm font-medium whitespace-nowrap text-foreground max-w-xs truncate" title={g.label}>
                         {g.label}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{g.count} 个</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{g.count}{lang === 'en' ? '' : ' 个'}</TableCell>
                       <TableCell className="text-xs tabular-nums text-muted-foreground">
                         {g.priceMin === g.priceMax
                           ? `$${g.priceMin.toFixed(2)}`
@@ -451,7 +451,7 @@ export default function FeedOptimizerPage() {
             </TableBody>
           </Table>
           {(grouped ? groupedRows?.length === 0 : sorted.length === 0) && search && (
-            <p className="text-xs text-muted-foreground text-center py-6">没有匹配「{search}」的产品</p>
+            <p className="text-xs text-muted-foreground text-center py-6">{lang === 'en' ? `No products matching "${search}"` : `没有匹配「${search}」的产品`}</p>
           )}
         </CardContent>
       </Card>
@@ -468,7 +468,7 @@ export default function FeedOptimizerPage() {
                   <XAxis type="number" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} />
                   <YAxis type="category" dataKey="label" width={120} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
                   <Tooltip
-                    formatter={(v) => [`${v} 个产品`, '涉及产品数']}
+                    formatter={(v) => [lang === 'en' ? `${v} products` : `${v} 个产品`, lang === 'en' ? 'Affected products' : '涉及产品数']}
                     contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', fontSize: 12 }}
                     labelStyle={{ color: 'hsl(var(--foreground))' }}
                   />

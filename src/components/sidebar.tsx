@@ -25,7 +25,7 @@ export function Sidebar() {
     <aside className="w-56 shrink-0 border-r border-border bg-card flex flex-col">
       <div className="px-4 py-4 border-b border-border">
         <div className="text-sm font-bold text-foreground tracking-tight">AdInsight AI</div>
-        <div className="text-xs text-muted-foreground mt-0.5">广告洞察 AI</div>
+        <div className="text-xs text-muted-foreground mt-0.5">{t('app_subtitle')}</div>
       </div>
       <nav className="flex-1 px-2 py-3 space-y-0.5">
         {navItems.map(({ href, label, icon: Icon }) => (

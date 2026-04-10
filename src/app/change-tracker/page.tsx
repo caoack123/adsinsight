@@ -21,6 +21,21 @@ import { ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react';
 import type { AnalyzeChangeResponse } from '@/app/api/ai/analyze-change/route';
 import { useI18n } from '@/context/i18n-context';
 
+const CHANGE_TYPE_LABEL_EN: Record<string, string> = {
+  BIDDING_STRATEGY_CHANGED: 'Bidding Strategy Changed',
+  BID_CHANGED: 'Bid Adjusted',
+  BUDGET_CHANGED: 'Budget Adjusted',
+  AD_PAUSED: 'Ad Paused',
+  AD_ENABLED: 'Ad Enabled',
+  CAMPAIGN_PAUSED: 'Campaign Paused',
+  CAMPAIGN_ENABLED: 'Campaign Enabled',
+  KEYWORD_ADDED: 'Keyword Added',
+  KEYWORD_REMOVED: 'Keyword Removed',
+  KEYWORD_PAUSED: 'Keyword Paused',
+  AD_GROUP_ADDED: 'Ad Group Added',
+  AD_GROUP_PAUSED: 'Ad Group Paused',
+};
+
 /** Flatten one level of nesting: {"campaign":{"status":"PAUSED"}} → {"status":"PAUSED"} */
 function flattenChangeObj(obj: Record<string, unknown>): Record<string, unknown> {
   const wrappers = ['campaign', 'adGroup', 'ad', 'adGroupCriterion', 'campaignCriterion', 'biddingStrategy', 'campaignBudget'];
@@ -35,7 +50,7 @@ function flattenChangeObj(obj: Record<string, unknown>): Record<string, unknown>
 }
 
 /** Try to parse a JSON old/new value into a human-readable string */
-function parseChangeValue(raw: string | null): string {
+function parseChangeValue(raw: string | null, lang: 'zh' | 'en' = 'zh'): string {
   if (!raw) return '';
   try {
     const parsed = JSON.parse(raw);
@@ -44,27 +59,29 @@ function parseChangeValue(raw: string | null): string {
 
     // Status changes
     if (obj.status !== undefined) {
-      const m: Record<string, string> = { ENABLED: '启用', PAUSED: '暂停', REMOVED: '删除' };
+      const m: Record<string, string> = lang === 'en'
+        ? { ENABLED: 'Enabled', PAUSED: 'Paused', REMOVED: 'Removed' }
+        : { ENABLED: '启用', PAUSED: '暂停', REMOVED: '删除' };
       return m[String(obj.status)] || String(obj.status);
     }
     // Bid / budget in micros
     if (obj.cpcBidMicros !== undefined) return `$${(Number(obj.cpcBidMicros) / 1_000_000).toFixed(2)} CPC`;
     if (obj.cpvBidMicros !== undefined) return `$${(Number(obj.cpvBidMicros) / 1_000_000).toFixed(4)} CPV`;
-    if (obj.amountMicros !== undefined) return `预算 $${(Number(obj.amountMicros) / 1_000_000).toFixed(2)}/天`;
-    if (obj.targetCpaMicros !== undefined) return `目标CPA $${(Number(obj.targetCpaMicros) / 1_000_000).toFixed(2)}`;
+    if (obj.amountMicros !== undefined) return `${lang === 'en' ? 'Budget' : '预算'} $${(Number(obj.amountMicros) / 1_000_000).toFixed(2)}/天`;
+    if (obj.targetCpaMicros !== undefined) return `${lang === 'en' ? 'Target CPA' : '目标CPA'} $${(Number(obj.targetCpaMicros) / 1_000_000).toFixed(2)}`;
     // Target ROAS — can be nested {"targetRoas":{"targetRoas": 3.2}} or flat {"targetRoas": 3.2}
     if (obj.targetRoas !== undefined) {
       const v = obj.targetRoas;
       const num = typeof v === 'number' ? v
         : (v && typeof v === 'object' && 'targetRoas' in (v as object)) ? Number((v as Record<string, unknown>).targetRoas)
         : Number(v);
-      return `ROAS目标 ${(num * 100).toFixed(0)}%`;
+      return `${lang === 'en' ? 'ROAS Target' : 'ROAS目标'} ${(num * 100).toFixed(0)}%`;
     }
     // Maximize conversion value with target ROAS
     if (obj.maximizeConversionValue !== undefined) {
       const inner = obj.maximizeConversionValue as Record<string, unknown>;
-      if (inner?.targetRoas !== undefined) return `最大化转化价值 ROAS ${(Number(inner.targetRoas) * 100).toFixed(0)}%`;
-      return '最大化转化价值';
+      if (inner?.targetRoas !== undefined) return `${lang === 'en' ? 'Max Conv. Value ROAS' : '最大化转化价值 ROAS'} ${(Number(inner.targetRoas) * 100).toFixed(0)}%`;
+      return lang === 'en' ? 'Maximize Conv. Value' : '最大化转化价值';
     }
     // Bidding strategy type
     if (obj.biddingStrategyType !== undefined) return String(obj.biddingStrategyType);
@@ -84,8 +101,18 @@ function parseChangeValue(raw: string | null): string {
 }
 
 /** Get a readable label for any change_type string, including ones from live scripts */
-function getChangeTypeLabel(changeType: string): string {
-  const extra: Record<string, string> = {
+function getChangeTypeLabel(changeType: string, lang: 'zh' | 'en' = 'zh'): string {
+  const extra: Record<string, string> = lang === 'en' ? {
+    CAMPAIGN_UPDATED: 'Campaign Updated',
+    AD_GROUP_UPDATED: 'Ad Group Updated',
+    AD_UPDATED: 'Ad Updated',
+    CAMPAIGN_REMOVED: 'Campaign Removed',
+    AD_GROUP_REMOVED: 'Ad Group Removed',
+    AD_REMOVED: 'Ad Removed',
+    CAMPAIGN_CRITERION_UPDATE: 'Campaign Targeting Updated',
+    AD_GROUP_CRITERION_UPDATE: 'Ad Group Targeting Updated',
+    UNKNOWN: 'Change',
+  } : {
     CAMPAIGN_UPDATED: '广告系列更新',
     AD_GROUP_UPDATED: '广告组更新',
     AD_UPDATED: '广告更新',
@@ -96,7 +123,7 @@ function getChangeTypeLabel(changeType: string): string {
     AD_GROUP_CRITERION_UPDATE: '广告组定向调整',
     UNKNOWN: '变更',
   };
-  return (CHANGE_TYPE_LABEL as Record<string, string>)[changeType]
+  return (lang === 'en' ? CHANGE_TYPE_LABEL_EN : CHANGE_TYPE_LABEL as Record<string, string>)[changeType]
     || extra[changeType]
     || changeType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -106,7 +133,7 @@ function getChangeTypeLabel(changeType: string): string {
  * isBefore=true  → ends the day BEFORE the change, spans windowDays backward
  * isBefore=false → starts ON the change date, spans windowDays forward
  */
-function windowDateRange(changeTimestamp: string, windowDays: number, isBefore: boolean): string {
+function windowDateRange(changeTimestamp: string, windowDays: number, isBefore: boolean, lang: 'zh' | 'en' = 'zh'): string {
   const fmt = (d: Date) =>
     `${d.getMonth() + 1}/${d.getDate()}`;
 
@@ -126,7 +153,7 @@ function windowDateRange(changeTimestamp: string, windowDays: number, isBefore: 
     }
     return `${fmt(new Date(startMs))} – ${fmt(new Date(endMs))}`;
   } catch {
-    return `${windowDays} 天`;
+    return `${windowDays}${lang === 'en' ? 'd' : ' 天'}`;
   }
 }
 
@@ -152,6 +179,7 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
   const before = change.performance_before;
   const after = change.performance_after;
   const { settings } = useSettings();
+  const { t, lang } = useI18n();
 
   const [aiResult, setAiResult] = useState<AnalyzeChangeResponse | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -204,6 +232,8 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
     }
   }
 
+  const spendLabel = t('ct_spend');
+
   return (
     <div className="px-4 py-3 bg-accent/10 border-t border-border">
       {before && after ? (
@@ -211,20 +241,20 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
           {/* Before metrics */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              变更前 {before.window_days} 天
+              {t('ct_before')} {before.window_days} 天
               <span className="ml-1 normal-case font-normal text-muted-foreground/70">
                 ({before.date_start && before.date_end
                   ? fmtDateRange(before.date_start, before.date_end)
-                  : windowDateRange(change.timestamp, before.window_days, true)})
+                  : windowDateRange(change.timestamp, before.window_days, true, lang)})
               </span>
             </p>
             <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
               {[
-                { label: '曝光', value: before.impressions.toLocaleString() },
-                { label: '点击', value: before.clicks.toLocaleString() },
+                { label: t('ct_impressions'), value: before.impressions.toLocaleString() },
+                { label: t('ct_clicks'), value: before.clicks.toLocaleString() },
                 { label: 'CTR', value: `${(before.ctr * 100).toFixed(1)}%` },
-                { label: '花费', value: `$${before.cost.toFixed(2)}` },
-                { label: '转化', value: before.conversions.toFixed(1) },
+                { label: spendLabel, value: `$${before.cost.toFixed(2)}` },
+                { label: t('ct_conversions'), value: before.conversions.toFixed(1) },
                 { label: 'ROAS', value: fmtRoas(before.roas) },
               ].map(({ label, value }) => (
                 <div key={label}>
@@ -237,29 +267,29 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
           {/* After metrics */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              变更后 {after.window_days} 天
+              {t('ct_after')} {after.window_days} 天
               <span className="ml-1 normal-case font-normal text-muted-foreground/70">
                 ({after.date_start && after.date_end
                   ? fmtDateRange(after.date_start, after.date_end)
-                  : windowDateRange(change.timestamp, after.window_days, false)})
+                  : windowDateRange(change.timestamp, after.window_days, false, lang)})
               </span>
-              <span className="ml-1 normal-case font-normal text-muted-foreground/50 text-[10px]">已换算同期</span>
+              <span className="ml-1 normal-case font-normal text-muted-foreground/50 text-[10px]">{t('ct_normalized')}</span>
             </p>
             <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
               {[
-                { label: '曝光', value: after.impressions.toLocaleString(), delta: delta.impressions_delta },
-                { label: '点击', value: after.clicks.toLocaleString(), delta: delta.clicks_delta },
+                { label: t('ct_impressions'), value: after.impressions.toLocaleString(), delta: delta.impressions_delta },
+                { label: t('ct_clicks'), value: after.clicks.toLocaleString(), delta: delta.clicks_delta },
                 { label: 'CTR', value: `${(after.ctr * 100).toFixed(1)}%`, delta: delta.ctr_delta * 100 },
-                { label: '花费', value: `$${after.cost.toFixed(2)}`, delta: delta.cost_delta },
-                { label: '转化', value: after.conversions.toFixed(1), delta: delta.conversions_delta },
+                { label: spendLabel, value: `$${after.cost.toFixed(2)}`, delta: delta.cost_delta },
+                { label: t('ct_conversions'), value: after.conversions.toFixed(1), delta: delta.conversions_delta },
                 { label: 'ROAS', value: fmtRoas(after.roas), delta: delta.roas_delta },
               ].map(({ label, value, delta: d }) => (
                 <div key={label}>
                   <p className="text-xs text-muted-foreground">{label}</p>
                   <p className={cn(
                     'text-xs font-semibold',
-                    d > 0 && (label === '花费' ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'),
-                    d < 0 && (label === '花费' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')
+                    d > 0 && (label === spendLabel ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'),
+                    d < 0 && (label === spendLabel ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')
                   )}>{value}</p>
                 </div>
               ))}
@@ -268,7 +298,7 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
         </div>
       ) : (
         <div className="mb-3 px-3 py-2 rounded border border-border bg-card text-xs text-muted-foreground">
-          暂无变更前后效果快照数据。Google Ads 脚本目前未采集变更前后指标，可点击「AI 实时分析」获取基于变更类型的建议。
+          {t('ct_no_snapshot')}
         </div>
       )}
 
@@ -277,8 +307,8 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
         <div className="flex items-center justify-between mb-1.5">
           <p className="text-xs font-semibold flex items-center gap-1.5 text-yellow-400">
             <Sparkles size={11} />
-            AI 分析
-            {isAiGenerated && <span className="text-blue-400 font-normal">· claude-sonnet-4-6 实时生成</span>}
+            {t('ai_analysis')}
+            {isAiGenerated && <span className="text-blue-400 font-normal">· {t('ai_live_badge')}</span>}
           </p>
           <button
             onClick={handleGenerateAI}
@@ -286,14 +316,14 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
             className="flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-blue-600 border border-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {aiLoading
-              ? <><Loader2 size={11} className="animate-spin" /> 生成中…</>
-              : <><Sparkles size={11} /> {isAiGenerated ? '重新生成' : '用 Claude 实时分析'}</>
+              ? <><Loader2 size={11} className="animate-spin" /> {t('generating')}</>
+              : <><Sparkles size={11} /> {isAiGenerated ? t('regenerate') : t('analyze_claude')}</>
             }
           </button>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">{displayInsight}</p>
         {aiError && (
-          <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">生成失败：{aiError}。请确认 ANTHROPIC_API_KEY 已配置。</p>
+          <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">{t('ai_failed_prefix')}{aiError}。{t('ai_key_hint')}</p>
         )}
       </div>
     </div>
@@ -301,22 +331,23 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
 }
 
 type ChangeDateRange = '30d' | '90d' | '180d' | '365d';
-const CHANGE_DATE_RANGE_OPTIONS: { key: ChangeDateRange; label: string; days: number }[] = [
-  { key: '30d',  label: '近 30 天',  days: 30  },
-  { key: '90d',  label: '近 90 天',  days: 90  },
-  { key: '180d', label: '近 180 天', days: 180 },
-  { key: '365d', label: '近 365 天', days: 365 },
-];
 
 export default function ChangeTrackerPage() {
   const { selectedAccountId } = useSettings();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [allAnnotated, setAllAnnotated] = useState<AnnotatedChange[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [campaign, setCampaign] = useState('all');
   const [verdict, setVerdict] = useState('all');
   const [dateRange, setDateRange] = useState<ChangeDateRange>('30d');
+
+  const CHANGE_DATE_RANGE_OPTIONS: { key: ChangeDateRange; label: string; days: number }[] = [
+    { key: '30d',  label: t('ct_change_range_30'),  days: 30  },
+    { key: '90d',  label: t('ct_change_range_90'),  days: 90  },
+    { key: '180d', label: t('ct_change_range_180'), days: 180 },
+    { key: '365d', label: t('ct_change_range_365'), days: 365 },
+  ];
 
   useEffect(() => {
     setLoading(true);
@@ -358,6 +389,7 @@ export default function ChangeTrackerPage() {
       if (new Date(a.change.timestamp) < cutoff) return false;
       return true;
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allAnnotated, campaign, verdict, dateRange]);
 
   const sorted = useMemo(() =>
@@ -384,25 +416,25 @@ export default function ChangeTrackerPage() {
       {/* KPI cards */}
       <div className="grid grid-cols-4 gap-3">
         <MetricCard
-          title="总变更次数"
+          title={t('change_total')}
           value={String(summary.total_changes)}
-          subtitle={CHANGE_DATE_RANGE_OPTIONS.find(o => o.key === dateRange)?.label ?? '近 30 天'}
+          subtitle={CHANGE_DATE_RANGE_OPTIONS.find(o => o.key === dateRange)?.label ?? t('ct_change_range_30')}
         />
         <MetricCard
-          title="正向变更"
+          title={t('change_positive')}
           value={String(summary.positive_changes)}
-          subtitle={`占比 ${Math.round(summary.positive_changes / summary.total_changes * 100)}%`}
+          subtitle={`${t('ct_kpi_ratio')} ${Math.round(summary.positive_changes / summary.total_changes * 100)}%`}
           highlight
         />
         <MetricCard
-          title="负向变更"
+          title={t('change_negative')}
           value={String(summary.negative_changes)}
-          subtitle="需要关注"
+          subtitle={t('ct_kpi_watchout')}
         />
         <MetricCard
-          title="节省花费"
+          title={t('change_saved')}
           value={`$${summary.cost_saved.toFixed(0)}`}
-          subtitle="通过暂停/降价"
+          subtitle={t('ct_kpi_via_pausing')}
         />
       </div>
 
@@ -427,10 +459,10 @@ export default function ChangeTrackerPage() {
         </div>
         <Select value={campaign} onValueChange={(v) => setCampaign(v ?? 'all')}>
           <SelectTrigger className="w-52 h-8 text-xs">
-            <SelectValue placeholder="全部广告系列" />
+            <SelectValue placeholder={t('ct_all_campaigns')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部广告系列</SelectItem>
+            <SelectItem value="all">{t('ct_all_campaigns')}</SelectItem>
             {allCampaigns.map(c => (
               <SelectItem key={c} value={c}>{c}</SelectItem>
             ))}
@@ -448,26 +480,26 @@ export default function ChangeTrackerPage() {
             <SelectItem value="paused">已暂停</SelectItem>
           </SelectContent>
         </Select>
-        <span className="text-xs text-muted-foreground ml-auto">{sorted.length} 条变更</span>
+        <span className="text-xs text-muted-foreground ml-auto">{sorted.length} {t('ct_changes_suffix')}</span>
       </div>
 
       {/* Change list */}
       <Card className="border-border">
         <CardHeader className="pb-2 pt-4 px-4">
-          <CardTitle className="text-sm font-semibold">变更记录 + 效果对比</CardTitle>
-          <p className="text-xs text-muted-foreground">点击任意行展开 AI 分析和详细数据对比</p>
+          <CardTitle className="text-sm font-semibold">{t('ct_record_title')}</CardTitle>
+          <p className="text-xs text-muted-foreground">{t('ct_record_subtitle')}</p>
         </CardHeader>
         <CardContent className="px-0 pb-0">
           {/* Header row */}
           <div className="grid grid-cols-[140px_1fr_130px_80px_80px_80px_80px_80px_28px] gap-2 px-4 py-2 border-b border-border">
-            {['时间', '变更内容', '广告系列', 'ΔROAS', 'Δ转化', 'Δ花费', 'Δ点击', '结果', ''].map(h => (
+            {[t('ct_col_time'), t('ct_col_change'), t('ct_col_campaign'), 'ΔROAS', `Δ${t('ct_conversions')}`, `Δ${t('ct_spend')}`, `Δ${t('ct_clicks')}`, t('ct_col_result'), ''].map(h => (
               <span key={h} className="text-xs text-muted-foreground font-medium">{h}</span>
             ))}
           </div>
 
           {sorted.map(annotated => {
             const { change, delta } = annotated;
-            const vc = getVerdictConfig(delta.verdict);
+            const vc = getVerdictConfig(delta.verdict, lang);
             const isExpanded = expandedId === change.change_id;
 
             return (
@@ -478,21 +510,21 @@ export default function ChangeTrackerPage() {
                 >
                   {/* Time — displayed in browser local timezone */}
                   <div>
-                    <p className="text-xs text-foreground font-medium">{formatChangeDateShort(change.timestamp)}</p>
+                    <p className="text-xs text-foreground font-medium">{formatChangeDateShort(change.timestamp, lang)}</p>
                     <p className="text-xs text-muted-foreground">
                       {new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(change.timestamp))}
                     </p>
-                    <p className="text-[10px] text-muted-foreground/40 leading-tight">本地时间</p>
+                    <p className="text-[10px] text-muted-foreground/40 leading-tight">{t('ct_local_time')}</p>
                   </div>
 
                   {/* Change content */}
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{getChangeTypeLabel(change.change_type)}</p>
+                    <p className="text-xs font-medium text-foreground truncate">{getChangeTypeLabel(change.change_type, lang)}</p>
                     <p className="text-xs text-muted-foreground truncate">
                       {/* If resource_name looks like a raw numeric/tilde ID, use campaign name instead */}
                       {/^[\d~_]+$/.test(change.resource_name) ? (change.campaign || '—') : (change.resource_name || change.campaign || '—')}
                       {change.old_value && change.new_value
-                        ? ` · ${parseChangeValue(change.old_value)} → ${parseChangeValue(change.new_value)}`
+                        ? ` · ${parseChangeValue(change.old_value, lang)} → ${parseChangeValue(change.new_value, lang)}`
                         : ''}
                     </p>
                     <p className="text-xs text-muted-foreground/60">{change.changed_by}</p>

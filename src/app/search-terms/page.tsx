@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useSettings } from '@/context/settings-context';
+import { useI18n } from '@/context/i18n-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -78,15 +79,18 @@ function buildNgrams(terms: SearchTerm[], n: 1 | 2 | 3): Ngram[] {
     .sort((a, b) => b.clicks - a.clicks);
 }
 
-function cvBadge(cvr: number, clicks: number) {
-  if (clicks < 10) return <Badge variant="outline" className="text-xs text-muted-foreground">数据不足</Badge>;
-  if (cvr === 0) return <Badge variant="outline" className="text-xs bg-red-500/10 text-red-400 border-red-500/30">零转化</Badge>;
-  if (cvr < 0.005) return <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-400 border-amber-500/30">低转化</Badge>;
+import type { TranslationKey } from '@/lib/i18n';
+
+function cvBadge(cvr: number, clicks: number, t: (k: TranslationKey) => string) {
+  if (clicks < 10) return <Badge variant="outline" className="text-xs text-muted-foreground">{t('st_badge_insufficient')}</Badge>;
+  if (cvr === 0) return <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-400 dark:border-red-500/30">{t('st_badge_zero_conv')}</Badge>;
+  if (cvr < 0.005) return <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-400 dark:border-amber-500/30">{t('st_badge_low_conv')}</Badge>;
   return <Badge variant="outline" className="text-xs text-muted-foreground">{(cvr * 100).toFixed(1)}%</Badge>;
 }
 
 export default function SearchTermsPage() {
   const { selectedAccountId } = useSettings();
+  const { t } = useI18n();
   const [terms, setTerms] = useState<SearchTerm[]>([]);
   const [loading, setLoading] = useState(true);
   const [ngramN, setNgramN] = useState<1 | 2 | 3>(2);
@@ -149,7 +153,7 @@ export default function SearchTermsPage() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground py-12 justify-center">
-        <Loader2 size={16} className="animate-spin" /> 加载中...
+        <Loader2 size={16} className="animate-spin" /> {t('loading')}
       </div>
     );
   }
@@ -157,18 +161,18 @@ export default function SearchTermsPage() {
   if (terms.length === 0) {
     return (
       <div className="space-y-4">
-        <h1 className="text-base font-semibold">搜索词 N-Gram 分析</h1>
+        <h1 className="text-base font-semibold">{t('search_terms_title')}</h1>
         <Card className="border-border">
           <CardContent className="pt-6 pb-6">
             <p className="text-sm text-muted-foreground">
               {selectedAccountId === 'demo'
-                ? '演示账户不含搜索词数据。'
-                : '该账户暂无搜索词数据。请在 Google Ads 脚本中添加搜索词导出并重新运行。'}
+                ? t('st_demo_no_data')
+                : t('st_no_data')}
             </p>
             {selectedAccountId !== 'demo' && (
               <div className="mt-4 p-3 bg-muted/50 rounded text-xs text-muted-foreground font-mono">
-                <p className="font-semibold text-foreground mb-1">需要先运行一次包含搜索词导出的脚本</p>
-                <p>前往「安装脚本」页面，复制最新版本脚本并在 Google Ads 中运行。</p>
+                <p className="font-semibold text-foreground mb-1">{t('st_setup_hint')}</p>
+                <p>{t('st_setup_hint2')}</p>
               </div>
             )}
           </CardContent>
@@ -184,10 +188,10 @@ export default function SearchTermsPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-base font-semibold">搜索词 N-Gram 分析</h1>
+        <h1 className="text-base font-semibold">{t('search_terms_title')}</h1>
         {syncedAt && (
           <span className="text-xs text-muted-foreground">
-            数据周期：最近 90 天 · 同步于 {new Date(syncedAt).toLocaleDateString('zh-CN')}
+            {t('st_data_period')} {new Date(syncedAt).toLocaleDateString('zh-CN')}
           </span>
         )}
       </div>
@@ -196,27 +200,27 @@ export default function SearchTermsPage() {
       <div className="grid grid-cols-4 gap-3">
         <Card className="border-border">
           <CardContent className="pt-4 pb-4 px-4">
-            <div className="text-xs text-muted-foreground mb-1">搜索词总数</div>
+            <div className="text-xs text-muted-foreground mb-1">{t('st_total_terms')}</div>
             <div className="text-xl font-bold tabular-nums">{terms.length.toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card className="border-border">
           <CardContent className="pt-4 pb-4 px-4">
-            <div className="text-xs text-muted-foreground mb-1">总点击数</div>
+            <div className="text-xs text-muted-foreground mb-1">{t('st_total_clicks')}</div>
             <div className="text-xl font-bold tabular-nums">{totalClicks.toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card className="border-border">
           <CardContent className="pt-4 pb-4 px-4">
-            <div className="text-xs text-muted-foreground mb-1">整体 CVR</div>
+            <div className="text-xs text-muted-foreground mb-1">{t('st_overall_cvr')}</div>
             <div className="text-xl font-bold tabular-nums">{(overallCvr * 100).toFixed(2)}%</div>
           </CardContent>
         </Card>
         <Card className="border-border">
           <CardContent className="pt-4 pb-4 px-4">
-            <div className="text-xs text-muted-foreground mb-1">潜在否定词</div>
+            <div className="text-xs text-muted-foreground mb-1">{t('st_neg_candidates')}</div>
             <div className="text-xl font-bold tabular-nums text-amber-400">{negKeywords.length}</div>
-            <div className="text-xs text-muted-foreground">CVR=0 且点击≥20</div>
+            <div className="text-xs text-muted-foreground">{t('st_neg_hint')}</div>
           </CardContent>
         </Card>
       </div>
@@ -226,18 +230,18 @@ export default function SearchTermsPage() {
         <Card className="border-amber-400 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/5">
           <CardHeader className="pb-2 pt-3 px-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-amber-400">建议否定关键词（{negKeywords.length} 个）</CardTitle>
+              <CardTitle className="text-sm font-semibold text-amber-400">{t('st_suggested_neg')} ({negKeywords.length})</CardTitle>
               <button
                 onClick={copyNegatives}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-amber-500/40 text-xs text-amber-400 hover:bg-amber-500/10 transition-colors"
               >
                 {copied ? <Check size={12} /> : <Copy size={12} />}
-                {copied ? '已复制' : '复制列表'}
+                {copied ? t('st_copied') : t('st_copy_list')}
               </button>
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-3">
-            <p className="text-xs text-muted-foreground mb-2">以下词汇产生了较多点击但零转化，建议添加为否定关键词：</p>
+            <p className="text-xs text-muted-foreground mb-2">{t('st_neg_desc')}</p>
             <div className="flex flex-wrap gap-1.5">
               {negKeywords.slice(0, 30).map(kw => (
                 <span key={kw} className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 text-xs border border-amber-500/20 font-mono">
@@ -245,7 +249,7 @@ export default function SearchTermsPage() {
                 </span>
               ))}
               {negKeywords.length > 30 && (
-                <span className="text-xs text-muted-foreground self-center">+{negKeywords.length - 30} 个</span>
+                <span className="text-xs text-muted-foreground self-center">+{negKeywords.length - 30} {t('st_more_suffix')}</span>
               )}
             </div>
           </CardContent>
@@ -256,7 +260,7 @@ export default function SearchTermsPage() {
       <Card className="border-border">
         <CardHeader className="pb-2 pt-3 px-4">
           <div className="flex items-center gap-3 flex-wrap">
-            <CardTitle className="text-sm font-semibold">N-Gram 分析</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t('st_ngram_title')}</CardTitle>
             {/* N selector */}
             <div className="flex rounded border border-border overflow-hidden text-xs">
               {([1, 2, 3] as const).map(n => (
@@ -274,7 +278,7 @@ export default function SearchTermsPage() {
             </div>
             {/* Min clicks */}
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span>最低点击：</span>
+              <span>{t('st_min_clicks')}</span>
               <select
                 value={minClicks}
                 onChange={e => setMinClicks(Number(e.target.value))}
@@ -293,14 +297,14 @@ export default function SearchTermsPage() {
                   : 'border-border text-muted-foreground hover:text-foreground'
               )}
             >
-              仅显示低转化
+              {t('st_show_neg_only')}
             </button>
             <div className="ml-auto flex items-center gap-2">
               <div className="relative">
                 <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="搜索词..."
+                  placeholder={t('st_search_placeholder')}
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   className="pl-6 pr-3 py-1 text-xs bg-muted border border-border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 w-36"
@@ -311,7 +315,7 @@ export default function SearchTermsPage() {
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Download size={12} />
-                导出 CSV
+                {t('export_csv')}
               </button>
             </div>
           </div>
@@ -320,13 +324,13 @@ export default function SearchTermsPage() {
           <Table>
             <TableHeader>
               <TableRow className="border-border">
-                <TableHead className="text-xs pl-4">词组</TableHead>
-                <TableHead className="text-xs">出现次数</TableHead>
-                <TableHead className="text-xs">点击数</TableHead>
-                <TableHead className="text-xs">展示数</TableHead>
-                <TableHead className="text-xs">花费</TableHead>
+                <TableHead className="text-xs pl-4">{t('st_col_phrase')}</TableHead>
+                <TableHead className="text-xs">{t('st_col_count')}</TableHead>
+                <TableHead className="text-xs">{t('st_col_clicks')}</TableHead>
+                <TableHead className="text-xs">{t('st_col_impressions')}</TableHead>
+                <TableHead className="text-xs">{t('st_col_spend')}</TableHead>
                 <TableHead className="text-xs">CPC</TableHead>
-                <TableHead className="text-xs">转化</TableHead>
+                <TableHead className="text-xs">{t('st_col_conversions')}</TableHead>
                 <TableHead className="text-xs">CVR</TableHead>
               </TableRow>
             </TableHeader>
@@ -340,16 +344,16 @@ export default function SearchTermsPage() {
                   <TableCell className="text-xs tabular-nums">${g.cost.toFixed(2)}</TableCell>
                   <TableCell className="text-xs tabular-nums text-muted-foreground">${g.cpc.toFixed(2)}</TableCell>
                   <TableCell className="text-xs tabular-nums">{g.conversions.toFixed(1)}</TableCell>
-                  <TableCell>{cvBadge(g.cvr, g.clicks)}</TableCell>
+                  <TableCell>{cvBadge(g.cvr, g.clicks, t)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
           {filtered.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-6">无符合条件的词组</p>
+            <p className="text-xs text-muted-foreground text-center py-6">{t('st_no_match')}</p>
           )}
           {filtered.length > 200 && (
-            <p className="text-xs text-muted-foreground text-center py-3">仅显示前 200 条，导出 CSV 获取完整数据</p>
+            <p className="text-xs text-muted-foreground text-center py-3">{t('st_showing_top')}</p>
           )}
         </CardContent>
       </Card>

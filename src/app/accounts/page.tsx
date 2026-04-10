@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useI18n } from '@/context/i18n-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, RefreshCw, Copy, Check, ChevronDown, ChevronUp, Clock, Database, AlertCircle } from 'lucide-react';
@@ -9,37 +10,41 @@ import type { DbAccount, DbSyncLog } from '@/lib/supabase';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, lang: 'zh' | 'en' = 'zh'): string {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return '刚刚';
-  if (m < 60) return `${m} 分钟前`;
+  if (m < 1) return lang === 'en' ? 'just now' : '刚刚';
+  if (m < 60) return lang === 'en' ? `${m} min ago` : `${m} 分钟前`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} 小时前`;
-  return `${Math.floor(h / 24)} 天前`;
+  if (h < 24) return lang === 'en' ? `${h}h ago` : `${h} 小时前`;
+  return lang === 'en' ? `${Math.floor(h / 24)}d ago` : `${Math.floor(h / 24)} 天前`;
 }
 
-const DATA_TYPE_LABEL: Record<string, string> = {
-  feed: 'Feed 产品',
-  changes: '变更记录',
-  videos: '视频素材',
-};
+function getDataTypeLabel(type: string, lang: 'zh' | 'en'): string {
+  if (lang === 'en') {
+    const map: Record<string, string> = { feed: 'Feed Products', changes: 'Changes', videos: 'Videos' };
+    return map[type] ?? type;
+  }
+  const map: Record<string, string> = { feed: 'Feed 产品', changes: '变更记录', videos: '视频素材' };
+  return map[type] ?? type;
+}
 
 // ─── Sync Log Row ─────────────────────────────────────────────────────────────
 
 function SyncLogRow({ log }: { log: DbSyncLog }) {
+  const { lang } = useI18n();
   return (
     <div className="flex items-center gap-3 py-1.5 text-xs border-b border-border/40 last:border-0">
       <span className={cn(
         'w-1.5 h-1.5 rounded-full shrink-0',
         log.status === 'success' ? 'bg-green-400' : 'bg-red-400'
       )} />
-      <span className="text-muted-foreground w-20 shrink-0">{timeAgo(log.synced_at)}</span>
-      <span className="text-foreground">{DATA_TYPE_LABEL[log.data_type] ?? log.data_type}</span>
+      <span className="text-muted-foreground w-20 shrink-0">{timeAgo(log.synced_at, lang)}</span>
+      <span className="text-foreground">{getDataTypeLabel(log.data_type, lang)}</span>
       {log.status === 'success' ? (
-        <span className="text-muted-foreground ml-auto">+{log.records_upserted} 条</span>
+        <span className="text-muted-foreground ml-auto">+{log.records_upserted} {lang === 'en' ? 'records' : '条'}</span>
       ) : (
-        <span className="text-red-400 ml-auto truncate max-w-48">{log.error_message}</span>
+        <span className="text-red-600 dark:text-red-400 ml-auto truncate max-w-48">{log.error_message}</span>
       )}
     </div>
   );
@@ -54,6 +59,7 @@ function AccountCard({
   account: DbAccount;
   onDelete: (id: string) => void;
 }) {
+  const { t, lang } = useI18n();
   const [tokenCopied, setTokenCopied] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
   const [logs, setLogs] = useState<DbSyncLog[]>([]);
@@ -83,7 +89,7 @@ function AccountCard({
   }
 
   async function handleDelete() {
-    if (!confirm(`确定删除账户「${account.account_name}」？所有导入数据将同步删除。`)) return;
+    if (!confirm(t('ac_delete_confirm').replace('{name}', account.account_name))) return;
     setDeleting(true);
     await fetch(`/api/accounts?id=${account.id}`, { method: 'DELETE' });
     onDelete(account.id);
@@ -116,8 +122,8 @@ function AccountCard({
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={12} />
           {account.last_synced_at
-            ? <>上次同步: <span className="text-foreground">{timeAgo(account.last_synced_at)}</span></>
-            : '尚未同步数据'}
+            ? <>{t('ac_last_sync')}<span className="text-foreground">{timeAgo(account.last_synced_at, lang)}</span></>
+            : t('ac_never_synced')}
         </div>
 
         {/* Script token */}
@@ -150,7 +156,7 @@ function AccountCard({
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
         >
           <Database size={12} />
-          同步历史
+          {t('ac_sync_history')}
           {logsLoading
             ? <RefreshCw size={11} className="ml-auto animate-spin" />
             : logsOpen
@@ -161,7 +167,7 @@ function AccountCard({
         {logsOpen && (
           <div className="border border-border/40 rounded p-2">
             {logs.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-2">暂无同步记录</p>
+              <p className="text-xs text-muted-foreground text-center py-2">{t('ac_no_logs')}</p>
             ) : (
               logs.map(log => <SyncLogRow key={log.id} log={log} />)
             )}
@@ -175,6 +181,7 @@ function AccountCard({
 // ─── Add Account Form ─────────────────────────────────────────────────────────
 
 function AddAccountForm({ onAdded }: { onAdded: (account: DbAccount) => void }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [customerId, setCustomerId] = useState('');
   const [accountName, setAccountName] = useState('');
@@ -216,7 +223,7 @@ function AddAccountForm({ onAdded }: { onAdded: (account: DbAccount) => void }) 
         className="flex items-center gap-2 px-3 py-2 rounded border border-dashed border-border text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors w-full"
       >
         <Plus size={14} />
-        添加 Google Ads 账户
+        {t('ac_add_account_btn')}
       </button>
     );
   }
@@ -224,17 +231,17 @@ function AddAccountForm({ onAdded }: { onAdded: (account: DbAccount) => void }) 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">添加账户</CardTitle>
+        <CardTitle className="text-sm">{t('ac_add_title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">账户名称</label>
+            <label className="text-xs text-muted-foreground">{t('ac_name_label')}</label>
             <input
               type="text"
               value={accountName}
               onChange={e => setAccountName(e.target.value)}
-              placeholder="如：My Brand US"
+              placeholder={t('ac_name_placeholder')}
               required
               className="w-full bg-muted/40 border border-border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             />
@@ -251,7 +258,7 @@ function AddAccountForm({ onAdded }: { onAdded: (account: DbAccount) => void }) 
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">货币</label>
+            <label className="text-xs text-muted-foreground">{t('ac_currency_label')}</label>
             <select
               value={currency}
               onChange={e => setCurrency(e.target.value)}
@@ -265,7 +272,7 @@ function AddAccountForm({ onAdded }: { onAdded: (account: DbAccount) => void }) 
             </select>
           </div>
           {error && (
-            <div className="flex items-center gap-1.5 text-xs text-red-400">
+            <div className="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400">
               <AlertCircle size={12} />
               {error}
             </div>
@@ -276,14 +283,14 @@ function AddAccountForm({ onAdded }: { onAdded: (account: DbAccount) => void }) 
               disabled={loading}
               className="flex-1 bg-primary text-primary-foreground rounded px-3 py-1.5 text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
-              {loading ? '添加中...' : '添加'}
+              {loading ? t('ac_adding') : t('ac_add')}
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
               className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              取消
+              {t('cancel')}
             </button>
           </div>
         </form>
@@ -295,6 +302,7 @@ function AddAccountForm({ onAdded }: { onAdded: (account: DbAccount) => void }) 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AccountsPage() {
+  const { t } = useI18n();
   const [accounts, setAccounts] = useState<DbAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -326,17 +334,17 @@ export default function AccountsPage() {
   return (
     <div className="space-y-5 max-w-2xl">
       <div>
-        <h1 className="text-base font-semibold">账户管理</h1>
+        <h1 className="text-base font-semibold">{t('accounts_title')}</h1>
         <p className="text-xs text-muted-foreground mt-0.5">
-          每个账户生成一个独立 Token，Google Ads Script 用此 Token 推送数据
+          {t('ac_subtitle')}
         </p>
       </div>
 
       {/* Stats */}
       {!loading && (
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span><span className="text-foreground font-medium">{accounts.length}</span> 个账户</span>
-          <span><span className="text-foreground font-medium">{accounts.filter(a => a.last_synced_at).length}</span> 个已同步</span>
+          <span><span className="text-foreground font-medium">{accounts.length}</span> {t('ac_accounts_count')}</span>
+          <span><span className="text-foreground font-medium">{accounts.filter(a => a.last_synced_at).length}</span> {t('ac_synced_count')}</span>
         </div>
       )}
 
@@ -344,13 +352,13 @@ export default function AccountsPage() {
       {error && (
         <div className="flex items-center gap-2 text-sm text-red-400 bg-red-400/10 rounded p-3">
           <AlertCircle size={14} />
-          {error} — 请检查 Supabase 环境变量是否已配置
+          {error} — {t('ac_error_hint')}
         </div>
       )}
 
       {/* Loading */}
       {loading && (
-        <div className="text-sm text-muted-foreground animate-pulse">加载中...</div>
+        <div className="text-sm text-muted-foreground animate-pulse">{t('loading')}</div>
       )}
 
       {/* Account list */}
@@ -371,12 +379,12 @@ export default function AccountsPage() {
       {!loading && accounts.length > 0 && (
         <Card className="bg-muted/20">
           <CardContent className="pt-4">
-            <p className="text-xs font-medium mb-2">接下来：在 Google Ads 安装脚本</p>
+            <p className="text-xs font-medium mb-2">{t('ac_next_steps')}</p>
             <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-              <li>复制上方账户的 Token</li>
-              <li>前往 <a href="/setup" className="text-primary underline">安装脚本</a> 页面，将 Token 填入脚本</li>
-              <li>在 Google Ads 后台 → 工具 → 脚本，粘贴并运行</li>
-              <li>回到此页面查看同步历史，确认数据导入成功</li>
+              <li>{t('ac_step1')}</li>
+              <li>{t('ac_step2')}</li>
+              <li>{t('ac_step3')}</li>
+              <li>{t('ac_step4')}</li>
             </ol>
           </CardContent>
         </Card>

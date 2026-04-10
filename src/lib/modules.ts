@@ -1,42 +1,54 @@
 export const MODULE_REGISTRY = {
   'auction-insights': {
     label: '竞价洞察',
+    label_en: 'Auction Insights',
     description: '分析 Auction Insights，识别竞争对手威胁',
+    description_en: 'Analyze Auction Insights and identify competitor threats',
     icon: 'BarChart2',
     path: '/auction-insights',
-    enabled: false, // may bring back later
+    enabled: false,
   },
   'feed-optimizer': {
     label: 'Feed 智能优化',
+    label_en: 'Feed Optimizer',
     description: 'AI 优化 Product Title，提升 Shopping 点击率',
+    description_en: 'AI-optimize product titles to improve Shopping CTR',
     icon: 'ShoppingBag',
     path: '/feed-optimizer',
-    enabled: true, // BUILD THIS
+    enabled: true,
   },
   'video-abcd': {
     label: '视频素材分析',
+    label_en: 'Video Analysis',
     description: 'ABCD 框架评分 + 竞品素材对比',
+    description_en: 'ABCD framework scoring for video ad creatives',
     icon: 'Video',
     path: '/video-abcd',
     enabled: true,
   },
   'pmax-xray': {
     label: 'PMax 透视',
+    label_en: 'PMax X-Ray',
     description: '拆解 PMax 黑盒，看清预算去向',
+    description_en: 'Demystify PMax and see where your budget is going',
     icon: 'Eye',
     path: '/pmax-xray',
-    enabled: false, // Phase 2
+    enabled: false,
   },
   'bidding-audit': {
     label: '出价审计',
+    label_en: 'Bidding Audit',
     description: '审查 Smart Bidding 是否在浪费预算',
+    description_en: 'Audit Smart Bidding for budget waste',
     icon: 'Scale',
     path: '/bidding-audit',
-    enabled: false, // Phase 3
+    enabled: false,
   },
   'change-tracker': {
     label: '变更追踪',
+    label_en: 'Change Tracker',
     description: '自动追踪账号变更及其对效果的影响',
+    description_en: 'Automatically track account changes and their performance impact',
     icon: 'History',
     path: '/change-tracker',
     enabled: true,

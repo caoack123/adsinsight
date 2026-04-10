@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Sparkles, Loader2, ExternalLink, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/context/i18n-context';
 
 // ── Score ring ────────────────────────────────────────────────────────────────
 function ScoreRing({ score, color }: { score: number; color: string }) {
@@ -49,6 +50,7 @@ function ScoreRing({ score, color }: { score: number; color: string }) {
 
 // ── Category block ────────────────────────────────────────────────────────────
 function CategoryBlock({ catScore }: { catScore: CategoryScore }) {
+  const { lang } = useI18n();
   const meta = CATEGORY_META[catScore.category];
   const ratingMeta = RATING_META[catScore.rating];
   const sigDefs = getSignalsByCategory(catScore.category);
@@ -64,7 +66,7 @@ function CategoryBlock({ catScore }: { catScore: CategoryScore }) {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className={cn('text-sm font-bold', meta.color)}>{meta.label_zh}</CardTitle>
-            <p className="text-xs text-muted-foreground">{meta.label_en} · {catScore.signals_passed}/{catScore.signals_total} 通过</p>
+            <p className="text-xs text-muted-foreground">{meta.label_en} · {catScore.signals_passed}/{catScore.signals_total} {lang === 'en' ? 'passed' : '通过'}</p>
           </div>
           <div className="flex items-center gap-3">
             <ScoreRing score={catScore.score} color={ringColors[catScore.category]} />
@@ -106,6 +108,7 @@ function CategoryBlock({ catScore }: { catScore: CategoryScore }) {
 
 // ── Manual-analysis-only view (no performance data) ──────────────────────────
 function ManualVideoDetail({ videoId, youtubeUrl, analysis }: { videoId: string; youtubeUrl: string; analysis: ABCDAnalysis }) {
+  const { t, lang } = useI18n();
   const thumbUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
   return (
     <div className="space-y-5">
@@ -114,7 +117,7 @@ function ManualVideoDetail({ videoId, youtubeUrl, analysis }: { videoId: string;
           <ArrowLeft size={16} />
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-base font-semibold">YouTube 视频分析</h1>
+          <h1 className="text-base font-semibold">{t('video_page_title')}</h1>
           <p className="text-xs text-muted-foreground font-mono">{videoId}</p>
         </div>
         <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
@@ -136,7 +139,7 @@ function ManualVideoDetail({ videoId, youtubeUrl, analysis }: { videoId: string;
                     <Badge variant="outline" className={cn('text-xs', RATING_META[analysis.overall_rating].badge)}>
                       {RATING_META[analysis.overall_rating].label_zh}
                     </Badge>
-                    <span className="text-xs text-muted-foreground">by {analysis.model} · {new Date(analysis.analyzed_at).toLocaleDateString('zh-CN')}</span>
+                    <span className="text-xs text-muted-foreground">by {analysis.model} · {new Date(analysis.analyzed_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-CN')}</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">{analysis.summary_zh}</p>
                 </div>
@@ -150,7 +153,7 @@ function ManualVideoDetail({ videoId, youtubeUrl, analysis }: { videoId: string;
 
           <div className="grid grid-cols-2 gap-3">
             <Card className="border-emerald-400 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-950/10">
-              <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">优势亮点</CardTitle></CardHeader>
+              <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">{t('video_strengths_title')}</CardTitle></CardHeader>
               <CardContent className="px-4 pb-4">
                 <ul className="space-y-2">
                   {analysis.top_strengths_zh.map((s, i) => (
@@ -162,7 +165,7 @@ function ManualVideoDetail({ videoId, youtubeUrl, analysis }: { videoId: string;
               </CardContent>
             </Card>
             <Card className="border-amber-400 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/10">
-              <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wider">待改进方向</CardTitle></CardHeader>
+              <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wider">{t('video_improvements_title')}</CardTitle></CardHeader>
               <CardContent className="px-4 pb-4">
                 <ul className="space-y-2">
                   {analysis.top_improvements_zh.map((s, i) => (
@@ -183,13 +186,13 @@ function ManualVideoDetail({ videoId, youtubeUrl, analysis }: { videoId: string;
             </div>
             <CardContent className="p-3">
               <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-blue-400 hover:underline">
-                <ExternalLink size={11} /> 在 YouTube 中打开
+                <ExternalLink size={11} /> {t('video_open_yt_full')}
               </a>
             </CardContent>
           </Card>
 
           <Card className="border-border">
-            <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">ABCD 分类得分</CardTitle></CardHeader>
+            <CardHeader className="pb-1 pt-3 px-4"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">{t('video_abcd_category_scores')}</CardTitle></CardHeader>
             <CardContent className="px-4 pb-4 space-y-2">
               {analysis.categories.map(cat => {
                 const m = CATEGORY_META[cat.category];
@@ -230,6 +233,7 @@ export default function VideoDetailPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { settings, selectedAccountId } = useSettings();
+  const { t, lang } = useI18n();
 
   // For manually-analyzed videos not in static data — check sessionStorage
   const [manualData, setManualData] = useState<{ youtubeUrl: string; analysis: ABCDAnalysis } | null>(null);
@@ -271,7 +275,7 @@ export default function VideoDetailPage({
     if (dbLoading) {
       return (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-12 justify-center">
-          <Loader2 size={16} className="animate-spin" /> 加载中...
+          <Loader2 size={16} className="animate-spin" /> {t('loading')}
         </div>
       );
     }
@@ -279,9 +283,9 @@ export default function VideoDetailPage({
       return (
         <div className="space-y-4">
           <Link href="/video-abcd" className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm">
-            <ArrowLeft size={14} /> 返回列表
+            <ArrowLeft size={14} /> {t('video_back')}
           </Link>
-          <p className="text-sm text-muted-foreground">找不到该视频。</p>
+          <p className="text-sm text-muted-foreground">{t('video_not_found')}</p>
         </div>
       );
     }
@@ -352,9 +356,9 @@ export default function VideoDetailPage({
             <Card className="border-blue-500/30 bg-blue-950/10">
               <CardContent className="px-4 py-5 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-foreground mb-0.5">尚未分析</p>
+                  <p className="text-sm font-semibold text-foreground mb-0.5">{t('video_not_analyzed_yet')}</p>
                   <p className="text-xs text-muted-foreground">
-                    点击按钮，Gemini 将自动检测 22 个 ABCD 信号
+                    {t('video_analyze_hint')}
                   </p>
                 </div>
                 <button
@@ -363,14 +367,14 @@ export default function VideoDetailPage({
                   className="flex items-center gap-2 px-4 py-2 rounded bg-blue-600 border border-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading
-                    ? <><Loader2 size={14} className="animate-spin" /> 分析中…</>
-                    : <><Sparkles size={14} /> 开始 ABCD 分析</>
+                    ? <><Loader2 size={14} className="animate-spin" /> {t('video_analyzing')}</>
+                    : <><Sparkles size={14} /> {t('video_start_analysis')}</>
                   }
                 </button>
               </CardContent>
               {error && (
                 <div className="px-4 pb-3">
-                  <p className="text-xs text-red-600 dark:text-red-400">分析失败：{error}。请确认 GOOGLE_AI_API_KEY 已配置。</p>
+                  <p className="text-xs text-red-600 dark:text-red-400">{t('video_analysis_failed')}{error}。{t('video_ai_key_hint')}</p>
                 </div>
               )}
             </Card>
@@ -390,7 +394,7 @@ export default function VideoDetailPage({
                         <Badge variant="outline" className={cn('text-xs', RATING_META[analysis.overall_rating].badge)}>
                           {RATING_META[analysis.overall_rating].label_zh}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">by {analysis.model} · {new Date(analysis.analyzed_at).toLocaleDateString('zh-CN')}</span>
+                        <span className="text-xs text-muted-foreground">by {analysis.model} · {new Date(analysis.analyzed_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-CN')}</span>
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed">{analysis.summary_zh}</p>
                     </div>
@@ -400,7 +404,7 @@ export default function VideoDetailPage({
                       className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
                     >
                       {loading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-                      重新分析
+                      {lang === 'en' ? 'Re-analyze' : '重新分析'}
                     </button>
                   </div>
                 </CardContent>
@@ -420,7 +424,7 @@ export default function VideoDetailPage({
             <div className="grid grid-cols-2 gap-3">
               <Card className="border-emerald-400 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-950/10">
                 <CardHeader className="pb-1 pt-3 px-4">
-                  <CardTitle className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">优势亮点</CardTitle>
+                  <CardTitle className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">{t('video_strengths_title')}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
                   <ul className="space-y-2">
@@ -435,7 +439,7 @@ export default function VideoDetailPage({
               </Card>
               <Card className="border-amber-400 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/10">
                 <CardHeader className="pb-1 pt-3 px-4">
-                  <CardTitle className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wider">待改进方向</CardTitle>
+                  <CardTitle className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wider">{t('video_improvements_title')}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
                   <ul className="space-y-2">
@@ -452,7 +456,7 @@ export default function VideoDetailPage({
           )}
 
           {error && !loading && (
-            <p className="text-xs text-red-600 dark:text-red-400 px-1">分析失败：{error}</p>
+            <p className="text-xs text-red-600 dark:text-red-400 px-1">{t('video_analysis_failed')}{error}</p>
           )}
         </div>
 
@@ -486,7 +490,7 @@ export default function VideoDetailPage({
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-xs text-blue-400 hover:underline"
               >
-                <ExternalLink size={11} /> 在 YouTube 中打开
+                <ExternalLink size={11} /> {t('video_open_yt_full')}
               </a>
             </CardContent>
           </Card>
@@ -495,18 +499,18 @@ export default function VideoDetailPage({
           {effectiveVideo.performance && (effectiveVideo.performance.impressions > 0 || effectiveVideo.performance.cost > 0) && (
             <Card className="border-border">
               <CardHeader className="pb-1 pt-3 px-4">
-                <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">广告效果数据</CardTitle>
+                <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">{t('video_performance_title')}</CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
                   {[
-                    { label: '曝光量', value: ((effectiveVideo.performance.impressions ?? 0) / 1000).toFixed(0) + 'K' },
-                    { label: '视频观看', value: ((effectiveVideo.performance.views ?? 0) / 1000).toFixed(0) + 'K' },
-                    { label: '观看率 (VTR)', value: ((effectiveVideo.performance.view_rate ?? 0) * 100).toFixed(0) + '%', good: (effectiveVideo.performance.view_rate ?? 0) >= 0.3 },
-                    { label: '点击率 (CTR)', value: ((effectiveVideo.performance.ctr ?? 0) * 100).toFixed(2) + '%', warn: (effectiveVideo.performance.ctr ?? 0) < 0.008 },
-                    { label: '单次观看成本 (CPV)', value: '$' + cpv.toFixed(3) },
-                    { label: '总花费', value: '$' + (effectiveVideo.performance.cost ?? 0).toLocaleString() },
-                    { label: '转化数', value: String(effectiveVideo.performance.conversions ?? 0) },
+                    { label: lang === 'en' ? 'Impressions' : '曝光量', value: ((effectiveVideo.performance.impressions ?? 0) / 1000).toFixed(0) + 'K' },
+                    { label: lang === 'en' ? 'Views' : '视频观看', value: ((effectiveVideo.performance.views ?? 0) / 1000).toFixed(0) + 'K' },
+                    { label: lang === 'en' ? 'View Rate (VTR)' : '观看率 (VTR)', value: ((effectiveVideo.performance.view_rate ?? 0) * 100).toFixed(0) + '%', good: (effectiveVideo.performance.view_rate ?? 0) >= 0.3 },
+                    { label: lang === 'en' ? 'Click Rate (CTR)' : '点击率 (CTR)', value: ((effectiveVideo.performance.ctr ?? 0) * 100).toFixed(2) + '%', warn: (effectiveVideo.performance.ctr ?? 0) < 0.008 },
+                    { label: lang === 'en' ? 'Cost/View (CPV)' : '单次观看成本 (CPV)', value: '$' + cpv.toFixed(3) },
+                    { label: lang === 'en' ? 'Total Spend' : '总花费', value: '$' + (effectiveVideo.performance.cost ?? 0).toLocaleString() },
+                    { label: lang === 'en' ? 'Conversions' : '转化数', value: String(effectiveVideo.performance.conversions ?? 0) },
                     { label: 'ROAS', value: roas.toFixed(2) + 'x', good: roas >= 2, warn: roas > 0 && roas < 1 },
                   ].map(({ label, value, warn, good }) => (
                     <div key={label}>
@@ -525,7 +529,7 @@ export default function VideoDetailPage({
           {analysis && (
             <Card className="border-border">
               <CardHeader className="pb-1 pt-3 px-4">
-                <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">ABCD 分类得分</CardTitle>
+                <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">{t('video_abcd_category_scores')}</CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4 space-y-2">
                 {analysis.categories.map(cat => {

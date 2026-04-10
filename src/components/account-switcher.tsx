@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useSettings } from '@/context/settings-context';
+import { useI18n } from '@/context/i18n-context';
 import { ChevronDown, Database, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DbAccount } from '@/lib/supabase';
 
 export function AccountSwitcher() {
   const { selectedAccountId, setSelectedAccountId } = useSettings();
+  const { t } = useI18n();
   const [accounts, setAccounts] = useState<DbAccount[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -23,8 +25,8 @@ export function AccountSwitcher() {
     : accounts.find(a => a.id === selectedAccountId);
 
   const label = selectedAccountId === 'demo'
-    ? '演示数据'
-    : (current?.account_name ?? '选择账户');
+    ? t('as_demo')
+    : (current?.account_name ?? t('as_select'));
 
   return (
     <div className="relative">
@@ -54,8 +56,8 @@ export function AccountSwitcher() {
             >
               <FlaskConical size={13} className="text-amber-400 shrink-0" />
               <div>
-                <div>演示数据</div>
-                <div className="text-xs text-muted-foreground">内置 Demo 样本</div>
+                <div>{t('as_demo')}</div>
+                <div className="text-xs text-muted-foreground">{t('as_demo_subtitle')}</div>
               </div>
             </button>
 
@@ -78,8 +80,8 @@ export function AccountSwitcher() {
                   <div className="truncate">{account.account_name}</div>
                   <div className="text-xs text-muted-foreground">
                     {account.last_synced_at
-                      ? `已同步 · ${account.currency}`
-                      : '尚未同步'}
+                      ? `${t('as_synced')}${account.currency}`
+                      : t('as_not_synced')}
                   </div>
                 </div>
               </button>
@@ -87,8 +89,8 @@ export function AccountSwitcher() {
 
             {accounts.length === 0 && (
               <div className="px-3 py-2 text-xs text-muted-foreground">
-                暂无真实账户 —{' '}
-                <a href="/accounts" className="text-primary underline">去添加</a>
+                {t('as_no_accounts')} —{' '}
+                <a href="/accounts" className="text-primary underline">{t('as_add')}</a>
               </div>
             )}
           </div>

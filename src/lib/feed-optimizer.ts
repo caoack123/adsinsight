@@ -63,7 +63,11 @@ export function getIssueTypeLabel(type: string) {
   return labels[type] ?? type;
 }
 
-export function getSeverityLabel(severity: 'high' | 'medium' | 'low') {
+export function getSeverityLabel(severity: 'high' | 'medium' | 'low', lang: 'zh' | 'en' = 'zh'): string {
+  if (lang === 'en') {
+    const m: Record<string, string> = { high: 'High', medium: 'Medium', low: 'Low' };
+    return m[severity] ?? severity;
+  }
   const labels = {
     high: '高优先级',
     medium: '中优先级',

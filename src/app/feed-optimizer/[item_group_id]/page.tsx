@@ -13,6 +13,7 @@ import { analyzeTitles } from '@/modules/feed-optimizer/processor';
 import type { TitleAnalysis } from '@/modules/feed-optimizer/schema';
 import type { OptimizeTitleResponse } from '@/app/api/ai/optimize-title/route';
 import { useSettings } from '@/context/settings-context';
+import { useI18n } from '@/context/i18n-context';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Copy, Check, CheckCircle2, XCircle, Sparkles, Loader2 } from 'lucide-react';
@@ -25,6 +26,7 @@ export default function FeedProductDetailPage({
 }) {
   const { item_group_id } = use(params);
   const { settings, selectedAccountId } = useSettings();
+  const { t, lang } = useI18n();
 
   const [analysis, setAnalysis] = useState<TitleAnalysis | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
@@ -49,7 +51,7 @@ export default function FeedProductDetailPage({
   if (pageLoading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground py-12 justify-center">
-        <Loader2 size={16} className="animate-spin" /> 加载中...
+        <Loader2 size={16} className="animate-spin" /> {t('loading')}
       </div>
     );
   }
@@ -58,9 +60,9 @@ export default function FeedProductDetailPage({
     return (
       <div className="space-y-4">
         <Link href="/feed-optimizer" className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm">
-          <ArrowLeft size={14} /> 返回列表
+          <ArrowLeft size={14} /> {t('feed_back')}
         </Link>
-        <p className="text-sm text-muted-foreground">找不到该产品（ID: {item_group_id}）。</p>
+        <p className="text-sm text-muted-foreground">{lang === 'en' ? 'Product not found (ID: ' : '找不到该产品（ID: '}{item_group_id}）。</p>
       </div>
     );
   }
@@ -138,7 +140,7 @@ export default function FeedProductDetailPage({
           <p className="text-xs text-muted-foreground">{product.item_group_id}</p>
         </div>
         <Badge variant="outline" className={cn('text-xs font-semibold px-1.5 ml-auto', tone.badgeClassName)}>
-          质量分 {score}/100
+          {t('feed_score_label')} {score}/100
         </Badge>
       </div>
 
@@ -148,7 +150,7 @@ export default function FeedProductDetailPage({
           {/* Current title */}
           <Card className={cn('border', tone.borderClassName)}>
             <CardHeader className="pb-1 pt-3 px-4">
-              <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">当前标题</CardTitle>
+              <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">{t('feed_current_title')}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <p className="text-sm leading-relaxed text-foreground">{product.current_title}</p>
@@ -158,7 +160,7 @@ export default function FeedProductDetailPage({
           {/* Issues */}
           {sortedIssues.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">发现的问题</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('feed_issues_found')}</p>
               {sortedIssues.map((issue, i) => (
                 <div
                   key={i}
@@ -181,7 +183,7 @@ export default function FeedProductDetailPage({
                           issue.severity === 'low' && 'border-border text-muted-foreground'
                         )}
                       >
-                        {getSeverityLabel(issue.severity)}
+                        {getSeverityLabel(issue.severity, lang)}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">{issue.description_zh}</p>
@@ -196,14 +198,14 @@ export default function FeedProductDetailPage({
             <CardHeader className="pb-1 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <CardTitle className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">AI 优化标题</CardTitle>
+                  <CardTitle className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">{t('feed_ai_title')}</CardTitle>
                   {isAiGenerated && (
                     <Badge variant="outline" className="text-xs border-emerald-500/50 text-emerald-700 dark:text-emerald-400 px-1.5">
-                      实时生成
+                      {t('feed_live_generated')}
                     </Badge>
                   )}
                 </div>
-                <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">预计 CTR 提升 {displayLift}</span>
+                <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">{t('feed_ctr_lift_prefix')} {displayLift}</span>
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-3">
@@ -214,7 +216,7 @@ export default function FeedProductDetailPage({
                   className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-emerald-100 border border-emerald-400 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-700/30 dark:border-emerald-500/40 dark:text-emerald-300 dark:hover:bg-emerald-700/50 transition-colors"
                 >
                   {copied ? <Check size={12} /> : <Copy size={12} />}
-                  {copied ? '已复制！' : '复制优化标题'}
+                  {copied ? t('feed_copied_title') : t('feed_copy_title')}
                 </button>
                 <button
                   onClick={handleGenerateAI}
@@ -223,13 +225,13 @@ export default function FeedProductDetailPage({
                 >
                   {aiLoading
                     ? <><Loader2 size={12} className="animate-spin" /> AI 生成中…</>
-                    : <><Sparkles size={12} /> {isAiGenerated ? '重新生成' : '用 Claude 实时生成'}</>
+                    : <><Sparkles size={12} /> {isAiGenerated ? t('regenerate') : t('feed_generate_ai')}</>
                   }
                 </button>
               </div>
               {aiError && (
                 <p className="text-xs text-red-600 dark:text-red-400 mt-2">
-                  生成失败：{aiError}。请确认 ANTHROPIC_API_KEY 已配置。
+                  {t('ai_failed_prefix')}{aiError}。{t('ai_key_hint')}
                 </p>
               )}
             </CardContent>
@@ -239,8 +241,8 @@ export default function FeedProductDetailPage({
           <Card className="border-border">
             <CardHeader className="pb-1 pt-3 px-4">
               <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">
-                AI 分析说明
-                {isAiGenerated && <span className="ml-2 text-blue-400 font-normal normal-case">由 claude-sonnet-4-6 生成</span>}
+                {t('feed_reasoning_title')}
+                {isAiGenerated && <span className="ml-2 text-blue-400 font-normal normal-case">{t('feed_reasoning_badge')}</span>}
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
@@ -262,7 +264,7 @@ export default function FeedProductDetailPage({
                   className="w-full h-full object-contain rounded"
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
-                <span className="absolute text-xs text-muted-foreground">产品图片</span>
+                <span className="absolute text-xs text-muted-foreground">{t('feed_product_image')}</span>
               </div>
               <p className="text-xs font-semibold text-foreground">{product.brand || '—'}</p>
               <p className="text-xs text-muted-foreground">{product.product_type || '—'}</p>
@@ -273,16 +275,16 @@ export default function FeedProductDetailPage({
           {/* Performance metrics */}
           <Card className="border-border">
             <CardHeader className="pb-1 pt-3 px-4">
-              <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">效果数据</CardTitle>
+              <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">{t('feed_performance')}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-3">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 {[
-                  { label: '曝光量 (Impressions)', value: product.impressions.toLocaleString() },
-                  { label: '点击量 (Clicks)', value: product.clicks.toLocaleString() },
-                  { label: '点击率 (CTR)', value: `${(product.ctr * 100).toFixed(1)}%`, warn: product.ctr < 0.01 },
-                  { label: '花费 (Cost)', value: `$${product.cost.toFixed(2)}` },
-                  { label: '转化数', value: product.conversions.toString() },
+                  { label: lang === 'en' ? 'Impressions' : '曝光量', value: product.impressions.toLocaleString() },
+                  { label: lang === 'en' ? 'Clicks' : '点击量', value: product.clicks.toLocaleString() },
+                  { label: 'CTR', value: `${(product.ctr * 100).toFixed(1)}%`, warn: product.ctr < 0.01 },
+                  { label: lang === 'en' ? 'Spend' : '花费', value: `$${product.cost.toFixed(2)}` },
+                  { label: lang === 'en' ? 'Conversions' : '转化数', value: product.conversions.toString() },
                   { label: 'ROAS', value: `${roas.toFixed(2)}x`, good: roas >= 2 },
                 ].map(({ label, value, warn, good }) => (
                   <div key={label}>
@@ -297,7 +299,7 @@ export default function FeedProductDetailPage({
           {/* Top search terms */}
           <Card className="border-border">
             <CardHeader className="pb-1 pt-3 px-4">
-              <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">热门搜索词</CardTitle>
+              <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">{t('feed_search_terms_section')}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-3">
               <div className="flex flex-wrap gap-1.5">
@@ -311,7 +313,7 @@ export default function FeedProductDetailPage({
           {/* Search coverage analysis */}
           <Card className="border-border">
             <CardHeader className="pb-1 pt-3 px-4">
-              <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">搜索词覆盖分析</CardTitle>
+              <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">{t('feed_coverage_title')}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-3 space-y-2">
               {(product.top_search_terms ?? []).map(term => {
@@ -321,9 +323,9 @@ export default function FeedProductDetailPage({
                   <div key={term} className="flex items-center justify-between gap-2">
                     <span className="text-xs text-muted-foreground truncate">{term}</span>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-muted-foreground w-8 text-right">现在</span>
+                      <span className="text-xs text-muted-foreground w-8 text-right">{t('feed_coverage_current')}</span>
                       {inCurrent ? <CheckCircle2 size={13} className="text-green-600 dark:text-green-400" /> : <XCircle size={13} className="text-red-600 dark:text-red-400" />}
-                      <span className="text-xs text-muted-foreground w-8 text-right">优化后</span>
+                      <span className="text-xs text-muted-foreground w-8 text-right">{t('feed_coverage_after')}</span>
                       {inSuggested ? <CheckCircle2 size={13} className="text-green-600 dark:text-green-400" /> : <XCircle size={13} className="text-red-600 dark:text-red-400" />}
                     </div>
                   </div>
