@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, createElement } from 'react';
 import { useSettings } from '@/context/settings-context';
 import { useI18n } from '@/context/i18n-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -208,22 +208,26 @@ function ReportDisplay({
     setPdfLoading(true);
     setPdfError(null);
     try {
-      const res = await fetch('/api/youtube-intel/pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ report, meta }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error ?? `HTTP ${res.status}`);
-      }
-      // Trigger browser download
-      const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
+      // Generate PDF entirely in the browser — no server API needed.
+      // Dynamic imports keep react-pdf out of the initial page bundle.
+      // In a client component, Turbopack correctly resolves @react-pdf/renderer
+      // to its browser build, which exports `pdf()` + `.toBlob()`.
+      const [{ pdf }, { YouTubeIntelPDF }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('@/lib/youtube-intel-pdf'),
+      ]);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const blob = await pdf(
+        createElement(YouTubeIntelPDF, { report, meta }) as any
+      ).toBlob();
+
       const safeQuery = meta.query.replace(/[^\w\u4e00-\u9fff]/g, '-').slice(0, 30);
+      const filename  = `yt-intel-${safeQuery}-${meta.generated_at.split('T')[0]}.pdf`;
+      const url = URL.createObjectURL(blob as Blob);
+      const a   = document.createElement('a');
       a.href     = url;
-      a.download = `yt-intel-${safeQuery}-${meta.generated_at.split('T')[0]}.pdf`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
