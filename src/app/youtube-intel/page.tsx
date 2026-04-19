@@ -202,20 +202,26 @@ function ReportDisplay({
   const [showAllVideos, setShowAllVideos] = useState(false);
   const [expandedVideo, setExpandedVideo] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError]     = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   async function handleDownloadPDF() {
     if (!printRef.current) return;
     setPdfLoading(true);
-    const el = printRef.current;
-    el.style.display = 'block';
-    // Wait two animation frames so React finishes painting
-    await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+    setPdfError(null);
+    // Give React one tick to show the spinner before the heavy work begins
+    await new Promise<void>(r => setTimeout(r, 50));
     try {
       const safeQuery = meta.query.replace(/[^\w\u4e00-\u9fff]/g, '-').slice(0, 30);
-      await captureAndSavePDF(el, `yt-intel-${safeQuery}-${meta.generated_at.split('T')[0]}.pdf`);
+      await captureAndSavePDF(
+        printRef.current,
+        `yt-intel-${safeQuery}-${meta.generated_at.split('T')[0]}.pdf`
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('[PDF]', e);
+      setPdfError(msg);
     } finally {
-      el.style.display = 'none';
       setPdfLoading(false);
     }
   }
@@ -260,6 +266,12 @@ function ReportDisplay({
           }
         </button>
       </div>
+
+      {pdfError && (
+        <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/30 rounded px-3 py-2">
+          PDF error: {pdfError}
+        </div>
+      )}
 
       {/* Headline + market temp */}
       <div className="flex items-start gap-3 flex-wrap">
@@ -602,10 +614,11 @@ function ReportDisplay({
         )}
       </Card>
 
-      {/* Hidden print view — captured by html2canvas for PDF generation */}
+      {/* Off-screen print view — always rendered so html2canvas can capture it instantly */}
       <div
         ref={printRef}
-        style={{ display: 'none', position: 'fixed', left: '-9999px', top: 0, zIndex: -1 }}
+        aria-hidden="true"
+        style={{ position: 'fixed', left: '-9999px', top: 0, zIndex: -1, pointerEvents: 'none' }}
       >
         <PrintableReportView report={report} meta={meta} />
       </div>
@@ -617,10 +630,12 @@ function ReportDisplay({
 
 /** Async PDF generator — dynamically imports jspdf + html2canvas to keep bundle lean */
 async function captureAndSavePDF(el: HTMLElement, filename: string) {
-  const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-    import('html2canvas'),
-    import('jspdf'),
-  ]);
+  // jsPDF ships both a default export and a named export; grab whichever is available
+  const [h2cMod, pdfMod] = await Promise.all([import('html2canvas'), import('jspdf')]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const html2canvas = (h2cMod as any).default ?? h2cMod;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const jsPDF = (pdfMod as any).jsPDF ?? (pdfMod as any).default ?? pdfMod;
 
   // Snapshot the element (force white bg, full width)
   const canvas = await html2canvas(el, {
