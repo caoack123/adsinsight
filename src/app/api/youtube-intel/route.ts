@@ -20,6 +20,7 @@ export interface YouTubeIntelRequest {
   query: string;
   country_code: string;                         // ISO 3166-1 alpha-2, e.g. 'US'
   sort: 'relevance' | 'date' | 'viewCount';
+  output_lang: 'zh' | 'en';                     // language for Gemini report output
   youtube_api_key: string;
   gemini_api_key?: string;                      // falls back to GOOGLE_AI_API_KEY env
   model?: string;                               // defaults to gemini-2.5-flash
@@ -106,6 +107,7 @@ export interface YouTubeIntelResponse {
     query: string;
     country_code: string;
     sort: string;
+    output_lang: 'zh' | 'en';
     videos_analyzed: number;
     comments_analyzed: number;
     generated_at: string;
@@ -141,6 +143,7 @@ export async function POST(request: NextRequest) {
     query,
     country_code = 'US',
     sort = 'relevance',
+    output_lang = 'en',
     youtube_api_key,
     gemini_api_key,
     model = 'gemini-2.5-flash',
@@ -266,7 +269,13 @@ export async function POST(request: NextRequest) {
       })
       .join('\n\n---\n\n');
 
+    const langInstruction = output_lang === 'zh'
+      ? 'LANGUAGE: Write EVERY text value in the JSON in Simplified Chinese (简体中文). Every headline, finding, bullet, label, and sentence must be in Chinese — no English except proper nouns, brand names, and metric values.'
+      : 'LANGUAGE: Write EVERY text value in the JSON in English.';
+
     const prompt = `You are a senior digital marketing intelligence analyst producing a YouTube Intelligence Report for a brand's multi-disciplinary team.
+
+## ${langInstruction}
 
 ## Search context
 - Query: "${query}"
@@ -433,6 +442,7 @@ Generate the full intelligence report now.`;
         query,
         country_code,
         sort,
+        output_lang,
         videos_analyzed: videos.length,
         comments_analyzed: totalComments,
         generated_at: new Date().toISOString(),

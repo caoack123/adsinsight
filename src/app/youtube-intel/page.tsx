@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '@/context/settings-context';
 import { useI18n } from '@/context/i18n-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +11,43 @@ import {
   Map, BookOpen, BarChart3, ChevronDown, ChevronUp,
   ExternalLink, ThumbsUp, MessageSquare, Eye, Flame,
   Target, Palette, Megaphone, Package, LineChart,
+  Clock, Trash2, Languages,
 } from 'lucide-react';
 import type { YouTubeIntelResponse, YouTubeIntelReport, VideoItem } from '@/app/api/youtube-intel/route';
+
+// ─── History persistence ──────────────────────────────────────────────────────
+
+interface HistoryItem {
+  id: string;
+  query: string;
+  country_code: string;
+  sort: string;
+  output_lang: 'zh' | 'en';
+  created_at: string;
+  data: YouTubeIntelResponse;
+}
+
+const HISTORY_KEY = 'yt_intel_history_v1';
+const MAX_HISTORY = 25;
+
+function loadHistory(): HistoryItem[] {
+  if (typeof window === 'undefined') return [];
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]') as HistoryItem[]; }
+  catch { return []; }
+}
+
+function saveHistoryItem(item: HistoryItem): void {
+  if (typeof window === 'undefined') return;
+  const all = loadHistory();
+  const updated = [item, ...all.filter(h => h.id !== item.id)].slice(0, MAX_HISTORY);
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(updated)); } catch { /* quota */ }
+}
+
+function removeHistoryItem(id: string): HistoryItem[] {
+  const updated = loadHistory().filter(h => h.id !== id);
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(updated)); } catch { /* quota */ }
+  return updated;
+}
 
 // ─── Country options ───────────────────────────────────────────────────────────
 
@@ -184,6 +219,17 @@ function ReportDisplay({
         <span>·</span>
         <span className="flex items-center gap-1"><Eye size={10} /> {meta.videos_analyzed} {lang === 'en' ? 'videos' : '个视频'}</span>
         <span className="flex items-center gap-1"><MessageSquare size={10} /> {meta.comments_analyzed} {lang === 'en' ? 'comments' : '条评论'}</span>
+        <Badge
+          variant="outline"
+          className={cn(
+            'text-xs px-1.5',
+            meta.output_lang === 'zh'
+              ? 'border-red-500/40 text-red-500 dark:text-red-400'
+              : 'border-blue-500/40 text-blue-500 dark:text-blue-400'
+          )}
+        >
+          {meta.output_lang === 'zh' ? '中文报告' : 'EN Report'}
+        </Badge>
         <span className="ml-auto">{new Date(meta.generated_at).toLocaleString()}</span>
       </div>
 
@@ -531,6 +577,77 @@ function ReportDisplay({
   );
 }
 
+// ─── History panel ────────────────────────────────────────────────────────────
+
+function HistoryPanel({
+  history, onLoad, onDelete, lang,
+}: {
+  history: HistoryItem[];
+  onLoad: (item: HistoryItem) => void;
+  onDelete: (id: string) => void;
+  lang: 'zh' | 'en';
+}) {
+  const [open, setOpen] = useState(true);
+  if (history.length === 0) return null;
+
+  return (
+    <Card className="border-border">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-accent/30 transition-colors"
+      >
+        <span className="flex items-center gap-2 text-muted-foreground">
+          <Clock size={13} />
+          {lang === 'en' ? `History (${history.length})` : `历史记录 (${history.length})`}
+        </span>
+        {open ? <ChevronUp size={13} className="text-muted-foreground" /> : <ChevronDown size={13} className="text-muted-foreground" />}
+      </button>
+      {open && (
+        <div className="border-t border-border divide-y divide-border">
+          {history.map(item => (
+            <div key={item.id} className="flex items-start gap-3 px-4 py-2.5 hover:bg-accent/20 group transition-colors">
+              <button onClick={() => onLoad(item)} className="flex-1 text-left min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-medium text-foreground truncate max-w-[220px]">
+                    "{item.query}"
+                  </span>
+                  <Badge variant="outline" className="text-xs px-1.5 shrink-0">{item.country_code}</Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'text-xs px-1.5 shrink-0',
+                      item.output_lang === 'zh'
+                        ? 'border-red-500/40 text-red-500 dark:text-red-400'
+                        : 'border-blue-500/40 text-blue-500 dark:text-blue-400'
+                    )}
+                  >
+                    {item.output_lang === 'zh' ? '中文' : 'EN'}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {item.data.meta.videos_analyzed}{lang === 'en' ? ' videos' : ' 个视频'}
+                    {' · '}
+                    {item.data.meta.comments_analyzed}{lang === 'en' ? ' comments' : ' 条评论'}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {new Date(item.created_at).toLocaleString()}
+                </p>
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); onDelete(item.id); }}
+                className="text-muted-foreground/40 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1 mt-0.5 shrink-0"
+                title={lang === 'en' ? 'Delete' : '删除'}
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // ─── Loading steps ─────────────────────────────────────────────────────────────
 
 const LOADING_STEPS = [
@@ -582,12 +699,17 @@ export default function YouTubeIntelPage() {
   const [query, setQuery]               = useState('');
   const [countryCode, setCountryCode]   = useState('US');
   const [sort, setSort]                 = useState<'relevance' | 'date' | 'viewCount'>('relevance');
+  const [outputLang, setOutputLang]     = useState<'zh' | 'en'>('en');
   const [loading, setLoading]           = useState(false);
   const [loadingStep, setLoadingStep]   = useState(0);
   const [error, setError]               = useState<string | null>(null);
   const [result, setResult]             = useState<YouTubeIntelResponse | null>(null);
+  const [history, setHistory]           = useState<HistoryItem[]>([]);
 
   const stepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Hydrate history from localStorage on mount
+  useEffect(() => { setHistory(loadHistory()); }, []);
 
   function startStepTimer() {
     let step = 0;
@@ -627,6 +749,7 @@ export default function YouTubeIntelPage() {
           query: query.trim(),
           country_code: countryCode,
           sort,
+          output_lang: outputLang,
           youtube_api_key: settings.youtubeApiKey,
           gemini_api_key: settings.googleAiApiKey || undefined,
           model: settings.videoAbcdModel,
@@ -634,13 +757,40 @@ export default function YouTubeIntelPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Unknown error');
-      setResult(data as YouTubeIntelResponse);
+      const resp = data as YouTubeIntelResponse;
+      setResult(resp);
+      // Auto-save to history
+      const histItem: HistoryItem = {
+        id: Date.now().toString(),
+        query: query.trim(),
+        country_code: countryCode,
+        sort,
+        output_lang: outputLang,
+        created_at: new Date().toISOString(),
+        data: resp,
+      };
+      saveHistoryItem(histItem);
+      setHistory(loadHistory());
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     } finally {
       clearStepTimer();
       setLoading(false);
     }
+  }
+
+  function handleLoadHistory(item: HistoryItem) {
+    setQuery(item.query);
+    setCountryCode(item.country_code);
+    setSort(item.sort as 'relevance' | 'date' | 'viewCount');
+    setOutputLang(item.output_lang);
+    setResult(item.data);
+    setError(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function handleDeleteHistory(id: string) {
+    setHistory(removeHistoryItem(id));
   }
 
   const sortOptions = [
@@ -720,6 +870,42 @@ export default function YouTubeIntelPage() {
               </select>
             </div>
 
+            {/* Report language */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Languages size={11} />
+                {lang === 'en' ? 'Report Language' : '报告语言'}
+              </label>
+              <div className="flex rounded border border-border overflow-hidden h-[34px]">
+                <button
+                  type="button"
+                  onClick={() => setOutputLang('en')}
+                  disabled={loading}
+                  className={cn(
+                    'px-3 text-xs font-medium transition-colors',
+                    outputLang === 'en'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-background text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  🇺🇸 EN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOutputLang('zh')}
+                  disabled={loading}
+                  className={cn(
+                    'px-3 text-xs font-medium transition-colors border-l border-border',
+                    outputLang === 'zh'
+                      ? 'bg-red-600 text-white'
+                      : 'bg-background text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  🇨🇳 中文
+                </button>
+              </div>
+            </div>
+
             {/* Analyze button */}
             <button
               onClick={handleAnalyze}
@@ -745,6 +931,16 @@ export default function YouTubeIntelPage() {
         </CardContent>
       </Card>
 
+      {/* History */}
+      {!result && !loading && (
+        <HistoryPanel
+          history={history}
+          onLoad={handleLoadHistory}
+          onDelete={handleDeleteHistory}
+          lang={lang}
+        />
+      )}
+
       {/* Error */}
       {error && (
         <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/30 rounded px-3 py-2">
@@ -757,7 +953,18 @@ export default function YouTubeIntelPage() {
 
       {/* Report */}
       {result && !loading && (
-        <ReportDisplay report={result.report} videos={result.videos} meta={result.meta} />
+        <div className="space-y-4">
+          <ReportDisplay report={result.report} videos={result.videos} meta={result.meta} />
+          {/* History at the bottom when a report is open */}
+          {history.length > 0 && (
+            <HistoryPanel
+              history={history}
+              onLoad={handleLoadHistory}
+              onDelete={handleDeleteHistory}
+              lang={lang}
+            />
+          )}
+        </div>
       )}
     </div>
   );
