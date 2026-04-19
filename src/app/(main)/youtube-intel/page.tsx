@@ -628,7 +628,11 @@ function ReportDisplay({
 
 // ─── PDF download helpers ─────────────────────────────────────────────────────
 
-/** Async PDF generator — dynamically imports jspdf + html2canvas to keep bundle lean */
+/** Async PDF generator — dynamically imports jspdf + html2canvas to keep bundle lean.
+ *  Uses section-aware page breaking: reads [data-pdf-section] element positions from
+ *  the DOM before rendering, then chooses cut points that land between sections
+ *  rather than through them.
+ */
 async function captureAndSavePDF(el: HTMLElement, filename: string) {
   // html2canvas-pro is a drop-in fork that supports modern CSS lab()/oklch() colors
   const [h2cMod, pdfMod] = await Promise.all([import('html2canvas-pro'), import('jspdf')]);
@@ -637,43 +641,95 @@ async function captureAndSavePDF(el: HTMLElement, filename: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const jsPDF = (pdfMod as any).jsPDF ?? (pdfMod as any).default ?? pdfMod;
 
-  // Snapshot the element (force white bg, full width)
+  const SCALE = 1.5;
+
+  // ── 1. Measure section break positions in DOM pixels BEFORE rendering ──────
+  // el is a fixed-positioned off-screen div — getBoundingClientRect() works fine.
+  const elRect = el.getBoundingClientRect();
+  const sectionOffsetsPx: number[] = Array.from(
+    el.querySelectorAll('[data-pdf-section]')
+  ).map(sec => {
+    const r = (sec as HTMLElement).getBoundingClientRect();
+    return r.top - elRect.top; // px from top of container
+  }).filter(y => y > 4).sort((a, b) => a - b); // skip anything at very top
+
+  // ── 2. Render the full element to a canvas ─────────────────────────────────
   const canvas = await html2canvas(el, {
-    scale: 1.5,
+    scale: SCALE,
     useCORS: true,
     allowTaint: true,
     backgroundColor: '#ffffff',
     logging: false,
   });
 
+  // ── 3. Set up PDF ──────────────────────────────────────────────────────────
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pageW = pdf.internal.pageSize.getWidth();
-  const pageH = pdf.internal.pageSize.getHeight();
+  const pageW  = pdf.internal.pageSize.getWidth();
+  const pageH  = pdf.internal.pageSize.getHeight();
   const margin = 8;
   const usableW = pageW - 2 * margin;
   const usableH = pageH - 2 * margin;
 
-  // Total PDF height that the image would occupy if un-cropped
+  // Total PDF height the full canvas would occupy (proportional scale to usableW)
   const totalPdfH = (canvas.height / canvas.width) * usableW;
 
-  let yOffset = 0;
-  let pageNum = 0;
-  while (yOffset < totalPdfH) {
-    if (pageNum > 0) pdf.addPage();
+  // Convert section DOM-px positions → PDF mm positions
+  const breakPointsMm = sectionOffsetsPx.map(domY => {
+    const canvasY = domY * SCALE;
+    return (canvasY / canvas.height) * totalPdfH;
+  });
 
-    const sliceH    = Math.min(usableH, totalPdfH - yOffset);
-    const srcY      = Math.round((yOffset / totalPdfH) * canvas.height);
-    const srcH      = Math.round((sliceH / totalPdfH) * canvas.height);
+  // ── 4. Build smart page slices ─────────────────────────────────────────────
+  // For each page, try to end at the last section boundary that fits within
+  // the page height, so we never cut through a section. Fall back to the
+  // arithmetic boundary if no break point exists in the window.
+  const MIN_SLICE_RATIO = 0.25; // don't make a page shorter than 25% of usableH
+  const slices: Array<{ start: number; end: number }> = [];
+  let pos = 0;
+
+  while (pos < totalPdfH) {
+    const idealEnd = pos + usableH;
+    if (idealEnd >= totalPdfH) {
+      slices.push({ start: pos, end: totalPdfH });
+      break;
+    }
+
+    const minEnd = pos + usableH * MIN_SLICE_RATIO;
+    // Pick the last break point in (minEnd, idealEnd] — "last" means furthest
+    // down the page, maximising content per page.
+    let bestBreak = idealEnd; // default: arithmetic cut
+    for (const bp of breakPointsMm) {
+      if (bp > minEnd && bp <= idealEnd) {
+        bestBreak = bp;
+      }
+    }
+
+    slices.push({ start: pos, end: bestBreak });
+    pos = bestBreak;
+  }
+
+  // ── 5. Render each slice onto a PDF page ───────────────────────────────────
+  slices.forEach(({ start, end }, i) => {
+    if (i > 0) pdf.addPage();
+
+    const sliceH = end - start;
+    if (sliceH <= 0) return;
+
+    const srcY = Math.round((start / totalPdfH) * canvas.height);
+    const srcH = Math.round((sliceH  / totalPdfH) * canvas.height);
+    if (srcH <= 0) return;
 
     const sliceCvs  = document.createElement('canvas');
     sliceCvs.width  = canvas.width;
     sliceCvs.height = srcH;
-    sliceCvs.getContext('2d')!.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+    sliceCvs.getContext('2d')!.drawImage(
+      canvas, 0, srcY, canvas.width, srcH,
+      0,      0, canvas.width, srcH
+    );
 
     pdf.addImage(sliceCvs.toDataURL('image/jpeg', 0.92), 'JPEG', margin, margin, usableW, sliceH);
-    yOffset += usableH;
-    pageNum++;
-  }
+  });
+
   pdf.save(filename);
 }
 
@@ -756,7 +812,7 @@ function PrintableReportView({ report, meta }: {
       </div>
 
       {/* ── Executive Summary ── */}
-      <div style={{ marginBottom: '28px' }}>
+      <div data-pdf-section style={{ marginBottom: '28px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '14px' }}>
           <p style={S.headline}>{es.headline}</p>
           <span style={S.tempBadge}>{es.market_temperature}</span>
@@ -773,7 +829,7 @@ function PrintableReportView({ report, meta }: {
       <hr style={S.hr} />
 
       {/* ── Quantitative Summary ── */}
-      <div style={{ marginBottom: '28px' }}>
+      <div data-pdf-section style={{ marginBottom: '28px' }}>
         <p style={S.secTitle}>{L('QUANTITATIVE SUMMARY', '量化数据')}</p>
         <div style={S.statRow}>
           {[
@@ -791,7 +847,7 @@ function PrintableReportView({ report, meta }: {
       </div>
 
       {/* ── Top 5 Videos ── */}
-      <div style={{ marginBottom: '28px' }}>
+      <div data-pdf-section style={{ marginBottom: '28px' }}>
         <p style={S.secTitle}>{L('TOP 5 VIDEOS', '热门视频 Top 5')}</p>
         {qs.top_5_videos.map(v => (
           <div key={v.rank} style={S.videoRow}>
@@ -808,7 +864,7 @@ function PrintableReportView({ report, meta }: {
       <hr style={S.hr} />
 
       {/* ── Content Landscape ── */}
-      <div style={{ marginBottom: '28px' }}>
+      <div data-pdf-section style={{ marginBottom: '28px' }}>
         <p style={S.secTitle}>{L('CONTENT LANDSCAPE', '内容格局')}</p>
         <div style={S.grid2}>
           <div style={S.card}>
@@ -839,7 +895,7 @@ function PrintableReportView({ report, meta }: {
       <hr style={S.hr} />
 
       {/* ── Audience Intelligence ── */}
-      <div style={{ marginBottom: '28px' }}>
+      <div data-pdf-section style={{ marginBottom: '28px' }}>
         <p style={S.secTitle}>{L('AUDIENCE INTELLIGENCE', '受众洞察')}</p>
         <div style={{ marginBottom: '14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -874,7 +930,7 @@ function PrintableReportView({ report, meta }: {
       <hr style={S.hr} />
 
       {/* ── Creative & Brand Intelligence ── */}
-      <div style={{ marginBottom: '28px' }}>
+      <div data-pdf-section style={{ marginBottom: '28px' }}>
         <p style={S.secTitle}>{L('CREATIVE & BRAND INTELLIGENCE', '创意与品牌情报')}</p>
         <div style={S.grid2}>
           <div>
@@ -920,7 +976,7 @@ function PrintableReportView({ report, meta }: {
       <hr style={S.hr} />
 
       {/* ── Opportunity Map ── */}
-      <div style={{ marginBottom: '28px' }}>
+      <div data-pdf-section style={{ marginBottom: '28px' }}>
         <p style={S.secTitle}>{L('OPPORTUNITY MAP', '机会地图')}</p>
         <div style={S.grid2}>
           <div style={S.card}>
@@ -947,7 +1003,7 @@ function PrintableReportView({ report, meta }: {
       <hr style={S.hr} />
 
       {/* ── Team Playbooks ── */}
-      <div>
+      <div data-pdf-section>
         <p style={S.secTitle}>{L('TEAM PLAYBOOKS', '团队策略')}</p>
         <div style={{ ...S.grid2, marginBottom: '12px' }}>
           <div style={S.pbCard}>

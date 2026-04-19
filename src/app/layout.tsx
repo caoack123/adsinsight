@@ -1,10 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Sidebar } from '@/components/sidebar';
 import { Providers } from '@/components/providers';
-import { AccountSwitcher } from '@/components/account-switcher';
-import { ThemeToggle, LangToggle } from '@/components/theme-provider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -13,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: '广告洞察 AI — AdInsight AI',
+  title: 'AdInsight AI',
   description: 'Google Ads 智能分析工具，专为跨境电商卖家打造',
 };
 
@@ -24,24 +21,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Prevent flash of wrong theme */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('adinsight_theme');if(t!=='light')document.documentElement.classList.add('dark');})()` }} />
       </head>
-      <body className="bg-background text-foreground min-h-screen flex">
+      <body className="bg-background text-foreground min-h-screen">
         <Providers>
-          <Sidebar />
-          <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-            <header className="border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
-              <span className="text-sm font-semibold text-foreground tracking-tight">
-                AdInsight AI <span className="text-muted-foreground font-normal text-xs ml-1">广告洞察 AI</span>
-              </span>
-              <div className="flex items-center gap-2">
-                <LangToggle />
-                <ThemeToggle />
-                <AccountSwitcher />
-              </div>
-            </header>
-            <main className="flex-1 overflow-auto p-6">
-              {children}
-            </main>
-          </div>
+          {children}
         </Providers>
       </body>
     </html>

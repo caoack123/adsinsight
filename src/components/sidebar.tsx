@@ -2,7 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingBag, Settings, Wrench, History, Video, Building2, SearchCode, PlayCircle } from 'lucide-react';
+import {
+  LayoutDashboard, ShoppingBag, Settings, Wrench, History,
+  Video, Building2, SearchCode, PlayCircle, ExternalLink,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/context/i18n-context';
 
@@ -11,15 +14,14 @@ export function Sidebar() {
   const { t } = useI18n();
 
   const navItems = [
-    { href: '/', label: t('nav_overview'), icon: LayoutDashboard },
-    { href: '/feed-optimizer', label: t('nav_feed'), icon: ShoppingBag },
-    { href: '/search-terms', label: t('nav_search_terms'), icon: SearchCode },
-    { href: '/change-tracker', label: t('nav_change_tracker'), icon: History },
-    { href: '/video-abcd', label: t('nav_video'), icon: Video },
-    { href: '/youtube-intel', label: t('nav_youtube_intel'), icon: PlayCircle },
-    { href: '/accounts', label: t('nav_accounts'), icon: Building2 },
-    { href: '/setup', label: t('nav_setup'), icon: Wrench },
-    { href: '/settings', label: t('nav_settings'), icon: Settings },
+    { href: '/',               label: t('nav_overview'),      icon: LayoutDashboard },
+    { href: '/feed-optimizer', label: t('nav_feed'),          icon: ShoppingBag },
+    { href: '/search-terms',   label: t('nav_search_terms'),  icon: SearchCode },
+    { href: '/change-tracker', label: t('nav_change_tracker'),icon: History },
+    { href: '/video-abcd',     label: t('nav_video'),         icon: Video },
+    { href: '/accounts',       label: t('nav_accounts'),      icon: Building2 },
+    { href: '/setup',          label: t('nav_setup'),         icon: Wrench },
+    { href: '/settings',       label: t('nav_settings'),      icon: Settings },
   ];
 
   return (
@@ -44,6 +46,20 @@ export function Sidebar() {
             {label}
           </Link>
         ))}
+
+        {/* YouTube Intel — opens as standalone module in a new tab */}
+        <div className="pt-2 mt-2 border-t border-border/60">
+          <a
+            href="/yt"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 px-3 py-2 rounded text-sm font-medium transition-colors text-muted-foreground hover:bg-accent/50 hover:text-foreground group"
+          >
+            <PlayCircle size={15} className="text-red-500/70 group-hover:text-red-500 transition-colors" />
+            <span className="flex-1">{t('nav_youtube_intel')}</span>
+            <ExternalLink size={11} className="opacity-40 group-hover:opacity-70 transition-opacity" />
+          </a>
+        </div>
       </nav>
     </aside>
   );
