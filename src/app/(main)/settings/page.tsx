@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSettings } from '@/context/settings-context';
 import { useI18n } from '@/context/i18n-context';
+import { useLock } from '@/context/lock-context';
 import {
   TEXT_MODELS,
   GEMINI_MODELS,
@@ -12,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Key, Bot, CheckCircle2, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { Key, Bot, CheckCircle2, Eye, EyeOff, ExternalLink, Lock, LockOpen, ShieldCheck } from 'lucide-react';
 
 function MaskedInput({
   value,
@@ -89,6 +90,179 @@ function ModelCard<T extends string>({
       </div>
       <p className="text-xs text-muted-foreground mt-0.5 ml-5">{description}</p>
     </button>
+  );
+}
+
+// ── PIN Lock management card ──────────────────────────────────────────────────
+
+function PinLockCard() {
+  const { lang } = useI18n();
+  const { hasPin, lockEnabled, setPin, clearPin, setLockEnabled, lockNow } = useLock();
+
+  const [mode, setMode]         = useState<'idle' | 'set' | 'change' | 'confirm'>('idle');
+  const [step1, setStep1]       = useState('');   // first entry
+  const [step2, setStep2]       = useState('');   // confirmation
+  const [pinError, setPinError] = useState('');
+  const [success, setSuccess]   = useState('');
+
+  const L = (en: string, zh: string) => lang === 'en' ? en : zh;
+
+  function PinInput({ value, onChange, placeholder }: {
+    value: string; onChange: (v: string) => void; placeholder?: string;
+  }) {
+    return (
+      <input
+        type="password"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        maxLength={4}
+        value={value}
+        onChange={e => {
+          const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+          onChange(v);
+          setPinError('');
+        }}
+        placeholder={placeholder ?? '••••'}
+        className="w-28 text-center tracking-[0.4em] bg-background border border-border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500/50 placeholder:text-muted-foreground/40"
+      />
+    );
+  }
+
+  function handleSave() {
+    if (step1.length !== 4) { setPinError(L('PIN must be 4 digits', 'PIN 必须是 4 位数字')); return; }
+    if (mode === 'confirm' || mode === 'set' || mode === 'change') {
+      if (step2.length !== 4) { setPinError(L('Please confirm your PIN', '请再次输入 PIN')); return; }
+      if (step1 !== step2)    { setPinError(L('PINs do not match', '两次输入不一致')); setStep2(''); return; }
+    }
+    setPin(step1);
+    setStep1(''); setStep2(''); setPinError('');
+    setMode('idle');
+    setSuccess(L('PIN saved. Lock is active.', 'PIN 已保存，锁已启用。'));
+    setTimeout(() => setSuccess(''), 3000);
+  }
+
+  function handleClear() {
+    clearPin();
+    setMode('idle'); setStep1(''); setStep2(''); setPinError('');
+    setSuccess(L('PIN removed. Lock disabled.', 'PIN 已删除，锁已关闭。'));
+    setTimeout(() => setSuccess(''), 3000);
+  }
+
+  return (
+    <Card className="border-border">
+      <CardHeader className="pb-2 pt-4 px-4">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <Lock size={14} className="text-muted-foreground" />
+          {L('App Lock (PIN)', '应用锁（PIN 码）')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 space-y-4">
+        <p className="text-xs text-muted-foreground">
+          {L(
+            'Set a 4-digit PIN. You\'ll be prompted on every page load and every time you return to this tab.',
+            '设置 4 位 PIN 码。每次打开主页面或切换 Tab 返回时都会要求输入。',
+          )}
+        </p>
+
+        {success && (
+          <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-300 rounded px-3 py-2 dark:bg-green-950/20 dark:border-green-500/30 dark:text-green-400">
+            <ShieldCheck size={13} />
+            {success}
+          </div>
+        )}
+
+        {/* Status row */}
+        <div className="flex items-center gap-3">
+          {hasPin ? (
+            <>
+              <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
+                <Lock size={12} /> {L('PIN set', 'PIN 已设置')}
+              </span>
+              {/* Enable / disable toggle */}
+              <button
+                onClick={() => setLockEnabled(!lockEnabled)}
+                className={cn(
+                  'text-xs px-2.5 py-1 rounded border transition-colors',
+                  lockEnabled
+                    ? 'border-green-500/40 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/20'
+                    : 'border-border text-muted-foreground hover:bg-accent/40'
+                )}
+              >
+                {lockEnabled ? L('Enabled ✓', '已启用 ✓') : L('Disabled', '已禁用')}
+              </button>
+              {/* Lock now */}
+              {lockEnabled && (
+                <button
+                  onClick={lockNow}
+                  className="text-xs px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
+                >
+                  {L('Lock now', '立即锁定')}
+                </button>
+              )}
+            </>
+          ) : (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <LockOpen size={12} /> {L('No PIN set — lock is off', '未设置 PIN — 锁未启用')}
+            </span>
+          )}
+        </div>
+
+        {/* Action buttons */}
+        {mode === 'idle' && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setMode(hasPin ? 'change' : 'set'); setStep1(''); setStep2(''); setPinError(''); }}
+              className="text-xs px-3 py-1.5 rounded border border-border text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
+            >
+              {hasPin ? L('Change PIN', '修改 PIN') : L('Set PIN', '设置 PIN')}
+            </button>
+            {hasPin && (
+              <button
+                onClick={handleClear}
+                className="text-xs px-3 py-1.5 rounded border border-red-500/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+              >
+                {L('Remove PIN', '删除 PIN')}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Set / Change PIN form */}
+        {(mode === 'set' || mode === 'change') && (
+          <div className="space-y-3 pt-1">
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">
+                {L('New PIN (4 digits)', '新 PIN（4 位数字）')}
+              </label>
+              <PinInput value={step1} onChange={setStep1} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">
+                {L('Confirm PIN', '再次输入 PIN')}
+              </label>
+              <PinInput value={step2} onChange={setStep2} placeholder="••••" />
+            </div>
+            {pinError && (
+              <p className="text-xs text-red-500">{pinError}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={handleSave}
+                className="text-xs px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              >
+                {L('Save PIN', '保存 PIN')}
+              </button>
+              <button
+                onClick={() => { setMode('idle'); setStep1(''); setStep2(''); setPinError(''); }}
+                className="text-xs px-3 py-1.5 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {L('Cancel', '取消')}
+              </button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -271,6 +445,9 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* PIN Lock */}
+      <PinLockCard />
 
       {/* Env var reference */}
       <Card className="border-border">
