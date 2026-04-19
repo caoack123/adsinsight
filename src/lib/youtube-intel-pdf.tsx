@@ -12,19 +12,18 @@ import type {
 } from '@/app/api/youtube-intel/route';
 
 // ── Fonts ─────────────────────────────────────────────────────────────────────
-// Chinese reports → NotoSansSC (covers CJK + Latin)
+// Chinese reports → NotoSansSC (covers CJK + Latin), served from /public/fonts/
 // English reports → Helvetica (built-in, zero download)
+//
+// Italic variants point to the same OTF file — CJK fonts have no true italic,
+// this stops react-pdf throwing "Could not resolve font … fontStyle italic".
 Font.register({
   family: 'NotoSansSC',
   fonts: [
-    {
-      src: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.12/files/noto-sans-sc-chinese-simplified-400-normal.woff2',
-      fontWeight: 400,
-    },
-    {
-      src: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.12/files/noto-sans-sc-chinese-simplified-700-normal.woff2',
-      fontWeight: 700,
-    },
+    { src: '/fonts/NotoSansSC-Regular.ttf', fontWeight: 400 },
+    { src: '/fonts/NotoSansSC-Regular.ttf', fontWeight: 400, fontStyle: 'italic' },
+    { src: '/fonts/NotoSansSC-Bold.ttf',    fontWeight: 700 },
+    { src: '/fonts/NotoSansSC-Bold.ttf',    fontWeight: 700, fontStyle: 'italic' },
   ],
 });
 
