@@ -23,6 +23,7 @@ export type TextModel =
 export interface AppSettings {
   openrouterApiKey: string;
   googleAiApiKey: string;
+  youtubeApiKey: string;
   feedOptimizerModel: TextModel;
   changeTrackerModel: TextModel;
   videoAbcdModel: GeminiModel;
@@ -31,6 +32,7 @@ export interface AppSettings {
 export const DEFAULT_SETTINGS: AppSettings = {
   openrouterApiKey: '',
   googleAiApiKey: '',
+  youtubeApiKey: '',
   feedOptimizerModel: 'anthropic/claude-sonnet-4-5',
   changeTrackerModel: 'anthropic/claude-sonnet-4-5',
   videoAbcdModel: 'gemini-2.5-flash',

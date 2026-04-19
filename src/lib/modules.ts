@@ -53,6 +53,15 @@ export const MODULE_REGISTRY = {
     path: '/change-tracker',
     enabled: true,
   },
+  'youtube-intel': {
+    label: 'YouTube 洞察',
+    label_en: 'YouTube Intel',
+    description: 'AI 分析 YouTube 视频 + 评论，生成多团队洞察报告',
+    description_en: 'AI-analyze top YouTube videos + comments to generate multi-team intelligence reports',
+    icon: 'Youtube',
+    path: '/youtube-intel',
+    enabled: true,
+  },
 } as const;
 
 export type ModuleKey = keyof typeof MODULE_REGISTRY;

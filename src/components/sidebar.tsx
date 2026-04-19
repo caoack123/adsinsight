@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingBag, Settings, Wrench, History, Video, Building2, SearchCode } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Settings, Wrench, History, Video, Building2, SearchCode, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/context/i18n-context';
 
@@ -16,6 +16,7 @@ export function Sidebar() {
     { href: '/search-terms', label: t('nav_search_terms'), icon: SearchCode },
     { href: '/change-tracker', label: t('nav_change_tracker'), icon: History },
     { href: '/video-abcd', label: t('nav_video'), icon: Video },
+    { href: '/youtube-intel', label: t('nav_youtube_intel'), icon: PlayCircle },
     { href: '/accounts', label: t('nav_accounts'), icon: Building2 },
     { href: '/setup', label: t('nav_setup'), icon: Wrench },
     { href: '/settings', label: t('nav_settings'), icon: Settings },

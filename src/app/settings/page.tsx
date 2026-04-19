@@ -168,6 +168,31 @@ export default function SettingsPage() {
               {t('s_google_desc')} <code className="bg-muted px-1 rounded">GOOGLE_AI_API_KEY</code>
             </p>
           </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-foreground">
+                YouTube Data API Key
+                <span className="ml-2 text-muted-foreground font-normal">{t('s_youtube_usage')}</span>
+              </label>
+              <a
+                href="https://console.cloud.google.com/apis/credentials"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-xs text-blue-400 hover:underline"
+              >
+                {t('s_get_key')} <ExternalLink size={10} />
+              </a>
+            </div>
+            <MaskedInput
+              value={settings.youtubeApiKey}
+              onChange={v => updateSettings({ youtubeApiKey: v })}
+              placeholder="AIza..."
+            />
+            <p className="text-xs text-muted-foreground">
+              {t('s_youtube_desc')}
+            </p>
+          </div>
         </CardContent>
       </Card>
 
