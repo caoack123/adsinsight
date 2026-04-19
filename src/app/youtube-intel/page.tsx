@@ -11,7 +11,7 @@ import {
   Map, BookOpen, BarChart3, ChevronDown, ChevronUp,
   ExternalLink, ThumbsUp, MessageSquare, Eye, Flame,
   Target, Palette, Megaphone, Package, LineChart,
-  Clock, Trash2, Languages,
+  Clock, Trash2, Languages, Download,
 } from 'lucide-react';
 import type { YouTubeIntelResponse, YouTubeIntelReport, VideoItem } from '@/app/api/youtube-intel/route';
 
@@ -201,6 +201,24 @@ function ReportDisplay({
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showAllVideos, setShowAllVideos] = useState(false);
   const [expandedVideo, setExpandedVideo] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  async function handleDownloadPDF() {
+    if (!printRef.current) return;
+    setPdfLoading(true);
+    const el = printRef.current;
+    el.style.display = 'block';
+    // Wait two animation frames so React finishes painting
+    await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+    try {
+      const safeQuery = meta.query.replace(/[^\w\u4e00-\u9fff]/g, '-').slice(0, 30);
+      await captureAndSavePDF(el, `yt-intel-${safeQuery}-${meta.generated_at.split('T')[0]}.pdf`);
+    } finally {
+      el.style.display = 'none';
+      setPdfLoading(false);
+    }
+  }
 
   const { executive_summary: es, content_landscape: cl, audience_intel: ai,
           brand_intelligence: bi, creative_intelligence: ci,
@@ -230,7 +248,17 @@ function ReportDisplay({
         >
           {meta.output_lang === 'zh' ? '中文报告' : 'EN Report'}
         </Badge>
-        <span className="ml-auto">{new Date(meta.generated_at).toLocaleString()}</span>
+        <span>{new Date(meta.generated_at).toLocaleString()}</span>
+        <button
+          onClick={handleDownloadPDF}
+          disabled={pdfLoading}
+          className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {pdfLoading
+            ? <><Loader2 size={11} className="animate-spin" /> {lang === 'en' ? 'Generating PDF…' : '生成 PDF 中…'}</>
+            : <><Download size={11} /> {lang === 'en' ? 'Download PDF' : '下载 PDF'}</>
+          }
+        </button>
       </div>
 
       {/* Headline + market temp */}
@@ -573,6 +601,371 @@ function ReportDisplay({
           </div>
         )}
       </Card>
+
+      {/* Hidden print view — captured by html2canvas for PDF generation */}
+      <div
+        ref={printRef}
+        style={{ display: 'none', position: 'fixed', left: '-9999px', top: 0, zIndex: -1 }}
+      >
+        <PrintableReportView report={report} meta={meta} />
+      </div>
+    </div>
+  );
+}
+
+// ─── PDF download helpers ─────────────────────────────────────────────────────
+
+/** Async PDF generator — dynamically imports jspdf + html2canvas to keep bundle lean */
+async function captureAndSavePDF(el: HTMLElement, filename: string) {
+  const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+    import('html2canvas'),
+    import('jspdf'),
+  ]);
+
+  // Snapshot the element (force white bg, full width)
+  const canvas = await html2canvas(el, {
+    scale: 1.5,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: '#ffffff',
+    logging: false,
+  });
+
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 8;
+  const usableW = pageW - 2 * margin;
+  const usableH = pageH - 2 * margin;
+
+  // Total PDF height that the image would occupy if un-cropped
+  const totalPdfH = (canvas.height / canvas.width) * usableW;
+
+  let yOffset = 0;
+  let pageNum = 0;
+  while (yOffset < totalPdfH) {
+    if (pageNum > 0) pdf.addPage();
+
+    const sliceH    = Math.min(usableH, totalPdfH - yOffset);
+    const srcY      = Math.round((yOffset / totalPdfH) * canvas.height);
+    const srcH      = Math.round((sliceH / totalPdfH) * canvas.height);
+
+    const sliceCvs  = document.createElement('canvas');
+    sliceCvs.width  = canvas.width;
+    sliceCvs.height = srcH;
+    sliceCvs.getContext('2d')!.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+
+    pdf.addImage(sliceCvs.toDataURL('image/jpeg', 0.92), 'JPEG', margin, margin, usableW, sliceH);
+    yOffset += usableH;
+    pageNum++;
+  }
+  pdf.save(filename);
+}
+
+// ─── Printable report view ────────────────────────────────────────────────────
+// Renders ALL sections (no tabs) with inline styles → captured by html2canvas for PDF
+
+function PrintableReportView({ report, meta }: {
+  report: YouTubeIntelReport;
+  meta: YouTubeIntelResponse['meta'];
+}) {
+  const { executive_summary: es, content_landscape: cl, audience_intel: ai,
+    brand_intelligence: bi, creative_intelligence: ci,
+    opportunity_map: om, team_playbooks: tp, quantitative_summary: qs } = report;
+  const isZh = meta.output_lang === 'zh';
+
+  // All inline styles for a clean, print-safe layout on white background
+  const S = {
+    root:        { width: '920px', background: '#fff', color: '#111827', fontFamily: '"Inter","PingFang SC","Microsoft YaHei",system-ui,sans-serif', padding: '44px 52px', lineHeight: 1.65 },
+    pageBreak:   { pageBreakBefore: 'always' as const, marginTop: '40px' },
+    header:      { borderBottom: '3px solid #2563eb', paddingBottom: '18px', marginBottom: '32px' },
+    title:       { fontSize: '24px', fontWeight: 800, color: '#111827', margin: 0 },
+    subline:     { fontSize: '12px', color: '#6b7280', marginTop: '5px' },
+    langBadge:   { display: 'inline-block', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600, background: isZh ? '#fef2f2' : '#eff6ff', color: isZh ? '#dc2626' : '#2563eb', border: `1px solid ${isZh ? '#fecaca' : '#bfdbfe'}`, marginLeft: '8px' },
+    secTitle:    { fontSize: '10px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.06em', borderBottom: '1px solid #e5e7eb', paddingBottom: '5px', marginBottom: '10px', marginTop: '0' },
+    headline:    { fontSize: '17px', fontWeight: 700, color: '#111827', marginBottom: '6px' },
+    tempBadge:   { display: 'inline-block', padding: '3px 10px', borderRadius: '5px', fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' },
+    findingBox:  { display: 'flex', gap: '10px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '9px 12px', marginBottom: '7px', fontSize: '12px' },
+    findingNum:  { color: '#2563eb', fontWeight: 700, flexShrink: 0 },
+    grid2:       { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' },
+    grid3:       { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '24px' },
+    card:        { background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px 16px' },
+    cardTitle:   { fontSize: '11px', fontWeight: 700, color: '#374151', marginBottom: '8px' },
+    bullet:      { fontSize: '12px', color: '#374151', marginBottom: '4px', display: 'flex', gap: '7px' },
+    dot:         { color: '#2563eb', flexShrink: 0, fontSize: '14px', lineHeight: '1.3' },
+    bodyText:    { fontSize: '12px', color: '#4b5563', lineHeight: 1.65 },
+    italic:      { fontStyle: 'italic' as const, color: '#6b7280', fontSize: '12px' },
+    statRow:     { display: 'flex', gap: '36px', marginBottom: '14px' },
+    statBox:     { textAlign: 'center' as const },
+    statVal:     { fontSize: '22px', fontWeight: 800, color: '#111827' },
+    statLbl:     { fontSize: '10px', color: '#9ca3af' },
+    sentBar:     { height: '7px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden', marginBottom: '8px' },
+    sentFill:    (score: number) => ({ height: '100%', borderRadius: '4px', width: `${score}%`, background: score >= 70 ? '#16a34a' : score >= 40 ? '#d97706' : '#dc2626' }),
+    pbCard:      { background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px 16px', breakInside: 'avoid' as const },
+    pbTitle:     { fontSize: '12px', fontWeight: 700, color: '#111827', marginBottom: '8px', borderBottom: '1px solid #e5e7eb', paddingBottom: '6px' },
+    hr:          { border: 'none', borderTop: '1px solid #e5e7eb', margin: '24px 0' },
+    videoRow:    { marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: '10px' },
+    videoRank:   { fontWeight: 800, color: '#2563eb', fontSize: '14px', flexShrink: 0, width: '24px' },
+  } as const;
+
+  function BulletList({ items, color = '#2563eb' }: { items: string[]; color?: string }) {
+    return (
+      <div>
+        {items.map((item, i) => (
+          <div key={i} style={S.bullet}>
+            <span style={{ ...S.dot, color }}>•</span>
+            <span>{item}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const L = (en: string, zh: string) => isZh ? zh : en;
+
+  return (
+    <div style={S.root}>
+      {/* ── Header ── */}
+      <div style={S.header}>
+        <p style={S.title}>
+          YouTube Intelligence Report
+          <span style={S.langBadge}>{isZh ? '中文报告' : 'EN Report'}</span>
+        </p>
+        <p style={S.subline}>
+          {L('Query', '搜索词')}: "{meta.query}" &nbsp;·&nbsp;
+          {meta.country_code} &nbsp;·&nbsp;
+          {meta.videos_analyzed} {L('videos', '个视频')} &nbsp;·&nbsp;
+          {meta.comments_analyzed} {L('comments', '条评论')} &nbsp;·&nbsp;
+          {new Date(meta.generated_at).toLocaleString()}
+        </p>
+      </div>
+
+      {/* ── Executive Summary ── */}
+      <div style={{ marginBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '14px' }}>
+          <p style={S.headline}>{es.headline}</p>
+          <span style={S.tempBadge}>{es.market_temperature}</span>
+        </div>
+        <p style={S.secTitle}>{L('KEY FINDINGS', '核心洞察')}</p>
+        {es.key_findings.map((f, i) => (
+          <div key={i} style={S.findingBox}>
+            <span style={S.findingNum}>{i + 1}</span>
+            <span style={{ fontSize: '12px' }}>{f}</span>
+          </div>
+        ))}
+      </div>
+
+      <hr style={S.hr} />
+
+      {/* ── Quantitative Summary ── */}
+      <div style={{ marginBottom: '28px' }}>
+        <p style={S.secTitle}>{L('QUANTITATIVE SUMMARY', '量化数据')}</p>
+        <div style={S.statRow}>
+          {[
+            [fmtNum(qs.avg_views),               L('Avg Views','平均观看量')],
+            [fmtNum(qs.median_views),             L('Median Views','中位数观看量')],
+            [fmtNum(qs.total_comments_analyzed),  L('Comments Analyzed','已分析评论')],
+          ].map(([val, lbl]) => (
+            <div key={lbl} style={S.statBox}>
+              <div style={S.statVal}>{val}</div>
+              <div style={S.statLbl}>{lbl}</div>
+            </div>
+          ))}
+        </div>
+        <p style={S.italic}>{qs.engagement_insight}</p>
+      </div>
+
+      {/* ── Top 5 Videos ── */}
+      <div style={{ marginBottom: '28px' }}>
+        <p style={S.secTitle}>{L('TOP 5 VIDEOS', '热门视频 Top 5')}</p>
+        {qs.top_5_videos.map(v => (
+          <div key={v.rank} style={S.videoRow}>
+            <span style={S.videoRank}>#{v.rank}</span>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 600 }}>{v.title}</div>
+              <div style={{ fontSize: '11px', color: '#6b7280' }}>{v.channel} · {fmtNum(v.views)} {L('views','次观看')}</div>
+              <div style={{ fontSize: '11px', color: '#2563eb', marginTop: '2px' }}>{v.why_it_works}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <hr style={S.hr} />
+
+      {/* ── Content Landscape ── */}
+      <div style={{ marginBottom: '28px' }}>
+        <p style={S.secTitle}>{L('CONTENT LANDSCAPE', '内容格局')}</p>
+        <div style={S.grid2}>
+          <div style={S.card}>
+            <p style={S.cardTitle}>{L('Dominant Themes', '主要内容主题')}</p>
+            {cl.dominant_themes.map((t, i) => (
+              <div key={i} style={{ marginBottom: '8px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600 }}>{t.theme}</div>
+                <div style={{ fontSize: '11px', color: '#6b7280' }}>{t.why_it_works}</div>
+              </div>
+            ))}
+          </div>
+          <div style={S.card}>
+            <p style={S.cardTitle}>{L('Winning Formats', '高效内容形式')}</p>
+            {cl.winning_formats.map((f, i) => (
+              <div key={i} style={{ marginBottom: '8px' }}>
+                <div style={{ display: 'inline-block', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '1px 7px', fontSize: '11px', fontWeight: 600, marginBottom: '2px' }}>{f.format}</div>
+                <div style={{ fontSize: '11px', color: '#6b7280' }}>{f.description}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ ...S.card, background: '#f0f9ff', borderColor: '#bae6fd' }}>
+          <span style={{ fontSize: '12px', fontWeight: 600 }}>{L('Publishing insight: ', '发布规律：')}</span>
+          <span style={{ fontSize: '12px', color: '#4b5563' }}>{cl.publishing_insight}</span>
+        </div>
+      </div>
+
+      <hr style={S.hr} />
+
+      {/* ── Audience Intelligence ── */}
+      <div style={{ marginBottom: '28px' }}>
+        <p style={S.secTitle}>{L('AUDIENCE INTELLIGENCE', '受众洞察')}</p>
+        <div style={{ marginBottom: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600 }}>{L('Sentiment Score', '受众情绪分')}</span>
+            <span style={{ fontSize: '18px', fontWeight: 800 }}>{ai.sentiment_score}<span style={{ fontSize: '12px', color: '#9ca3af' }}>/100</span></span>
+          </div>
+          <div style={S.sentBar}><div style={S.sentFill(ai.sentiment_score)} /></div>
+          <p style={S.italic}>{ai.overall_sentiment}</p>
+        </div>
+        <div style={S.grid2}>
+          <div style={S.card}>
+            <p style={S.cardTitle}>{L('Pain Points', '用户痛点')}</p>
+            <BulletList items={ai.pain_points} color="#dc2626" />
+          </div>
+          <div style={S.card}>
+            <p style={S.cardTitle}>{L('Desires & Wants', '用户期望')}</p>
+            <BulletList items={ai.desires} color="#16a34a" />
+          </div>
+        </div>
+        <div style={S.grid2}>
+          <div style={S.card}>
+            <p style={S.cardTitle}>{L('Viral Triggers', '传播触发点')}</p>
+            <BulletList items={ai.viral_triggers} color="#d97706" />
+          </div>
+          <div style={S.card}>
+            <p style={S.cardTitle}>{L('Demographic Signals', '人群画像信号')}</p>
+            <BulletList items={ai.demographic_signals} color="#7c3aed" />
+          </div>
+        </div>
+      </div>
+
+      <hr style={S.hr} />
+
+      {/* ── Creative & Brand Intelligence ── */}
+      <div style={{ marginBottom: '28px' }}>
+        <p style={S.secTitle}>{L('CREATIVE & BRAND INTELLIGENCE', '创意与品牌情报')}</p>
+        <div style={S.grid2}>
+          <div>
+            <div style={S.card}>
+              <p style={S.cardTitle}>{L('Title Patterns That Win', '高效标题规律')}</p>
+              <BulletList items={ci.title_patterns} />
+            </div>
+          </div>
+          <div>
+            <div style={S.card}>
+              <p style={S.cardTitle}>{L('Hook Formulas', 'Hook 公式')}</p>
+              <BulletList items={ci.hook_formulas} color="#d97706" />
+            </div>
+          </div>
+        </div>
+        <div style={{ ...S.grid2, marginTop: '12px' }}>
+          <div style={S.card}>
+            <p style={S.cardTitle}>{L('Visual / Thumbnail Patterns', '视觉与封面规律')}</p>
+            <BulletList items={ci.visual_patterns} color="#7c3aed" />
+          </div>
+          <div style={S.card}>
+            <p style={S.cardTitle}>{L('Content Angles', '内容切入角度')}</p>
+            <BulletList items={ci.content_angles} color="#16a34a" />
+          </div>
+        </div>
+        <div style={{ ...S.card, marginTop: '12px' }}>
+          <p style={S.cardTitle}>{L('Brand Perception', '品牌认知')}</p>
+          <p style={{ ...S.bodyText, marginBottom: '10px' }}>{bi.perception_summary}</p>
+          <div style={S.grid2}>
+            <div>
+              <p style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a', marginBottom: '5px' }}>{L('Positive Associations', '正向品牌信号')}</p>
+              <BulletList items={bi.positive_associations} color="#16a34a" />
+            </div>
+            <div>
+              <p style={{ fontSize: '11px', fontWeight: 700, color: '#dc2626', marginBottom: '5px' }}>{L('Risk Signals', '风险信号')}</p>
+              <BulletList items={bi.risk_signals} color="#dc2626" />
+            </div>
+          </div>
+          <p style={{ ...S.italic, marginTop: '8px' }}>{L('Competitive landscape: ', '竞争格局：')}{bi.competitor_landscape}</p>
+        </div>
+      </div>
+
+      <hr style={S.hr} />
+
+      {/* ── Opportunity Map ── */}
+      <div style={{ marginBottom: '28px' }}>
+        <p style={S.secTitle}>{L('OPPORTUNITY MAP', '机会地图')}</p>
+        <div style={S.grid2}>
+          <div style={S.card}>
+            <p style={S.cardTitle}>{L('Content Gaps', '内容空白')}</p>
+            <BulletList items={om.content_gaps} />
+          </div>
+          <div style={S.card}>
+            <p style={S.cardTitle}>{L('Trending Angles', '趋势切角')}</p>
+            <BulletList items={om.trending_angles} color="#d97706" />
+          </div>
+        </div>
+        <div style={{ ...S.grid2, marginTop: '12px' }}>
+          <div style={S.card}>
+            <p style={S.cardTitle}>{L('Underserved Niches', '未被服务的细分人群')}</p>
+            <BulletList items={om.underserved_niches} color="#7c3aed" />
+          </div>
+          <div style={S.card}>
+            <p style={S.cardTitle}>{L('First-Mover Opportunities', '先发优势机会')}</p>
+            <BulletList items={om.first_mover_ops} color="#16a34a" />
+          </div>
+        </div>
+      </div>
+
+      <hr style={S.hr} />
+
+      {/* ── Team Playbooks ── */}
+      <div>
+        <p style={S.secTitle}>{L('TEAM PLAYBOOKS', '团队策略')}</p>
+        <div style={{ ...S.grid2, marginBottom: '12px' }}>
+          <div style={S.pbCard}>
+            <p style={S.pbTitle}>{L('CMO — Strategic Brief', 'CMO — 战略决策')}</p>
+            <BulletList items={tp.cmo} />
+          </div>
+          <div style={S.pbCard}>
+            <p style={S.pbTitle}>{L('Marketing Director — Campaign Plan', '营销总监 — 执行计划')}</p>
+            <BulletList items={tp.marketing_director} />
+          </div>
+        </div>
+        <div style={S.grid3}>
+          <div style={S.pbCard}>
+            <p style={S.pbTitle}>{L('Creative Team', '创意团队')}</p>
+            <BulletList items={tp.creative_team} color="#d97706" />
+          </div>
+          <div style={S.pbCard}>
+            <p style={S.pbTitle}>{L('Ads Team', '广告投放团队')}</p>
+            <BulletList items={tp.ads_team} color="#16a34a" />
+          </div>
+          <div style={S.pbCard}>
+            <p style={S.pbTitle}>{L('Product Team', '产品团队')}</p>
+            <BulletList items={tp.product_team} color="#7c3aed" />
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '32px', paddingTop: '12px', textAlign: 'center' as const }}>
+        <p style={{ fontSize: '10px', color: '#9ca3af' }}>
+          Generated by AdInsight AI · YouTube Intelligence · {new Date(meta.generated_at).toLocaleString()}
+        </p>
+      </div>
     </div>
   );
 }
