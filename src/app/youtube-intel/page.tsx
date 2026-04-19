@@ -630,8 +630,8 @@ function ReportDisplay({
 
 /** Async PDF generator — dynamically imports jspdf + html2canvas to keep bundle lean */
 async function captureAndSavePDF(el: HTMLElement, filename: string) {
-  // jsPDF ships both a default export and a named export; grab whichever is available
-  const [h2cMod, pdfMod] = await Promise.all([import('html2canvas'), import('jspdf')]);
+  // html2canvas-pro is a drop-in fork that supports modern CSS lab()/oklch() colors
+  const [h2cMod, pdfMod] = await Promise.all([import('html2canvas-pro'), import('jspdf')]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const html2canvas = (h2cMod as any).default ?? h2cMod;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
