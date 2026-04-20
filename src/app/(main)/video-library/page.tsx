@@ -448,6 +448,15 @@ export default function VideoLibraryPage() {
   }
 
   async function handleAnalyze(id: string) {
+    // Pre-flight: key must be available in client context
+    if (!settings.googleAiApiKey) {
+      setError(L(
+        'Google AI API key not configured. Please go to Settings and save your key.',
+        '请先在设置页面配置并保存您的 Google AI API 密钥，然后刷新此页面重试。',
+      ));
+      return;
+    }
+
     setAnalyzing(prev => new Set(prev).add(id));
     setVideos(prev => prev.map(v => v.id === id ? { ...v, analysis_status: 'processing' } : v));
 

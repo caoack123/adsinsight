@@ -55,10 +55,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       fetch('/api/user/settings')
         .then(r => r.ok ? r.json() : null)
         .then(json => {
-          if (json?.settings && Object.keys(json.settings).length > 0) {
-            const merged = { ...local, ...json.settings };
-            setSettings(merged);
-            saveSettings(merged);
+          const cloud: Partial<AppSettings> = json?.settings ?? {};
+          // Cloud wins for any key it has; local fills the gaps
+          const merged: AppSettings = { ...local, ...(Object.keys(cloud).length ? cloud : {}) };
+          setSettings(merged);
+          saveSettings(merged);
+
+          // ── Bi-directional sync: if local has API keys the cloud row is missing,
+          //    push them up now so server-side lookups always work.
+          const localHasKeys  = !!(local.googleAiApiKey || local.openrouterApiKey);
+          const cloudHasKeys  = !!(cloud.googleAiApiKey || cloud.openrouterApiKey);
+          if (localHasKeys && !cloudHasKeys) {
+            fetch('/api/user/settings', {
+              method:  'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ settings: merged }),
+            }).catch(() => {});
           }
         })
         .catch(() => {});
