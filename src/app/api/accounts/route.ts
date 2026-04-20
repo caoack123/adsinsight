@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import { getAccounts, createAccount, deleteAccount } from '@/lib/db';
 
-// GET /api/accounts — list all accounts
+// GET /api/accounts — list accounts belonging to the logged-in user
 export async function GET() {
   try {
-    const accounts = await getAccounts();
+    const session = await auth();
+    const userId = session?.userId ?? null;
+    const accounts = await getAccounts(userId ?? undefined);
     return NextResponse.json(accounts);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
 
-// POST /api/accounts — create account
+// POST /api/accounts — create account, stamped with the logged-in user's id
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    const userId = session?.userId ?? null;
+
     const body = await request.json();
     const { customer_id, account_name, currency, timezone } = body;
     if (!customer_id || !account_name) {
@@ -22,7 +28,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const account = await createAccount({ customer_id, account_name, currency, timezone });
+    const account = await createAccount({ customer_id, account_name, currency, timezone, user_id: userId });
     return NextResponse.json(account, { status: 201 });
   } catch (err) {
     const msg = String(err);

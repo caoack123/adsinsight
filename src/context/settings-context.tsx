@@ -4,12 +4,15 @@ import { createContext, useContext, useState, useEffect, useRef, type ReactNode 
 import { useSession } from 'next-auth/react';
 import { type AppSettings, DEFAULT_SETTINGS, loadSettings, saveSettings } from '@/lib/settings';
 
+export type UserRole = 'admin' | 'standard' | 'visitor' | null;
+
 interface SettingsContextValue {
   settings:             AppSettings;
   updateSettings:       (patch: Partial<AppSettings>) => void;
   savedFlash:           boolean;
   selectedAccountId:    string;
   setSelectedAccountId: (id: string) => void;
+  userRole:             UserRole;
 }
 
 const SettingsContext = createContext<SettingsContextValue>({
@@ -18,6 +21,7 @@ const SettingsContext = createContext<SettingsContextValue>({
   savedFlash:           false,
   selectedAccountId:    'demo',
   setSelectedAccountId: () => {},
+  userRole:             null,
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -27,6 +31,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings,               setSettings]               = useState<AppSettings>(DEFAULT_SETTINGS);
   const [savedFlash,             setSavedFlash]             = useState(false);
   const [selectedAccountId,      setSelectedAccountIdState] = useState('demo');
+  const [userRole,               setUserRole]               = useState<UserRole>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Hydrate: localStorage first, then cloud if logged in ──────────────────
@@ -38,6 +43,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSelectedAccountIdState(localStorage.getItem('adinsight_selected_account') ?? 'demo');
 
     if (userId) {
+      // Fetch user profile to get role
+      fetch('/api/user/profile')
+        .then(r => r.ok ? r.json() : null)
+        .then(json => {
+          if (json?.role) setUserRole(json.role as UserRole);
+        })
+        .catch(() => {});
+
+      // Fetch cloud settings (own settings)
       fetch('/api/user/settings')
         .then(r => r.ok ? r.json() : null)
         .then(json => {
@@ -48,9 +62,32 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           }
         })
         .catch(() => {});
+    } else {
+      setUserRole(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, userId]);
+
+  // ── Standard users: overlay admin's API keys on top of their own settings ──
+  useEffect(() => {
+    if (userRole !== 'standard') return;
+
+    fetch('/api/admin/api-keys')
+      .then(r => r.ok ? r.json() : null)
+      .then(json => {
+        if (!json) return;
+        setSettings(prev => ({
+          ...prev,
+          openrouterApiKey:    json.openrouterApiKey    ?? prev.openrouterApiKey,
+          googleAiApiKey:      json.googleAiApiKey      ?? prev.googleAiApiKey,
+          youtubeApiKey:       json.youtubeApiKey       ?? prev.youtubeApiKey,
+          feedOptimizerModel:  json.feedOptimizerModel  ?? prev.feedOptimizerModel,
+          changeTrackerModel:  json.changeTrackerModel  ?? prev.changeTrackerModel,
+          videoAbcdModel:      json.videoAbcdModel      ?? prev.videoAbcdModel,
+        }));
+      })
+      .catch(() => {});
+  }, [userRole]);
 
   function setSelectedAccountId(id: string) {
     setSelectedAccountIdState(id);
@@ -82,7 +119,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   return (
     <SettingsContext.Provider value={{
-      settings, updateSettings, savedFlash, selectedAccountId, setSelectedAccountId,
+      settings, updateSettings, savedFlash, selectedAccountId, setSelectedAccountId, userRole,
     }}>
       {children}
     </SettingsContext.Provider>

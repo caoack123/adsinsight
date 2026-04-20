@@ -6,12 +6,11 @@ import { createServerClient, type DbAccount, type DbSyncLog, type DbAiCache } fr
 
 // ─── Accounts ─────────────────────────────────────────────────────────────────
 
-export async function getAccounts(): Promise<DbAccount[]> {
+export async function getAccounts(userId?: string | null): Promise<DbAccount[]> {
   const db = createServerClient();
-  const { data, error } = await db
-    .from('accounts')
-    .select('*')
-    .order('created_at', { ascending: false });
+  let q = db.from('accounts').select('*').order('created_at', { ascending: false });
+  if (userId) q = q.eq('user_id', userId);
+  const { data, error } = await q;
   if (error) throw error;
   return data ?? [];
 }
@@ -32,6 +31,7 @@ export async function createAccount(params: {
   account_name: string;
   currency?: string;
   timezone?: string;
+  user_id?: string | null;
 }): Promise<DbAccount> {
   const db = createServerClient();
   const { data, error } = await db
@@ -41,6 +41,56 @@ export async function createAccount(params: {
     .single();
   if (error) throw error;
   return data;
+}
+
+// ─── User Profiles ────────────────────────────────────────────────────────────
+
+export async function getAllUserProfiles() {
+  const db = createServerClient();
+  const { data, error } = await db
+    .from('user_profiles')
+    .select('id, google_id, email, name, avatar_url, role, created_at')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getUserProfile(userId: string) {
+  const db = createServerClient();
+  const { data, error } = await db
+    .from('user_profiles')
+    .select('id, google_id, email, name, avatar_url, role, created_at')
+    .eq('id', userId)
+    .single();
+  if (error) return null;
+  return data;
+}
+
+export async function updateUserRole(userId: string, role: 'admin' | 'standard' | 'visitor') {
+  const db = createServerClient();
+  const { error } = await db
+    .from('user_profiles')
+    .update({ role })
+    .eq('id', userId);
+  if (error) throw error;
+}
+
+export async function getAdminSettings() {
+  const db = createServerClient();
+  const { data, error } = await db
+    .from('user_profiles')
+    .select('id')
+    .eq('role', 'admin')
+    .limit(1)
+    .single();
+  if (error || !data) return null;
+
+  const { data: settings } = await db
+    .from('user_settings')
+    .select('settings_json')
+    .eq('user_id', data.id)
+    .single();
+  return settings?.settings_json ?? null;
 }
 
 export async function deleteAccount(id: string): Promise<void> {

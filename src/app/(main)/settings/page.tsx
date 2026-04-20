@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSettings } from '@/context/settings-context';
 import { useI18n } from '@/context/i18n-context';
 import { useLock } from '@/context/lock-context';
@@ -13,18 +13,31 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Key, Bot, CheckCircle2, Eye, EyeOff, ExternalLink, Lock, LockOpen, ShieldCheck } from 'lucide-react';
+import {
+  Key, Bot, CheckCircle2, Eye, EyeOff, ExternalLink,
+  Lock, LockOpen, ShieldCheck, Users, ShieldAlert,
+} from 'lucide-react';
 
 function MaskedInput({
   value,
   onChange,
   placeholder,
+  disabled,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
+  disabled?: boolean;
 }) {
   const [visible, setVisible] = useState(false);
+  if (disabled) {
+    return (
+      <div className="w-full bg-muted/40 border border-border rounded px-3 py-2 text-sm font-mono text-muted-foreground select-none flex items-center gap-2">
+        <Lock size={11} className="shrink-0" />
+        <span>由管理员配置</span>
+      </div>
+    );
+  }
   return (
     <div className="relative">
       <input
@@ -54,6 +67,7 @@ function ModelCard<T extends string>({
   description,
   badge,
   onSelect,
+  disabled,
 }: {
   value: T;
   current: T;
@@ -61,14 +75,17 @@ function ModelCard<T extends string>({
   description: string;
   badge?: string;
   onSelect: (v: T) => void;
+  disabled?: boolean;
 }) {
   const selected = value === current;
   return (
     <button
       type="button"
-      onClick={() => onSelect(value)}
+      onClick={() => !disabled && onSelect(value)}
+      disabled={disabled}
       className={cn(
         'w-full text-left px-3 py-2.5 rounded border transition-colors',
+        disabled && 'opacity-50 cursor-not-allowed',
         selected
           ? 'border-blue-400 bg-blue-50 text-foreground dark:border-blue-500/60 dark:bg-blue-950/20'
           : 'border-border hover:border-border/80 hover:bg-accent/30 text-muted-foreground'
@@ -100,8 +117,8 @@ function PinLockCard() {
   const { hasPin, lockEnabled, setPin, clearPin, setLockEnabled, lockNow } = useLock();
 
   const [mode, setMode]         = useState<'idle' | 'set' | 'change' | 'confirm'>('idle');
-  const [step1, setStep1]       = useState('');   // first entry
-  const [step2, setStep2]       = useState('');   // confirmation
+  const [step1, setStep1]       = useState('');
+  const [step2, setStep2]       = useState('');
   const [pinError, setPinError] = useState('');
   const [success, setSuccess]   = useState('');
 
@@ -171,14 +188,12 @@ function PinLockCard() {
           </div>
         )}
 
-        {/* Status row */}
         <div className="flex items-center gap-3">
           {hasPin ? (
             <>
               <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
                 <Lock size={12} /> {L('PIN set', 'PIN 已设置')}
               </span>
-              {/* Enable / disable toggle */}
               <button
                 onClick={() => setLockEnabled(!lockEnabled)}
                 className={cn(
@@ -190,7 +205,6 @@ function PinLockCard() {
               >
                 {lockEnabled ? L('Enabled ✓', '已启用 ✓') : L('Disabled', '已禁用')}
               </button>
-              {/* Lock now */}
               {lockEnabled && (
                 <button
                   onClick={lockNow}
@@ -207,7 +221,6 @@ function PinLockCard() {
           )}
         </div>
 
-        {/* Action buttons */}
         {mode === 'idle' && (
           <div className="flex gap-2">
             <button
@@ -227,7 +240,6 @@ function PinLockCard() {
           </div>
         )}
 
-        {/* Set / Change PIN form */}
         {(mode === 'set' || mode === 'change') && (
           <div className="space-y-3 pt-1">
             <div className="space-y-1.5">
@@ -266,9 +278,146 @@ function PinLockCard() {
   );
 }
 
+// ── Admin panel: user list + role management ───────────────────────────────────
+
+type UserRecord = {
+  id: string;
+  email: string;
+  name: string | null;
+  avatar_url: string | null;
+  role: 'admin' | 'standard' | 'visitor';
+  created_at: string;
+};
+
+const ROLE_LABELS: Record<string, { zh: string; en: string; color: string }> = {
+  admin:    { zh: '管理员', en: 'Admin',    color: 'text-purple-500 border-purple-500/40 bg-purple-50 dark:bg-purple-950/20' },
+  standard: { zh: '标准',   en: 'Standard', color: 'text-blue-500 border-blue-500/40 bg-blue-50 dark:bg-blue-950/20' },
+  visitor:  { zh: '访客',   en: 'Visitor',  color: 'text-muted-foreground border-border' },
+};
+
+function AdminPanel() {
+  const { lang } = useI18n();
+  const L = (en: string, zh: string) => lang === 'en' ? en : zh;
+
+  const [users, setUsers]         = useState<UserRecord[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [saving, setSaving]       = useState<string | null>(null);  // userId being saved
+  const [error, setError]         = useState('');
+
+  useEffect(() => {
+    fetch('/api/admin/users')
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(data => { setUsers(data); setLoading(false); })
+      .catch(() => { setError(L('Failed to load users', '加载用户失败')); setLoading(false); });
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function changeRole(userId: string, role: string) {
+    setSaving(userId);
+    try {
+      const res = await fetch(`/api/admin/users?id=${userId}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ role }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: role as UserRecord['role'] } : u));
+    } catch {
+      setError(L('Failed to update role', '更新权限失败'));
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <Card className="border-purple-500/30">
+      <CardHeader className="pb-2 pt-4 px-4">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <Users size={14} className="text-purple-500" />
+          {L('User Management', '用户管理')}
+          <Badge variant="outline" className="text-xs border-purple-500/40 text-purple-500 px-1.5 ml-1">Admin</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 space-y-3">
+        <p className="text-xs text-muted-foreground">
+          {L(
+            'Manage registered users and assign roles. Standard users inherit your API keys automatically.',
+            '管理已注册用户并分配权限。Standard 用户会自动继承你的 API Key。',
+          )}
+        </p>
+
+        {error && (
+          <p className="text-xs text-red-500">{error}</p>
+        )}
+
+        {loading ? (
+          <div className="space-y-2">
+            {[1,2].map(i => (
+              <div key={i} className="h-10 rounded bg-muted/40 animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
+            {users.map(u => {
+              const info = ROLE_LABELS[u.role] ?? ROLE_LABELS.visitor;
+              return (
+                <div key={u.id} className="flex items-center gap-3 px-3 py-2.5">
+                  {/* Avatar */}
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                    {u.avatar_url
+                      ? <img src={u.avatar_url} alt={u.name ?? ''} className="w-full h-full object-cover" />
+                      : <span className="text-xs font-medium text-muted-foreground uppercase">{(u.name ?? u.email)[0]}</span>
+                    }
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-foreground truncate">{u.name ?? u.email}</p>
+                    <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                  </div>
+
+                  {/* Role badge + selector */}
+                  <div className="shrink-0">
+                    {saving === u.id ? (
+                      <div className="w-20 h-6 rounded bg-muted/40 animate-pulse" />
+                    ) : (
+                      <select
+                        value={u.role}
+                        onChange={e => changeRole(u.id, e.target.value)}
+                        className={cn(
+                          'text-xs px-2 py-1 rounded border font-medium bg-background focus:outline-none cursor-pointer',
+                          info.color,
+                        )}
+                      >
+                        <option value="visitor">{L('Visitor', '访客')}</option>
+                        <option value="standard">{L('Standard', '标准')}</option>
+                        <option value="admin">{L('Admin', '管理员')}</option>
+                      </select>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="text-xs text-muted-foreground space-y-1 pt-1">
+          <p>• <span className="font-medium text-purple-500">{L('Admin', '管理员')}</span>{L(' — Full access, manages users', ' — 完全权限，可管理用户')}</p>
+          <p>• <span className="font-medium text-blue-500">{L('Standard', '标准')}</span>{L(' — Uses admin API keys, cannot modify them', ' — 使用管理员 API Key，不可修改')}</p>
+          <p>• <span className="font-medium">{L('Visitor', '访客')}</span>{L(' — Must configure own API keys', ' — 需自行配置 API Key')}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Main settings page ────────────────────────────────────────────────────────
+
 export default function SettingsPage() {
-  const { settings, updateSettings, savedFlash } = useSettings();
+  const { settings, updateSettings, savedFlash, userRole } = useSettings();
   const { t } = useI18n();
+
+  const isStandard = userRole === 'standard';
+  const isAdmin    = userRole === 'admin';
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -283,6 +432,17 @@ export default function SettingsPage() {
           {t('s_saved')}
         </div>
       )}
+
+      {/* Standard user notice */}
+      {isStandard && (
+        <div className="flex items-start gap-2 text-xs bg-blue-50 border border-blue-200 rounded px-3 py-2.5 dark:bg-blue-950/20 dark:border-blue-500/30 text-blue-700 dark:text-blue-300">
+          <ShieldAlert size={13} className="mt-0.5 shrink-0" />
+          <span>你的账号为 Standard 级别，API Key 由管理员统一配置，无需自行填写。</span>
+        </div>
+      )}
+
+      {/* Admin panel */}
+      {isAdmin && <AdminPanel />}
 
       {/* API Keys */}
       <Card className="border-border">
@@ -299,23 +459,28 @@ export default function SettingsPage() {
                 OpenRouter API Key
                 <span className="ml-2 text-muted-foreground font-normal">{t('s_openrouter_usage')}</span>
               </label>
-              <a
-                href="https://openrouter.ai/keys"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-blue-400 hover:underline"
-              >
-                {t('s_get_key')} <ExternalLink size={10} />
-              </a>
+              {!isStandard && (
+                <a
+                  href="https://openrouter.ai/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-blue-400 hover:underline"
+                >
+                  {t('s_get_key')} <ExternalLink size={10} />
+                </a>
+              )}
             </div>
             <MaskedInput
               value={settings.openrouterApiKey}
               onChange={v => updateSettings({ openrouterApiKey: v })}
               placeholder="sk-or-v1-..."
+              disabled={isStandard}
             />
-            <p className="text-xs text-muted-foreground">
-              {t('s_openrouter_desc')} <code className="bg-muted px-1 rounded">OPENROUTER_API_KEY</code> 或 <code className="bg-muted px-1 rounded">ANTHROPIC_API_KEY</code>
-            </p>
+            {!isStandard && (
+              <p className="text-xs text-muted-foreground">
+                {t('s_openrouter_desc')} <code className="bg-muted px-1 rounded">OPENROUTER_API_KEY</code> 或 <code className="bg-muted px-1 rounded">ANTHROPIC_API_KEY</code>
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -324,23 +489,28 @@ export default function SettingsPage() {
                 Google AI API Key
                 <span className="ml-2 text-muted-foreground font-normal">{t('s_google_usage')}</span>
               </label>
-              <a
-                href="https://aistudio.google.com/apikey"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-blue-400 hover:underline"
-              >
-                {t('s_get_key')} <ExternalLink size={10} />
-              </a>
+              {!isStandard && (
+                <a
+                  href="https://aistudio.google.com/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-blue-400 hover:underline"
+                >
+                  {t('s_get_key')} <ExternalLink size={10} />
+                </a>
+              )}
             </div>
             <MaskedInput
               value={settings.googleAiApiKey}
               onChange={v => updateSettings({ googleAiApiKey: v })}
               placeholder="AIza..."
+              disabled={isStandard}
             />
-            <p className="text-xs text-muted-foreground">
-              {t('s_google_desc')} <code className="bg-muted px-1 rounded">GOOGLE_AI_API_KEY</code>
-            </p>
+            {!isStandard && (
+              <p className="text-xs text-muted-foreground">
+                {t('s_google_desc')} <code className="bg-muted px-1 rounded">GOOGLE_AI_API_KEY</code>
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -349,23 +519,28 @@ export default function SettingsPage() {
                 YouTube Data API Key
                 <span className="ml-2 text-muted-foreground font-normal">{t('s_youtube_usage')}</span>
               </label>
-              <a
-                href="https://console.cloud.google.com/apis/credentials"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-blue-400 hover:underline"
-              >
-                {t('s_get_key')} <ExternalLink size={10} />
-              </a>
+              {!isStandard && (
+                <a
+                  href="https://console.cloud.google.com/apis/credentials"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-blue-400 hover:underline"
+                >
+                  {t('s_get_key')} <ExternalLink size={10} />
+                </a>
+              )}
             </div>
             <MaskedInput
               value={settings.youtubeApiKey}
               onChange={v => updateSettings({ youtubeApiKey: v })}
               placeholder="AIza..."
+              disabled={isStandard}
             />
-            <p className="text-xs text-muted-foreground">
-              {t('s_youtube_desc')}
-            </p>
+            {!isStandard && (
+              <p className="text-xs text-muted-foreground">
+                {t('s_youtube_desc')}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -395,6 +570,7 @@ export default function SettingsPage() {
                   description={m.description}
                   badge={m.badge}
                   onSelect={v => updateSettings({ feedOptimizerModel: v })}
+                  disabled={isStandard}
                 />
               ))}
             </div>
@@ -417,6 +593,7 @@ export default function SettingsPage() {
                   description={m.description}
                   badge={m.badge}
                   onSelect={v => updateSettings({ changeTrackerModel: v })}
+                  disabled={isStandard}
                 />
               ))}
             </div>
@@ -439,6 +616,7 @@ export default function SettingsPage() {
                   description={m.description}
                   badge={m.badge}
                   onSelect={v => updateSettings({ videoAbcdModel: v })}
+                  disabled={isStandard}
                 />
               ))}
             </div>
@@ -449,20 +627,22 @@ export default function SettingsPage() {
       {/* PIN Lock */}
       <PinLockCard />
 
-      {/* Env var reference */}
-      <Card className="border-border">
-        <CardHeader className="pb-2 pt-4 px-4">
-          <CardTitle className="text-sm font-semibold">{t('s_env_title')}</CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4 text-xs text-muted-foreground space-y-2">
-          <p>{t('s_env_desc')}</p>
-          <div className="font-mono bg-muted/40 rounded p-3 space-y-1">
-            <p><span className="text-blue-400">OPENROUTER_API_KEY</span>=sk-or-v1-...</p>
-            <p><span className="text-blue-400">GOOGLE_AI_API_KEY</span>=AIza...</p>
-            <p><span className="text-blue-400">NEXT_PUBLIC_APP_URL</span>=https://your-app.vercel.app</p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Env var reference — hide for standard users */}
+      {!isStandard && (
+        <Card className="border-border">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-semibold">{t('s_env_title')}</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 text-xs text-muted-foreground space-y-2">
+            <p>{t('s_env_desc')}</p>
+            <div className="font-mono bg-muted/40 rounded p-3 space-y-1">
+              <p><span className="text-blue-400">OPENROUTER_API_KEY</span>=sk-or-v1-...</p>
+              <p><span className="text-blue-400">GOOGLE_AI_API_KEY</span>=AIza...</p>
+              <p><span className="text-blue-400">NEXT_PUBLIC_APP_URL</span>=https://your-app.vercel.app</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

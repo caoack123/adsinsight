@@ -18,12 +18,23 @@ export function createServerClient() {
 
 export interface DbAccount {
   id: string;
+  user_id: string | null;
   customer_id: string;
   account_name: string;
   script_token: string;
   currency: string;
   timezone: string;
   last_synced_at: string | null;
+  created_at: string;
+}
+
+export interface DbUserProfile {
+  id: string;
+  google_id: string;
+  email: string;
+  name: string | null;
+  avatar_url: string | null;
+  role: 'admin' | 'standard' | 'visitor';
   created_at: string;
 }
 
