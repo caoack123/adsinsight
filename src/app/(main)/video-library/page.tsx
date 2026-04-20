@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useI18n } from '@/context/i18n-context';
+import { useSettings } from '@/context/settings-context';
 import {
   Link2, Trash2, Sparkles, Play, Eye, Heart, MessageCircle,
   Share2, Clock, AlertCircle, CheckCircle2, Loader2, Copy, Check,
@@ -376,6 +377,7 @@ type FilterStatus = 'all' | 'pending' | 'done' | 'error';
 export default function VideoLibraryPage() {
   const { data: session } = useSession();
   const { lang } = useI18n();
+  const { settings } = useSettings();
 
   const [videos,     setVideos]     = useState<VideoRecord[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -450,7 +452,16 @@ export default function VideoLibraryPage() {
     setVideos(prev => prev.map(v => v.id === id ? { ...v, analysis_status: 'processing' } : v));
 
     try {
-      const res = await fetch(`/api/video-library/${id}/analyze`, { method: 'POST' });
+      const res = await fetch(`/api/video-library/${id}/analyze`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Pass keys from client context — always correct (standard users already have admin keys injected)
+        body: JSON.stringify({
+          geminiApiKey: settings.googleAiApiKey,
+          geminiModel:  settings.videoAbcdModel,
+          youtubeApiKey: settings.youtubeApiKey,
+        }),
+      });
       const data = await res.json();
       if (res.ok) {
         setVideos(prev => prev.map(v =>

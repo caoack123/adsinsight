@@ -1,7 +1,11 @@
 /**
  * POST /api/video-library/[id]/analyze
  * Triggers Gemini analysis for a saved video.
- * Called by the frontend after ingestion.
+ *
+ * API keys resolution order:
+ *  1. Keys sent by the client in the request body (always correct — client
+ *     context already merges localStorage + Supabase + admin injection)
+ *  2. Supabase user_settings fallback (for non-browser callers like Shortcuts)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
@@ -30,53 +34,61 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (fetchErr || !video) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (video.analysis_status === 'done') return NextResponse.json({ analysis: video.analysis });
 
-  // Mark as processing
-  await db
-    .from('video_library')
-    .update({ analysis_status: 'processing' })
-    .eq('id', id);
+  // Parse request body (client sends keys from its settings context)
+  let body: Record<string, string> = {};
+  try { body = await req.json(); } catch { /* no body is fine */ }
 
-  // Fetch user settings for API keys
-  const { data: settingsRow } = await db
-    .from('user_settings')
-    .select('settings_json')
-    .eq('user_id', userId)
-    .single();
+  // ── Resolve API keys: client-provided → Supabase DB → admin keys ─────────
+  let googleAiApiKey = body.geminiApiKey ?? '';
+  let geminiModel    = body.geminiModel  ?? 'gemini-2.5-flash';
 
-  const settings = settingsRow?.settings_json as Record<string, string> | null ?? {};
+  if (!googleAiApiKey) {
+    // Fallback: look up from DB (used by iPhone Shortcuts or any non-browser caller)
+    const { data: settingsRow } = await db
+      .from('user_settings')
+      .select('settings_json')
+      .eq('user_id', userId)
+      .single();
 
-  // Check for admin keys if standard user
-  const { data: profile } = await db
-    .from('user_profiles')
-    .select('role')
-    .eq('id', userId)
-    .single();
+    const s = settingsRow?.settings_json as Record<string, string> | null ?? {};
+    googleAiApiKey = s.googleAiApiKey ?? '';
+    geminiModel    = s.videoAbcdModel ?? geminiModel;
 
-  let googleAiApiKey = settings.googleAiApiKey ?? '';
-  let geminiModel    = settings.videoAbcdModel ?? 'gemini-2.5-flash';
+    // If still empty and user is standard → fetch admin keys
+    if (!googleAiApiKey) {
+      const { data: profile } = await db
+        .from('user_profiles').select('role').eq('id', userId).single();
 
-  if (profile?.role === 'standard') {
-    const { data: adminProfile } = await db
-      .from('user_profiles').select('id').eq('role', 'admin').limit(1).single();
-    if (adminProfile) {
-      const { data: adminSettings } = await db
-        .from('user_settings').select('settings_json').eq('user_id', adminProfile.id).single();
-      const as = adminSettings?.settings_json as Record<string, string> | null ?? {};
-      googleAiApiKey = as.googleAiApiKey ?? googleAiApiKey;
-      geminiModel    = as.videoAbcdModel ?? geminiModel;
+      if (profile?.role === 'standard') {
+        const { data: adminProfile } = await db
+          .from('user_profiles').select('id').eq('role', 'admin').limit(1).single();
+        if (adminProfile) {
+          const { data: adminSettings } = await db
+            .from('user_settings').select('settings_json').eq('user_id', adminProfile.id).single();
+          const as = adminSettings?.settings_json as Record<string, string> | null ?? {};
+          googleAiApiKey = as.googleAiApiKey ?? '';
+          geminiModel    = as.videoAbcdModel ?? geminiModel;
+        }
+      }
     }
   }
 
   if (!googleAiApiKey) {
     await db.from('video_library').update({ analysis_status: 'error' }).eq('id', id);
-    return NextResponse.json({ error: 'Google AI API key not configured' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Google AI API key not found. Please save your settings on the Settings page.' },
+      { status: 400 },
+    );
   }
+
+  // Mark as processing
+  await db.from('video_library').update({ analysis_status: 'processing' }).eq('id', id);
 
   try {
     const analysis = await analyzeVideo({
       platform:      video.platform,
       url:           video.url,
-      direct_url:    null,   // TikTok direct URLs from Apify expire; re-fetch at analysis time
+      direct_url:    null,
       title:         video.title,
       author:        video.author,
       description:   video.description,
@@ -89,17 +101,12 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     await db
       .from('video_library')
-      .update({
-        analysis:        analysis,
-        analysis_status: 'done',
-        analyzed_at:     new Date().toISOString(),
-      })
+      .update({ analysis, analysis_status: 'done', analyzed_at: new Date().toISOString() })
       .eq('id', id);
 
     return NextResponse.json({ analysis });
   } catch (err) {
     await db.from('video_library').update({ analysis_status: 'error' }).eq('id', id);
-    // Surface the real error message (e.g. Gemini API key invalid, quota exceeded)
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
