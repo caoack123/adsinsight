@@ -8,6 +8,11 @@ import type { NextConfig } from "next";
 // We list the top-level package AND every @react-pdf/* sub-package because each
 // sub-package owns part of the singleton chain (stylesheet, font registry, etc.).
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' }, // Google avatars
+    ],
+  },
   serverExternalPackages: [
     '@react-pdf/renderer',
     '@react-pdf/fns',

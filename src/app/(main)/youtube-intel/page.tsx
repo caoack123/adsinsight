@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, createElement } from 'react';
+import { useState, useRef, useEffect, createElement, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import { useSettings } from '@/context/settings-context';
 import { useI18n } from '@/context/i18n-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -749,6 +750,8 @@ function LoadingState({ step, lang }: { step: number; lang: 'zh' | 'en' }) {
 export default function YouTubeIntelPage() {
   const { settings } = useSettings();
   const { lang } = useI18n();
+  const { data: session } = useSession();
+  const userId = (session as Record<string, unknown> | null)?.userId as string | null ?? null;
 
   const [query, setQuery]               = useState('');
   const [countryCode, setCountryCode]   = useState('US');
@@ -762,8 +765,30 @@ export default function YouTubeIntelPage() {
 
   const stepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Hydrate history from localStorage on mount
-  useEffect(() => { setHistory(loadHistory()); }, []);
+  // Load history — cloud if logged in, localStorage if not
+  const refreshHistory = useCallback(async () => {
+    if (userId) {
+      try {
+        const res = await fetch('/api/user/yt-history');
+        if (res.ok) {
+          const { history: cloud } = await res.json();
+          setHistory(cloud.map((r: Record<string, unknown>) => ({
+            id:           r.id,
+            query:        r.query,
+            country_code: r.country_code,
+            sort:         r.sort,
+            output_lang:  r.output_lang,
+            created_at:   r.created_at,
+            data:         r.data,
+          })));
+          return;
+        }
+      } catch { /* fall through to localStorage */ }
+    }
+    setHistory(loadHistory());
+  }, [userId]);
+
+  useEffect(() => { refreshHistory(); }, [refreshHistory]);
 
   function startStepTimer() {
     let step = 0;
@@ -813,18 +838,27 @@ export default function YouTubeIntelPage() {
       if (!res.ok) throw new Error(data.error ?? 'Unknown error');
       const resp = data as YouTubeIntelResponse;
       setResult(resp);
-      // Auto-save to history
-      const histItem: HistoryItem = {
-        id: Date.now().toString(),
-        query: query.trim(),
-        country_code: countryCode,
-        sort,
-        output_lang: outputLang,
-        created_at: new Date().toISOString(),
-        data: resp,
-      };
-      saveHistoryItem(histItem);
-      setHistory(loadHistory());
+      // Auto-save to history (cloud if logged in, localStorage otherwise)
+      if (userId) {
+        try {
+          await fetch('/api/user/yt-history', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: query.trim(), country_code: countryCode,
+              sort, output_lang: outputLang, data: resp,
+            }),
+          });
+        } catch { /* non-fatal */ }
+      } else {
+        saveHistoryItem({
+          id: Date.now().toString(),
+          query: query.trim(), country_code: countryCode,
+          sort, output_lang: outputLang,
+          created_at: new Date().toISOString(), data: resp,
+        });
+      }
+      await refreshHistory();
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     } finally {
@@ -843,8 +877,13 @@ export default function YouTubeIntelPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function handleDeleteHistory(id: string) {
-    setHistory(removeHistoryItem(id));
+  async function handleDeleteHistory(id: string) {
+    if (userId) {
+      await fetch(`/api/user/yt-history?id=${id}`, { method: 'DELETE' }).catch(() => {});
+      await refreshHistory();
+    } else {
+      setHistory(removeHistoryItem(id));
+    }
   }
 
   const sortOptions = [

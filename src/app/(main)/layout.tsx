@@ -3,6 +3,7 @@ import { AccountSwitcher } from '@/components/account-switcher';
 import { ThemeToggle, LangToggle } from '@/components/theme-provider';
 import { LockProvider } from '@/context/lock-context';
 import { LockScreen } from '@/components/lock-screen';
+import { UserMenu } from '@/components/user-menu';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -21,6 +22,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <LangToggle />
               <ThemeToggle />
               <AccountSwitcher />
+              <UserMenu />
             </div>
           </header>
           <main className="flex-1 overflow-auto p-6">
