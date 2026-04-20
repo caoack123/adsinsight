@@ -128,14 +128,11 @@ export async function analyzeVideo(opts: {
   const parts: Part[] = [];
 
   if (opts.platform === 'youtube') {
-    // Gemini natively understands YouTube URLs
-    parts.push({ text: ANALYSIS_PROMPT });
-    parts.push({ text: `\nContext:\n${contextBlock}` });
+    // Pass the YouTube URL directly in the text prompt.
+    // The fileData / fileUri approach for YouTube is unreliable across Gemini versions;
+    // including the URL in the prompt lets the model fetch it via its built-in YouTube tool.
     parts.push({
-      fileData: {
-        mimeType: 'video/mp4',
-        fileUri:  opts.url,
-      },
+      text: `${ANALYSIS_PROMPT}\n\nYouTube video to analyze: ${opts.url}\n\nAdditional context:\n${contextBlock}`,
     });
   } else if (opts.direct_url) {
     // Upload the video to Gemini Files API

@@ -130,6 +130,6 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: String(error) }, { status: 500 });
+  if (error) return NextResponse.json({ error: error.message ?? String(error) }, { status: 500 });
   return NextResponse.json(row, { status: 201 });
 }

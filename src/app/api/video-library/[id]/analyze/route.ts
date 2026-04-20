@@ -99,6 +99,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ analysis });
   } catch (err) {
     await db.from('video_library').update({ analysis_status: 'error' }).eq('id', id);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    // Surface the real error message (e.g. Gemini API key invalid, quota exceeded)
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

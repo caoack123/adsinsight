@@ -447,21 +447,23 @@ export default function VideoLibraryPage() {
 
   async function handleAnalyze(id: string) {
     setAnalyzing(prev => new Set(prev).add(id));
-    // Optimistically mark processing
     setVideos(prev => prev.map(v => v.id === id ? { ...v, analysis_status: 'processing' } : v));
 
     try {
       const res = await fetch(`/api/video-library/${id}/analyze`, { method: 'POST' });
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
         setVideos(prev => prev.map(v =>
           v.id === id ? { ...v, analysis: data.analysis, analysis_status: 'done', analyzed_at: new Date().toISOString() } : v
         ));
       } else {
+        const msg = data?.error ?? '分析失败';
         setVideos(prev => prev.map(v => v.id === id ? { ...v, analysis_status: 'error' } : v));
+        setError(`分析失败: ${msg}`);
       }
-    } catch {
+    } catch (e) {
       setVideos(prev => prev.map(v => v.id === id ? { ...v, analysis_status: 'error' } : v));
+      setError(`分析失败: ${String(e)}`);
     } finally {
       setAnalyzing(prev => { const s = new Set(prev); s.delete(id); return s; });
     }
