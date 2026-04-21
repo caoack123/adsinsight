@@ -132,7 +132,49 @@ export async function scrapeTikTok(url: string, apifyToken: string): Promise<Vid
   };
 }
 
-// ── Instagram / X — URL-only fallback ─────────────────────────────────────────
+// ── Instagram via Apify ───────────────────────────────────────────────────────
+
+export async function scrapeInstagram(url: string, apifyToken: string): Promise<VideoMeta | null> {
+  const res = await fetch(
+    `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${apifyToken}&timeout=60`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        directUrls:   [url],
+        resultsType:  'posts',
+        resultsLimit: 1,
+        addParentData: false,
+      }),
+    },
+  );
+  if (!res.ok) return null;
+
+  const items: Record<string, unknown>[] = await res.json();
+  const item = items?.[0];
+  if (!item) return null;
+
+  // Extract shortcode from URL or item
+  const shortcodeMatch = url.match(/\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
+  const platform_id = shortcodeMatch?.[2] ?? String(item.shortCode ?? item.id ?? '');
+
+  return {
+    platform:      'instagram',
+    platform_id,
+    title:         (item.caption as string | undefined)?.slice(0, 200) ?? null,
+    author:        (item.ownerUsername as string | undefined) ?? (item.ownerfullname as string | undefined) ?? null,
+    thumbnail_url: (item.displayUrl as string | undefined) ?? null,
+    duration_sec:  item.videoDuration ? +item.videoDuration : null,
+    view_count:    item.videoPlayCount  ? +item.videoPlayCount  : null,
+    like_count:    item.likesCount      ? +item.likesCount      : null,
+    comment_count: item.commentsCount   ? +item.commentsCount   : null,
+    share_count:   null,
+    description:   (item.caption as string | undefined)?.slice(0, 500) ?? null,
+    direct_url:    (item.videoUrl as string | undefined) ?? null,
+  };
+}
+
+// ── URL-only fallback ─────────────────────────────────────────────────────────
 
 export function urlOnlyMeta(url: string, platform: Platform): VideoMeta {
   return {
@@ -166,6 +208,11 @@ export async function scrapeVideoMeta(
 
   if (platform === 'tiktok' && opts.apifyToken) {
     const meta = await scrapeTikTok(url, opts.apifyToken).catch(() => null);
+    if (meta) return meta;
+  }
+
+  if (platform === 'instagram' && opts.apifyToken) {
+    const meta = await scrapeInstagram(url, opts.apifyToken).catch(() => null);
     if (meta) return meta;
   }
 
