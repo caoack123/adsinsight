@@ -12,10 +12,9 @@ import {
   Map, BookOpen, BarChart3, ChevronDown, ChevronUp,
   ExternalLink, ThumbsUp, MessageSquare, Eye, Flame,
   Target, Palette, Megaphone, Package, LineChart,
-  Clock, Trash2, Languages, Download, Globe2, GitCompare,
+  Clock, Trash2, Languages, Download,
 } from 'lucide-react';
 import type { YouTubeIntelResponse, YouTubeIntelReport, VideoItem } from '@/app/api/youtube-intel/route';
-import type { RedditPost } from '@/lib/reddit-scraper';
 
 // ─── History persistence ──────────────────────────────────────────────────────
 
@@ -181,13 +180,11 @@ function PlaybookCard({
 // ─── Tab definitions ───────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'overview',     label: 'Overview',        labelZh: '总览',       icon: BarChart3,   redditOnly: false },
-  { id: 'audience',     label: 'Audience',         labelZh: '受众洞察',  icon: Users,       redditOnly: false },
-  { id: 'creative',     label: 'Creative Intel',   labelZh: '创意情报',  icon: Lightbulb,   redditOnly: false },
-  { id: 'opportunity',  label: 'Opportunities',    labelZh: '机会地图',  icon: Map,         redditOnly: false },
-  { id: 'playbooks',    label: 'Team Playbooks',   labelZh: '团队策略',  icon: BookOpen,    redditOnly: false },
-  { id: 'reddit',       label: 'Reddit Community', labelZh: 'Reddit 社群', icon: Globe2,    redditOnly: true  },
-  { id: 'crossplatform',label: 'Cross-Platform',  labelZh: '跨平台洞察', icon: GitCompare, redditOnly: true  },
+  { id: 'overview',     label: 'Overview',     labelZh: '总览',     icon: BarChart3 },
+  { id: 'audience',     label: 'Audience',     labelZh: '受众洞察', icon: Users },
+  { id: 'creative',     label: 'Creative Intel', labelZh: '创意情报', icon: Lightbulb },
+  { id: 'opportunity',  label: 'Opportunities', labelZh: '机会地图', icon: Map },
+  { id: 'playbooks',    label: 'Team Playbooks', labelZh: '团队策略', icon: BookOpen },
 ] as const;
 
 type TabId = typeof TABS[number]['id'];
@@ -195,15 +192,13 @@ type TabId = typeof TABS[number]['id'];
 // ─── Report display ────────────────────────────────────────────────────────────
 
 function ReportDisplay({
-  report, videos, meta, reddit,
+  report, videos, meta,
 }: {
   report: YouTubeIntelReport;
   videos: VideoItem[];
   meta: YouTubeIntelResponse['meta'];
-  reddit?: RedditPost[];
 }) {
   const { lang } = useI18n();
-  const hasReddit = !!(reddit?.length && report.reddit_community_intel);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showAllVideos, setShowAllVideos] = useState(false);
   const [expandedVideo, setExpandedVideo] = useState<string | null>(null);
@@ -302,8 +297,8 @@ function ReportDisplay({
       </div>
 
       {/* Tab bar */}
-      <div className="flex items-center gap-0.5 rounded-md border border-border bg-muted/40 p-0.5 w-fit flex-wrap">
-        {TABS.filter(tab => !tab.redditOnly || hasReddit).map(tab => (
+      <div className="flex items-center gap-0.5 rounded-md border border-border bg-muted/40 p-0.5 w-fit">
+        {TABS.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -311,15 +306,11 @@ function ReportDisplay({
               'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors',
               activeTab === tab.id
                 ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-              tab.redditOnly && 'border-l border-border/60 ml-0.5 pl-3',
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             <tab.icon size={11} />
             {lang === 'en' ? tab.label : tab.labelZh}
-            {tab.redditOnly && (
-              <span className="text-[9px] px-1 py-0.5 rounded bg-orange-100 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400 font-semibold">R</span>
-            )}
           </button>
         ))}
       </div>
@@ -564,119 +555,6 @@ function ReportDisplay({
         </div>
       )}
 
-      {/* ── Reddit Community tab ─────────────────────────────────────────────── */}
-      {activeTab === 'reddit' && hasReddit && report.reddit_community_intel && (
-        <div className="space-y-4">
-          {/* Top Subreddits */}
-          <SectionCard title={lang === 'en' ? 'Top Communities' : '活跃社群'} icon={Globe2}>
-            <div className="grid grid-cols-1 gap-2">
-              {report.reddit_community_intel.top_subreddits.map((s, i) => (
-                <div key={i} className="flex items-start gap-3 p-2.5 rounded-md bg-orange-50/50 dark:bg-orange-950/10 border border-orange-100 dark:border-orange-900/30">
-                  <span className="shrink-0 text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/40 px-1.5 py-0.5 rounded font-mono">
-                    r/{s.name}
-                  </span>
-                  <p className="text-xs text-muted-foreground">{s.relevance}</p>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
-
-          {/* Community Sentiment */}
-          <SectionCard title={lang === 'en' ? 'Community Sentiment' : '社群情绪'} icon={MessageSquare}>
-            <p className="text-sm text-muted-foreground leading-relaxed">{report.reddit_community_intel.community_sentiment}</p>
-          </SectionCard>
-
-          {/* Key Discussions */}
-          <SectionCard title={lang === 'en' ? 'Key Discussions' : '热门话题讨论'} icon={TrendingUp}>
-            <InsightList items={report.reddit_community_intel.key_discussions} color="orange" />
-          </SectionCard>
-
-          {/* Unique Insights */}
-          <SectionCard title={lang === 'en' ? 'Reddit-Only Insights' : 'Reddit 独家洞察'} icon={Lightbulb}>
-            <p className="text-xs text-muted-foreground mb-2">
-              {lang === 'en' ? 'Things Reddit reveals that YouTube comments don\'t' : 'Reddit 揭示的、YouTube 评论区看不到的内容'}
-            </p>
-            <InsightList items={report.reddit_community_intel.unique_insights} color="purple" />
-          </SectionCard>
-
-          {/* Reddit Posts accordion */}
-          {reddit && reddit.length > 0 && (
-            <Card className="border-border">
-              <div className="px-4 py-3 border-b border-border">
-                <p className="text-sm font-medium flex items-center gap-2">
-                  <Globe2 size={13} className="text-orange-500" />
-                  {lang === 'en' ? `${reddit.length} Reddit Posts Analyzed` : `已分析 ${reddit.length} 篇 Reddit 帖子`}
-                </p>
-              </div>
-              <div className="divide-y divide-border max-h-96 overflow-y-auto">
-                {reddit.slice(0, 15).map(post => (
-                  <div key={post.id} className="px-4 py-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <a href={post.permalink} target="_blank" rel="noopener noreferrer"
-                          className="text-xs font-medium text-foreground hover:underline line-clamp-2">{post.title}</a>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                          <span className="text-orange-600 dark:text-orange-400 font-mono">r/{post.subreddit}</span>
-                          <span>↑ {post.score.toLocaleString()}</span>
-                          <span>{post.num_comments} comments</span>
-                          <span>{Math.round(post.upvote_ratio * 100)}% upvoted</span>
-                        </div>
-                      </div>
-                      <ExternalLink size={11} className="text-muted-foreground shrink-0 mt-0.5" />
-                    </div>
-                    {post.top_comments.length > 0 && (
-                      <div className="mt-2 space-y-1 pl-2 border-l-2 border-orange-200 dark:border-orange-800">
-                        {post.top_comments.slice(0, 3).map((c, ci) => (
-                          <p key={ci} className="text-xs text-muted-foreground leading-relaxed">
-                            <span className="text-orange-500 mr-1">↑{c.score}</span>{c.text}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* ── Cross-Platform tab ────────────────────────────────────────────────── */}
-      {activeTab === 'crossplatform' && hasReddit && report.cross_platform_intel && (
-        <div className="space-y-4">
-          {/* Sentiment alignment */}
-          <SectionCard title={lang === 'en' ? 'Cross-Platform Sentiment Alignment' : '跨平台情绪一致性'} icon={GitCompare}>
-            <p className="text-sm text-muted-foreground leading-relaxed">{report.cross_platform_intel.sentiment_alignment}</p>
-          </SectionCard>
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* Reddit exclusive */}
-            <SectionCard title={lang === 'en' ? 'Reddit-Exclusive Signals' : 'Reddit 独有信号'} icon={Globe2}>
-              <p className="text-xs text-muted-foreground mb-2">
-                {lang === 'en' ? 'Only visible in Reddit discussions' : '仅在 Reddit 讨论中出现'}
-              </p>
-              <InsightList items={report.cross_platform_intel.reddit_exclusive_insights} color="orange" />
-            </SectionCard>
-
-            {/* YouTube exclusive */}
-            <SectionCard title={lang === 'en' ? 'YouTube-Exclusive Signals' : 'YouTube 独有信号'} icon={PlayCircle}>
-              <p className="text-xs text-muted-foreground mb-2">
-                {lang === 'en' ? 'Only visible in YouTube data' : '仅在 YouTube 数据中出现'}
-              </p>
-              <InsightList items={report.cross_platform_intel.youtube_exclusive_insights} color="red" />
-            </SectionCard>
-          </div>
-
-          {/* Divergent views */}
-          <SectionCard title={lang === 'en' ? 'Where Audiences Diverge' : '两平台受众分歧点'} icon={GitCompare}>
-            <p className="text-xs text-muted-foreground mb-2">
-              {lang === 'en' ? 'Topics where YouTube viewers and Reddit community disagree' : 'YouTube 观众和 Reddit 社群意见不一致的话题'}
-            </p>
-            <InsightList items={report.cross_platform_intel.divergent_views} color="yellow" />
-          </SectionCard>
-        </div>
-      )}
-
       {/* ── All videos accordion ─────────────────────────────────────────────── */}
       <Card className="border-border">
         <button
@@ -831,8 +709,7 @@ const LOADING_STEPS = [
   { label: 'Searching YouTube...', labelZh: '搜索 YouTube 视频...' },
   { label: 'Fetching video details & stats...', labelZh: '获取视频详情和统计数据...' },
   { label: 'Fetching audience comments...', labelZh: '抓取受众评论...' },
-  { label: 'Fetching Reddit community posts...', labelZh: '抓取 Reddit 社群帖子...' },
-  { label: 'Gemini AI cross-platform analysis...', labelZh: 'Gemini AI 跨平台深度分析中...' },
+  { label: 'Gemini AI deep analysis...', labelZh: 'Gemini AI 深度分析中...' },
 ];
 
 function LoadingState({ step, lang }: { step: number; lang: 'zh' | 'en' }) {
@@ -880,7 +757,6 @@ export default function YouTubeIntelPage() {
   const [countryCode, setCountryCode]   = useState('US');
   const [sort, setSort]                 = useState<'relevance' | 'date' | 'viewCount'>('relevance');
   const [outputLang, setOutputLang]     = useState<'zh' | 'en'>('en');
-  const [includeReddit, setIncludeReddit] = useState(false);
   const [loading, setLoading]           = useState(false);
   const [loadingStep, setLoadingStep]   = useState(0);
   const [error, setError]               = useState<string | null>(null);
@@ -956,7 +832,6 @@ export default function YouTubeIntelPage() {
           youtube_api_key: settings.youtubeApiKey,
           gemini_api_key: settings.googleAiApiKey || undefined,
           model: settings.videoAbcdModel,
-          include_reddit: includeReddit,
         }),
       });
       const data = await res.json();
@@ -1124,27 +999,6 @@ export default function YouTubeIntelPage() {
               </div>
             </div>
 
-            {/* Reddit toggle */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">
-                {lang === 'en' ? 'Data Sources' : '数据来源'}
-              </label>
-              <button
-                type="button"
-                onClick={() => setIncludeReddit(v => !v)}
-                disabled={loading}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 h-[34px] rounded border text-xs font-medium transition-colors',
-                  includeReddit
-                    ? 'border-orange-400 bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-700'
-                    : 'border-border bg-background text-muted-foreground hover:text-foreground',
-                )}
-              >
-                <span className="text-sm">🤖</span>
-                {lang === 'en' ? '+ Reddit' : '+ Reddit 社群'}
-              </button>
-            </div>
-
             {/* Analyze button */}
             <button
               onClick={handleAnalyze}
@@ -1193,7 +1047,7 @@ export default function YouTubeIntelPage() {
       {/* Report */}
       {result && !loading && (
         <div className="space-y-4">
-          <ReportDisplay report={result.report} videos={result.videos} meta={result.meta} reddit={result.reddit} />
+          <ReportDisplay report={result.report} videos={result.videos} meta={result.meta} />
           {/* History at the bottom when a report is open */}
           {history.length > 0 && (
             <HistoryPanel

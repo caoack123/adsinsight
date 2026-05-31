@@ -13,7 +13,6 @@
 
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
-import { scrapeReddit, type RedditPost } from '@/lib/reddit-scraper';
 
 // ─── Request / Response types ─────────────────────────────────────────────────
 
@@ -25,7 +24,6 @@ export interface YouTubeIntelRequest {
   youtube_api_key: string;
   gemini_api_key?: string;                      // falls back to GOOGLE_AI_API_KEY env
   model?: string;                               // defaults to gemini-2.5-flash
-  include_reddit?: boolean;                     // also fetch Reddit community data
 }
 
 export interface VideoItem {
@@ -100,25 +98,11 @@ export interface YouTubeIntelReport {
       why_it_works: string;
     }[];
   };
-  // Optional — only present when include_reddit is true
-  reddit_community_intel?: {
-    top_subreddits:    { name: string; relevance: string }[];
-    community_sentiment: string;
-    key_discussions:   string[];
-    unique_insights:   string[];
-  };
-  cross_platform_intel?: {
-    sentiment_alignment:          string;
-    divergent_views:              string[];
-    reddit_exclusive_insights:    string[];
-    youtube_exclusive_insights:   string[];
-  };
 }
 
 export interface YouTubeIntelResponse {
-  report:  YouTubeIntelReport;
-  videos:  VideoItem[];
-  reddit?: RedditPost[];
+  report: YouTubeIntelReport;
+  videos: VideoItem[];
   meta: {
     query: string;
     country_code: string;
@@ -126,7 +110,6 @@ export interface YouTubeIntelResponse {
     output_lang: 'zh' | 'en';
     videos_analyzed: number;
     comments_analyzed: number;
-    reddit_posts_analyzed?: number;
     generated_at: string;
   };
 }
@@ -164,7 +147,6 @@ export async function POST(request: NextRequest) {
     youtube_api_key,
     gemini_api_key,
     model = 'gemini-2.5-flash',
-    include_reddit = false,
   } = body;
 
   if (!query?.trim())           return NextResponse.json({ error: 'query is required' }, { status: 400 });
@@ -265,12 +247,6 @@ export async function POST(request: NextRequest) {
     const medianViews   = videos[Math.floor(videos.length / 2)]?.views ?? 0;
     const avgViews      = videos.length > 0 ? Math.round(totalViews / videos.length) : 0;
 
-    // ── 4b. Fetch Reddit data in parallel (if requested) ───────────────────
-    let redditPosts: RedditPost[] = [];
-    if (include_reddit) {
-      redditPosts = await scrapeReddit(query, 25).catch(() => []);
-    }
-
     // ── 5. Build Gemini prompt ──────────────────────────────────────────────
     const videoDataStr = videos
       .map((v, i) => {
@@ -297,53 +273,7 @@ export async function POST(request: NextRequest) {
       ? 'LANGUAGE: Write EVERY text value in the JSON in Simplified Chinese (简体中文). Every headline, finding, bullet, label, and sentence must be in Chinese — no English except proper nouns, brand names, and metric values.'
       : 'LANGUAGE: Write EVERY text value in the JSON in English.';
 
-    // ── Build Reddit section of the prompt ──
-    let redditDataStr = '';
-    if (redditPosts.length > 0) {
-      redditDataStr = redditPosts.map((p, i) => {
-        const commentsBlock = p.top_comments.length > 0
-          ? '\nTop comments:\n' + p.top_comments
-              .slice(0, 10)
-              .map(c => `  [${c.score}↑] ${c.text}`)
-              .join('\n')
-          : '\n(No comments)';
-        return (
-          `### Reddit Post ${i + 1}: "${p.title}"\n` +
-          `r/${p.subreddit} | Score: ${p.score.toLocaleString()} (${Math.round(p.upvote_ratio * 100)}% upvoted) | Comments: ${p.num_comments}\n` +
-          `Author: u/${p.author}\n` +
-          (p.selftext ? `Post text: ${p.selftext}\n` : '') +
-          `URL: ${p.permalink}` +
-          commentsBlock
-        );
-      }).join('\n\n---\n\n');
-    }
-
-    const redditContext = redditPosts.length > 0
-      ? `\n- Reddit posts: ${redditPosts.length} | Total Reddit comments sampled: ${redditPosts.reduce((s, p) => s + p.top_comments.length, 0)}`
-      : '';
-
-    const redditPromptSection = redditPosts.length > 0 ? `
-
-## Reddit Community Dataset
-${redditDataStr}
-
-## Additional analysis required (Reddit + Cross-platform)
-Since Reddit data is included, also fill these two sections:
-
-**reddit_community_intel:**
-- top_subreddits: which subreddits appear most, and why they're relevant (2–4 entries)
-- community_sentiment: overall Reddit community feeling toward this topic
-- key_discussions: the most important discussion threads/topics surfacing in Reddit (3–5 items)
-- unique_insights: insights that ONLY Reddit reveals — things YouTube comments don't show (3–5 items)
-
-**cross_platform_intel:**
-- sentiment_alignment: where YouTube viewers and Reddit community agree
-- divergent_views: specific points where YouTube and Reddit audiences disagree or differ (2–4 items)
-- reddit_exclusive_insights: deep concerns/passions visible only in Reddit long-form posts (3–4 items)
-- youtube_exclusive_insights: patterns visible only in YouTube data — not reflected in Reddit (3–4 items)
-` : '';
-
-    const prompt = `You are a senior digital marketing intelligence analyst producing a ${redditPosts.length > 0 ? 'YouTube + Reddit Cross-Platform' : 'YouTube'} Intelligence Report for a brand's multi-disciplinary team.
+    const prompt = `You are a senior digital marketing intelligence analyst producing a YouTube Intelligence Report for a brand's multi-disciplinary team.
 
 ## ${langInstruction}
 
@@ -351,61 +281,24 @@ Since Reddit data is included, also fill these two sections:
 - Query: "${query}"
 - Country: ${country_code}
 - Sort: ${sort}
-- YouTube dataset: ${videos.length} videos | ${totalViews.toLocaleString()} total views | ${totalComments} audience comments analyzed
-- Avg views: ${avgViews.toLocaleString()} | Median views: ${medianViews.toLocaleString()}${redditContext}
+- Dataset: ${videos.length} videos | ${totalViews.toLocaleString()} total views | ${totalComments} audience comments analyzed
+- Avg views: ${avgViews.toLocaleString()} | Median views: ${medianViews.toLocaleString()}
 
 ## Your mandate
 Generate a report that is:
-1. QUANTITATIVE — cite specific numbers (view counts, ratios, comment counts, Reddit scores)
+1. QUANTITATIVE — cite specific numbers (view counts, ratios, comment counts)
 2. QUALITATIVE — identify concrete patterns, themes, sentiments
 3. ACTIONABLE — every insight must be a direct take-away a team can act on within a week
-4. SPECIFIC — reference actual video titles, channel names, subreddit names, exact comment quotes
+4. SPECIFIC — reference actual video titles, channel names, exact comment quotes
 
 The team_playbooks section is critical: each team (CMO, creative, ads, product, marketing director) needs 4–6 bullet-point action items they can execute directly. Write them as imperative sentences starting with a verb.
 
-## YouTube Dataset
+## Dataset
 ${videoDataStr}
-${redditPromptSection}
+
 Generate the full intelligence report now.`;
 
     // ── 6. Gemini structured output ─────────────────────────────────────────
-    const redditSchemaProps = redditPosts.length > 0 ? {
-      reddit_community_intel: {
-        type: SchemaType.OBJECT,
-        required: ['top_subreddits', 'community_sentiment', 'key_discussions', 'unique_insights'],
-        properties: {
-          top_subreddits: {
-            type: SchemaType.ARRAY,
-            items: {
-              type: SchemaType.OBJECT,
-              required: ['name', 'relevance'],
-              properties: {
-                name:      { type: SchemaType.STRING },
-                relevance: { type: SchemaType.STRING },
-              },
-            },
-          },
-          community_sentiment: { type: SchemaType.STRING },
-          key_discussions:     { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-          unique_insights:     { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-        },
-      },
-      cross_platform_intel: {
-        type: SchemaType.OBJECT,
-        required: ['sentiment_alignment', 'divergent_views', 'reddit_exclusive_insights', 'youtube_exclusive_insights'],
-        properties: {
-          sentiment_alignment:        { type: SchemaType.STRING },
-          divergent_views:            { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-          reddit_exclusive_insights:  { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-          youtube_exclusive_insights: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-        },
-      },
-    } : {};
-
-    const redditRequiredFields = redditPosts.length > 0
-      ? ['reddit_community_intel', 'cross_platform_intel']
-      : [];
-
     const genAI = new GoogleGenerativeAI(aiKey);
     const geminiModel = genAI.getGenerativeModel({
       model,
@@ -417,7 +310,6 @@ Generate the full intelligence report now.`;
             'executive_summary', 'content_landscape', 'audience_intel',
             'brand_intelligence', 'creative_intelligence', 'opportunity_map',
             'team_playbooks', 'quantitative_summary',
-            ...redditRequiredFields,
           ],
           properties: {
             executive_summary: {
@@ -537,7 +429,6 @@ Generate the full intelligence report now.`;
             },
           },
         },
-        ...redditSchemaProps,
       },
     });
 
@@ -547,15 +438,13 @@ Generate the full intelligence report now.`;
     return NextResponse.json({
       report,
       videos,
-      ...(redditPosts.length > 0 ? { reddit: redditPosts } : {}),
       meta: {
         query,
         country_code,
         sort,
         output_lang,
-        videos_analyzed:      videos.length,
-        comments_analyzed:    totalComments,
-        ...(redditPosts.length > 0 ? { reddit_posts_analyzed: redditPosts.length } : {}),
+        videos_analyzed: videos.length,
+        comments_analyzed: totalComments,
         generated_at: new Date().toISOString(),
       },
     } satisfies YouTubeIntelResponse);

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, ShoppingBag, Settings, Wrench, History,
-  Video, Building2, SearchCode, PlayCircle, ExternalLink, BookMarked,
+  Video, Building2, SearchCode, PlayCircle, ExternalLink, BookMarked, Globe2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/context/i18n-context';
@@ -48,8 +48,8 @@ export function Sidebar() {
           </Link>
         ))}
 
-        {/* YouTube Intel — opens as standalone module in a new tab */}
-        <div className="pt-2 mt-2 border-t border-border/60">
+        {/* Insight tools — YouTube Intel & Reddit Intel */}
+        <div className="pt-2 mt-2 border-t border-border/60 space-y-0.5">
           <a
             href="/yt"
             target="_blank"
@@ -60,6 +60,18 @@ export function Sidebar() {
             <span className="flex-1">{t('nav_youtube_intel')}</span>
             <ExternalLink size={11} className="opacity-40 group-hover:opacity-70 transition-opacity" />
           </a>
+          <Link
+            href="/reddit-intel"
+            className={cn(
+              'flex items-center gap-2.5 px-3 py-2 rounded text-sm font-medium transition-colors',
+              pathname.startsWith('/reddit-intel')
+                ? 'bg-accent text-accent-foreground'
+                : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+            )}
+          >
+            <Globe2 size={15} className="text-orange-500/70" />
+            {t('nav_reddit_intel')}
+          </Link>
         </div>
       </nav>
     </aside>
