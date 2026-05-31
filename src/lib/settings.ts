@@ -21,21 +21,25 @@ export type TextModel =
 // ─── Settings shape ───────────────────────────────────────────────────────────
 
 export interface AppSettings {
-  openrouterApiKey: string;
-  googleAiApiKey: string;
-  youtubeApiKey: string;
-  feedOptimizerModel: TextModel;
-  changeTrackerModel: TextModel;
-  videoAbcdModel: GeminiModel;
+  openrouterApiKey:    string;
+  googleAiApiKey:      string;
+  youtubeApiKey:       string;
+  redditClientId:      string;
+  redditClientSecret:  string;
+  feedOptimizerModel:  TextModel;
+  changeTrackerModel:  TextModel;
+  videoAbcdModel:      GeminiModel;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  openrouterApiKey: '',
-  googleAiApiKey: '',
-  youtubeApiKey: '',
-  feedOptimizerModel: 'anthropic/claude-sonnet-4-5',
-  changeTrackerModel: 'anthropic/claude-sonnet-4-5',
-  videoAbcdModel: 'gemini-2.5-flash',
+  openrouterApiKey:    '',
+  googleAiApiKey:      '',
+  youtubeApiKey:       '',
+  redditClientId:      '',
+  redditClientSecret:  '',
+  feedOptimizerModel:  'anthropic/claude-sonnet-4-5',
+  changeTrackerModel:  'anthropic/claude-sonnet-4-5',
+  videoAbcdModel:      'gemini-2.5-flash',
 };
 
 // ─── Model option lists ───────────────────────────────────────────────────────

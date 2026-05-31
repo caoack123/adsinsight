@@ -93,6 +93,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           openrouterApiKey:    json.openrouterApiKey    ?? prev.openrouterApiKey,
           googleAiApiKey:      json.googleAiApiKey      ?? prev.googleAiApiKey,
           youtubeApiKey:       json.youtubeApiKey       ?? prev.youtubeApiKey,
+          redditClientId:      json.redditClientId      ?? prev.redditClientId,
+          redditClientSecret:  json.redditClientSecret  ?? prev.redditClientSecret,
           feedOptimizerModel:  json.feedOptimizerModel  ?? prev.feedOptimizerModel,
           changeTrackerModel:  json.changeTrackerModel  ?? prev.changeTrackerModel,
           videoAbcdModel:      json.videoAbcdModel      ?? prev.videoAbcdModel,

@@ -15,11 +15,13 @@ import { scrapeReddit, type RedditPost } from '@/lib/reddit-scraper';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface RedditIntelRequest {
-  query:          string;
-  output_lang:    'zh' | 'en';
-  gemini_api_key?: string;
-  model?:         string;
-  post_limit?:    number;   // default 25
+  query:             string;
+  output_lang:       'zh' | 'en';
+  gemini_api_key?:   string;
+  model?:            string;
+  post_limit?:       number;   // default 25
+  reddit_client_id:     string;
+  reddit_client_secret: string;
 }
 
 export interface RedditIntelReport {
@@ -97,13 +99,21 @@ export async function POST(request: NextRequest) {
 
   const {
     query,
-    output_lang  = 'en',
+    output_lang          = 'en',
     gemini_api_key,
-    model        = 'gemini-2.5-flash',
-    post_limit   = 25,
+    model                = 'gemini-2.5-flash',
+    post_limit           = 25,
+    reddit_client_id     = process.env.REDDIT_CLIENT_ID ?? '',
+    reddit_client_secret = process.env.REDDIT_CLIENT_SECRET ?? '',
   } = body;
 
   if (!query?.trim()) return NextResponse.json({ error: 'query is required' }, { status: 400 });
+  if (!reddit_client_id || !reddit_client_secret) {
+    return NextResponse.json(
+      { error: 'Reddit API credentials not configured. Please add your Reddit Client ID and Secret in Settings.' },
+      { status: 400 },
+    );
+  }
 
   const aiKey = gemini_api_key?.trim() || process.env.GOOGLE_AI_API_KEY;
   if (!aiKey) return NextResponse.json(
@@ -113,7 +123,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // ── 1. Fetch Reddit posts + comments ───────────────────────────────────
-    const posts = await scrapeReddit(query, post_limit);
+    const posts = await scrapeReddit(query, reddit_client_id, reddit_client_secret, post_limit);
 
     if (posts.length === 0) {
       return NextResponse.json({ error: 'No Reddit posts found for this query' }, { status: 404 });
