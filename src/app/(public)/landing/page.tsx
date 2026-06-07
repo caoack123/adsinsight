@@ -217,6 +217,266 @@ function FeedCard() {
   );
 }
 
+/* ─── Browser chrome wrapper ────────────────────────────────────────────────── */
+function BrowserMockup({ children, url = 'adinsight.bageldigital.ai', className = '' }: {
+  children: React.ReactNode; url?: string; className?: string;
+}) {
+  return (
+    <div className={`rounded-2xl overflow-hidden border border-black/[0.09] select-none ${className}`}
+         style={{ boxShadow: '0 24px 60px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.05)' }}>
+      <div className="bg-[#f2f2f2] border-b border-[#e4e4e4] px-3 py-2 flex items-center gap-2">
+        <div className="flex gap-1.5 shrink-0">
+          {['#ff6058','#ffbd2e','#28c840'].map(c => <div key={c} className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />)}
+        </div>
+        <div className="flex-1 mx-3 h-5 rounded-md bg-white border border-[#ddd] flex items-center px-2">
+          <span className="text-[10px] text-[#aaa] truncate">{url}</span>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/* ─── Video ABCD page mockup ─────────────────────────────────────────────────── */
+function VideoAbcdMockup() {
+  const videos = [
+    {
+      title: 'Spring Collection 2026 — Ice Crystal Ring Hero',
+      sub: 'Video · Shopping Intent · Rings · Prospecting',
+      gradient: 'linear-gradient(135deg,#1e2a4a,#0f172a)',
+      label: 'In-stream', badge: '4 K', dur: '30s',
+      impr:'185K', vtr:'25%', ctr:'0.8%', cpv:'$0.028', roas:'0.42x', raosRed:true, ctrRed:false,
+    },
+    {
+      title: 'Snow Boots Winter 2026 — Lifestyle UGC',
+      sub: 'Video · Shopping Intent · Boots · Retargeting',
+      gradient: 'linear-gradient(135deg,#1a1a1a,#2d2d2d)',
+      label: 'In-stream', badge: '', dur: '15s',
+      impr:'320K', vtr:'40%', ctr:'2.0%', cpv:'$0.030', roas:'1.25x', raosRed:false, ctrRed:false,
+    },
+    {
+      title: 'Iced Out Bracelet — Hip Hop Style',
+      sub: 'Video · Brand Awareness · Bracelets · Cold Audience',
+      gradient: 'linear-gradient(135deg,#0a1a0a,#1a3a1a)',
+      label: 'In-stream', badge: 'vevo', dur: '20s',
+      impr:'420K', vtr:'15%', ctr:'0.5%', cpv:'$0.047', roas:'0.07x', raosRed:true, ctrRed:true,
+    },
+  ];
+  return (
+    <BrowserMockup>
+      <div className="bg-white">
+        {/* Page header */}
+        <div className="px-5 pt-4 pb-3 border-b border-[#f0f0f0]">
+          <h3 className="text-sm font-black text-[#111] mb-0.5">Video Analysis</h3>
+          <p className="text-[10px] text-[#999]">Evaluate video ad creatives with Gemini using the Google ABCD framework</p>
+        </div>
+        {/* Summary tile */}
+        <div className="mx-5 mt-3 mb-3 rounded-xl border border-[#f0f0f0] bg-[#fafafa] px-4 py-3 flex items-center gap-4">
+          <div>
+            <p className="text-[9px] font-bold text-[#999] tracking-widest uppercase mb-1">VIDEO ADS</p>
+            <p className="text-2xl font-black text-[#111]">3</p>
+            <p className="text-[10px] text-[#999]">Imported</p>
+          </div>
+        </div>
+        {/* ABCD tabs */}
+        <div className="flex gap-2 px-5 mb-3">
+          {[
+            { l:'A', label:'吸引注意', color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
+            { l:'B', label:'品牌植入', color:'#059669', bg:'#f0fdf4', border:'#a7f3d0' },
+            { l:'C', label:'情感连接', color:'#0ea5e9', bg:'#f0f9ff', border:'#bae6fd' },
+            { l:'D', label:'行动引导', color:'#d97706', bg:'#fffbeb', border:'#fde68a' },
+          ].map(t => (
+            <div key={t.l} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold"
+                 style={{ background: t.bg, borderColor: t.border, color: t.color }}>
+              <span className="font-black">{t.l}</span> {t.label}
+            </div>
+          ))}
+        </div>
+        {/* Video cards */}
+        <div className="space-y-0 divide-y divide-[#f5f5f5]">
+          {videos.map((v, i) => (
+            <div key={i} className="px-5 py-3 flex gap-3.5 items-start">
+              {/* Thumbnail */}
+              <div className="relative w-28 h-16 rounded-lg overflow-hidden shrink-0 flex items-center justify-center"
+                   style={{ background: v.gradient }}>
+                <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
+                  <Play size={10} className="text-white ml-0.5" />
+                </div>
+                <div className="absolute top-1 left-1 bg-black/50 text-white text-[8px] font-bold px-1.5 py-0.5 rounded">{v.label}</div>
+                {v.badge && <div className="absolute bottom-1 left-1 bg-black/50 text-white text-[8px] font-bold px-1 py-0.5 rounded">{v.badge}</div>}
+                <div className="absolute bottom-1 right-1 bg-black/50 text-white text-[8px] font-bold px-1 py-0.5 rounded">{v.dur}</div>
+              </div>
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold text-[#2563eb] leading-tight mb-0.5">{v.title}</p>
+                <p className="text-[9px] text-[#999] mb-2">{v.sub}</p>
+                {/* Metrics row */}
+                <div className="flex gap-4 mb-2">
+                  {[
+                    { l:'Impressions', v: v.impr,  red: false },
+                    { l:'VTR',        v: v.vtr,   red: false },
+                    { l:'CTR',        v: v.ctr,   red: v.ctrRed },
+                    { l:'CPV',        v: v.cpv,   red: false },
+                    { l:'ROAS',       v: v.roas,  red: v.raosRed },
+                  ].map(m => (
+                    <div key={m.l}>
+                      <p className="text-[8px] text-[#bbb] uppercase tracking-wider">{m.l}</p>
+                      <p className={`text-[11px] font-black ${m.red ? 'text-red-500' : 'text-[#111]'}`}>{m.v}</p>
+                    </div>
+                  ))}
+                </div>
+                {/* CTA */}
+                <div className="flex items-center gap-2">
+                  <button className="flex items-center gap-1 bg-[#4f46e5] text-white text-[9px] font-bold px-2.5 py-1 rounded-lg">
+                    <Sparkles size={8} /> Analyze with Gemini ABCD
+                  </button>
+                  <span className="text-[9px] text-[#bbb]">Not analyzed</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Bottom paste section */}
+        <div className="mx-5 mt-2 mb-4 rounded-xl border border-[#e8f0fe] bg-[#f8faff] px-4 py-3">
+          <p className="text-[10px] font-semibold text-[#2563eb] mb-1">🔗 Paste YouTube URL for Quick Analysis</p>
+          <p className="text-[9px] text-[#999] mb-2">No need to run in Google Ads — just paste a URL and Gemini scores it instantly</p>
+          <div className="h-6 rounded-md border border-[#e0e0e0] bg-white flex items-center px-2">
+            <span className="text-[9px] text-[#ccc]">https://www.youtube.com/watch?v=... or paste Video ID</span>
+          </div>
+        </div>
+      </div>
+    </BrowserMockup>
+  );
+}
+
+/* ─── YouTube Intel Team Playbooks mockup ────────────────────────────────────── */
+function YoutubePlaybookMockup() {
+  const playbooks = [
+    {
+      icon: '📊', title: 'CMO — Strategic Brief', color: '#7c3aed', bg: '#faf5ff', wide: true,
+      bullets: [
+        '明确品牌定位：我们是追求极致性能的硬核品牌，还是服务于潮流爱好者的时尚品牌？',
+        '发起关于"真实性"的品牌活动，讲述我们的产品设计师也是真正的滑雪爱好者。',
+        '利用观众对价格的敏感性，在营销活动中突出产品的"质价比"而非仅仅是"低价"。',
+        '监控关于Dope Snow和GSou Snow的讨论，学习他们的成功经验并避免他们的公关风险。',
+      ],
+    },
+    {
+      icon: '📢', title: 'Marketing Director — Campaign Plan', color: '#2563eb', bg: '#eff6ff', wide: true,
+      bullets: [
+        '与在滑雪技巧上受人尊敬的中小型影响者（micro-influencers）合作，而不是只有大量粉丝的时尚博主。',
+        '策划一次公关活动，主题是"风格无对错"，正面回应社区中关于"Jerry"的负面评价，倡导包容性。',
+        '根据评论中的新趋势：\'小上衣配大裤子\'这一信号，快速与KOL合作，引领这一潮流。',
+        '在产品描述和营销材料中，增加更多关于功能性和耐用性的细节，以平衡时尚潮流的宣传。',
+      ],
+    },
+    {
+      icon: '🎨', title: 'Creative Team', color: '#f97316', bg: '#fff7ed', wide: false,
+      bullets: [
+        '启动"穿搭星期五"（Fit Friday）YouTube Shorts系列，每周展示一套完整的滑雪造型。',
+        '制作"预算挑战"视频，展示如何在200美元内搭配一整套功能与风格兼备的装备。',
+        '采用"视觉对比"钩子，制作展示我们产品优于廉价竞品的短视频（防水性能、拉链质量）。',
+      ],
+    },
+    {
+      icon: '🎯', title: 'Ads Team', color: '#059669', bg: '#f0fdf4', wide: false,
+      bullets: [
+        '投放针对观看过Dope Snow和GSou Snow评测视频用户的再营销广告。',
+        '在广告文案中直接回应价格痛点："厌倦了200美元的雪裤？看看我们的选择。"',
+        '测试使用用户评论作为广告素材，例如引用"Ts look so tuff🔥"来增强社会认同。',
+      ],
+    },
+    {
+      icon: '📦', title: 'Product Team', color: '#e11d48', bg: '#fff1f2', wide: false,
+      bullets: [
+        '评估在夹克和裤子上增加专用雪票口袋（armpocket for skipasses）的必要性。',
+        '根据用户对尺码的频繁提问，优化网站上的尺码指南，提供基于身高体重的推荐模型。',
+        '研发更耐磨的适合滑雪运动的羽绒服替代品，解决其易被刮坏的痛点。',
+      ],
+    },
+  ];
+
+  return (
+    <BrowserMockup url='adinsight.bageldigital.ai/yt'>
+      <div className="bg-white">
+        {/* Report header */}
+        <div className="px-4 py-2.5 border-b border-[#f0f0f0] flex items-center gap-2.5 flex-wrap bg-[#fafafa]">
+          <span className="text-red-500 text-xs">⊙</span>
+          <span className="text-[11px] font-bold text-[#111]">&quot;baggy ski&quot;</span>
+          <span className="text-[10px] text-[#999]">· United States</span>
+          <span className="text-[10px] text-[#999]">· 👁 50 videos</span>
+          <span className="text-[10px] text-[#999]">· 💬 421 comments</span>
+          <span className="bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">中文报告</span>
+          <span className="text-[10px] text-[#bbb] ml-auto">5/8/2026, 9:34 PM</span>
+          <button className="text-[9px] font-semibold text-[#555] border border-[#e0e0e0] px-2 py-1 rounded-md flex items-center gap-1">
+            ↓ Download PDF
+          </button>
+        </div>
+        {/* Title */}
+        <div className="px-4 pt-3 pb-2.5 border-b border-[#f0f0f0] flex items-start justify-between gap-3">
+          <h2 className="text-sm font-black text-[#111] leading-snug flex-1">
+            宽松滑雪时尚主导YouTube，但真实性与性价比的争议引发观众热烈讨论
+          </h2>
+          <span className="shrink-0 text-[10px] font-bold bg-red-50 text-red-500 border border-red-200 px-2 py-1 rounded-full flex items-center gap-1">
+            🔥 火热
+          </span>
+        </div>
+        {/* Tabs */}
+        <div className="flex gap-0 border-b border-[#f0f0f0] px-4 overflow-x-auto">
+          {['Overview','Audience','Creative Intel','Opportunities','Team Playbooks'].map((tab, i) => (
+            <div key={tab} className={`text-[10px] font-semibold px-3 py-2.5 border-b-2 whitespace-nowrap ${
+              i === 4
+                ? 'border-[#2563eb] text-[#2563eb]'
+                : 'border-transparent text-[#999]'
+            }`}>{tab}</div>
+          ))}
+        </div>
+        {/* Playbook grid */}
+        <div className="p-4 space-y-3">
+          {/* Row 1: CMO + Marketing Director (2 col) */}
+          <div className="grid grid-cols-2 gap-3">
+            {playbooks.filter(p => p.wide).map(p => (
+              <div key={p.title} className="rounded-xl p-3.5" style={{ background: p.bg }}>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <span className="text-sm">{p.icon}</span>
+                  <span className="text-[11px] font-black" style={{ color: p.color }}>{p.title}</span>
+                </div>
+                <ul className="space-y-1.5">
+                  {p.bullets.map((b, i) => (
+                    <li key={i} className="flex gap-1.5 text-[9px] text-[#444] leading-relaxed">
+                      <span className="w-1 h-1 rounded-full mt-1.5 shrink-0" style={{ background: p.color }} />
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          {/* Row 2: Creative + Ads + Product (3 col) */}
+          <div className="grid grid-cols-3 gap-3">
+            {playbooks.filter(p => !p.wide).map(p => (
+              <div key={p.title} className="rounded-xl p-3" style={{ background: p.bg }}>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-xs">{p.icon}</span>
+                  <span className="text-[10px] font-black" style={{ color: p.color }}>{p.title}</span>
+                </div>
+                <ul className="space-y-1.5">
+                  {p.bullets.map((b, i) => (
+                    <li key={i} className="flex gap-1.5 text-[9px] text-[#444] leading-relaxed">
+                      <span className="w-1 h-1 rounded-full mt-1.5 shrink-0" style={{ background: p.color }} />
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </BrowserMockup>
+  );
+}
+
 /* ─── YouTube Intel card ────────────────────────────────────────────────────── */
 function YoutubeIntelCard() {
   return (
@@ -374,17 +634,19 @@ export default function LandingPage() {
     },
     {
       color: '#ef4444', bg: '#fff1f2', label: 'Video ABCD',
-      headline: 'Know what makes\nyour ads win',
-      sub: "Gemini Vision benchmarks every video ad against Google's ABCD framework — Attention, Branding, Connection, Direction — and delivers a prioritised recut brief.",
+      headline: 'Score every video\nagainst Google ABCD',
+      sub: "Gemini Vision benchmarks every video ad against Google's ABCD framework — Attention, Branding, Connection, Direction — and delivers a prioritised recut brief in seconds.",
       bullets: ['Frame-by-frame Gemini analysis', 'ABCD score with per-dimension breakdown', 'Actionable recut brief generated instantly'],
-      visual: <AbcdCard />,
+      visual: <VideoAbcdMockup />,
+      wide: true,
     },
     {
       color: '#dc2626', bg: '#fff1f2', label: 'YouTube Intel',
-      headline: 'Turn 1,000 comments\ninto 10 winning ads',
-      sub: "Gemini reads every comment on competitor YouTube videos in your niche — extracting objections, purchase triggers and trust gaps — then maps each signal directly to your live Google Ads campaigns.",
-      bullets: ['Competitor video comment sentiment analysis', 'Objection → ad copy translation, auto-generated', 'Purchase intent signals mapped to campaign keywords'],
-      visual: <YoutubeIntelCard />,
+      headline: 'One search.\nFive team briefs.',
+      sub: "Gemini reads 50+ videos and 400+ comments from your niche, then auto-generates separate strategic briefs for CMO, Marketing Director, Creative, Ads and Product — in Chinese or English.",
+      bullets: ['Competitor video comment sentiment analysis', 'Role-based playbooks for every team member', 'Download as PDF or export to Notion'],
+      visual: <YoutubePlaybookMockup />,
+      wide: true,
     },
   ];
 
@@ -480,66 +742,20 @@ export default function LandingPage() {
         </div>
 
         {/* ── Floating card scene ─────────────────────────────────────────── */}
-        <div className="relative max-w-6xl mx-auto px-6 mt-16 h-[380px] sm:h-[440px]">
-          {/* Centre: main dashboard mockup */}
-          <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[580px] sm:w-[680px]"
+        <div className="relative max-w-6xl mx-auto px-6 mt-14 h-[480px] sm:h-[560px]">
+          {/* Centre: Video ABCD page mockup */}
+          <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[560px] sm:w-[660px]"
             style={{ animation: 'float3 7s ease-in-out infinite' }}>
-            <div className="rounded-2xl overflow-hidden shadow-2xl border border-black/[0.09]"
-                 style={{ boxShadow: '0 24px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06)' }}>
-              {/* Browser chrome */}
-              <div className="bg-[#f5f5f5] border-b border-[#e8e8e8] px-4 py-2.5 flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  {['#ff6058','#ffbd2e','#28c840'].map(c => <div key={c} className="w-3 h-3 rounded-full" style={{ background: c }} />)}
-                </div>
-                <div className="flex-1 mx-4 h-5 rounded bg-white border border-[#e0e0e0] flex items-center px-2.5">
-                  <span className="text-[11px] text-[#aaa]">adinsight.bageldigital.ai</span>
-                </div>
-              </div>
-              {/* Dashboard body */}
-              <div className="bg-white p-5 space-y-4">
-                {/* KPI row */}
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { l:'Total spend (30d)',  v:'$4,845',  d:'+12%',   pos:true },
-                    { l:'Blended ROAS',       v:'3.82x',   d:'+0.4x',  pos:true },
-                    { l:'AI suggestions',     v:'9 ready', d:'3 high', pos:null },
-                  ].map(s => (
-                    <div key={s.l} className="rounded-xl border border-[#f0f0f0] bg-[#fafafa] px-3 py-2.5">
-                      <p className="text-[10px] text-[#999] mb-1">{s.l}</p>
-                      <p className="text-lg font-black text-[#111] tabular-nums">{s.v}</p>
-                      <p className={`text-[10px] font-semibold ${s.pos === true ? 'text-emerald-600' : s.pos === false ? 'text-red-500' : 'text-[#888]'}`}>{s.d}</p>
-                    </div>
-                  ))}
-                </div>
-                {/* Suggestion list */}
-                <div className="space-y-2">
-                  {[
-                    { pri:'HIGH', c:'#fee2e2', tc:'#dc2626', t:'Pause "Generic Jewelry" — ROAS 0.45x, $794/mo waste', imp:'Save $794', done:true  },
-                    { pri:'HIGH', c:'#dbeafe', tc:'#2563eb', t:'Scale Snow Boots budget +50% — ROAS 5.49x, capped',   imp:'+$1.2K',  done:false },
-                    { pri:'MED',  c:'#ede9fe', tc:'#7c3aed', t:'Switch Generic Jewelry to tROAS 250%',                imp:'+0.8x',   done:false },
-                  ].map((s,i) => (
-                    <div key={i} className="flex items-center gap-3 rounded-xl border border-[#f3f3f3] px-3.5 py-2.5">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0" style={{ background: s.c, color: s.tc }}>{s.pri}</span>
-                      <span className="text-xs text-[#333] flex-1 truncate">{s.t}</span>
-                      <span className="text-[10px] font-semibold text-emerald-600 shrink-0">{s.imp}</span>
-                      {s.done
-                        ? <span className="shrink-0 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center"><CheckCircle2 size={10} className="text-emerald-600" /></span>
-                        : <button className="shrink-0 text-[10px] bg-[#2563eb] text-white px-2.5 py-1 rounded-full font-bold flex items-center gap-1"><Play size={8}/> Apply</button>
-                      }
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <VideoAbcdMockup />
           </div>
 
-          {/* Left float: ABCD card */}
-          <div className="absolute top-8 -left-4 sm:left-8 hidden sm:block anim-float1">
+          {/* Left float: ABCD score card */}
+          <div className="absolute top-10 -left-4 sm:left-4 hidden sm:block anim-float1">
             <AbcdCard />
           </div>
 
           {/* Right float: Reddit card */}
-          <div className="absolute top-16 -right-4 sm:right-8 hidden sm:block anim-float2">
+          <div className="absolute top-20 -right-4 sm:right-4 hidden sm:block anim-float2">
             <RedditCard />
           </div>
         </div>
@@ -599,138 +815,39 @@ export default function LandingPage() {
           </Reveal>
 
           <Reveal delay={140}>
-            <p className="text-base text-white/50 text-center max-w-2xl mx-auto leading-relaxed mb-16">
-              Most agencies keep content research and performance marketing in separate silos.
-              We use AI to bridge them — turning YouTube comment intelligence into concrete Google Ads improvements, automatically.
+            <p className="text-base text-white/50 text-center max-w-xl mx-auto leading-relaxed mb-4">
+              One search query generates a full strategic report — with separate AI-written briefs for your CMO, Marketing Director, Creative Team, Ads Team and Product Team. Zero manual work.
             </p>
           </Reveal>
 
-          {/* Three-column bridge diagram */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-6 items-center mb-16">
-            {/* Left: YouTube analysis */}
-            <Reveal delay={0}>
-              <div className="rounded-2xl p-6 border border-white/[0.08]"
-                   style={{ background: 'rgba(255,255,255,0.04)' }}>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-xl bg-red-500/20 flex items-center justify-center">
-                    <PlayCircle size={16} className="text-red-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">YouTube Comment Analysis</p>
-                    <p className="text-xs text-white/40">AI reads what people actually say</p>
-                  </div>
-                </div>
-                {/* Stacked video + sentiment */}
-                <div className="space-y-3">
-                  {/* Video row */}
-                  <div className="flex items-center gap-3 rounded-xl p-2.5 bg-white/[0.05]">
-                    <div className="w-12 h-9 rounded-lg shrink-0 flex items-center justify-center"
-                         style={{ background: 'linear-gradient(135deg,#7f1d1d,#991b1b)' }}>
-                      <Play size={10} className="text-white ml-0.5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white/80 truncate">Competitor review: Ice Jewelry</p>
-                      <p className="text-[10px] text-white/40">148K views · 324 comments</p>
-                    </div>
-                  </div>
-                  {/* Extracted signals */}
-                  {[
-                    { text:'"looks cheap in real life"', count:'38 comments', type:'objection', color:'#f87171' },
-                    { text:'"where can I actually buy this?"', count:'24 comments', type:'intent', color:'#34d399' },
-                    { text:'"sizing is completely off"', count:'19 comments', type:'pain point', color:'#fb923c' },
-                    { text:'"need to see celebrity wearing it"', count:'15 comments', type:'trust trigger', color:'#a78bfa' },
-                  ].map((s, i) => (
-                    <div key={i} className="flex items-start gap-2.5 rounded-xl p-2.5 bg-white/[0.05]">
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 mt-0.5"
-                            style={{ background: s.color + '25', color: s.color }}>{s.type}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-white/70 leading-tight">{s.text}</p>
-                        <p className="text-[10px] text-white/30 mt-0.5">{s.count}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Reveal>
+          {/* Proof chips */}
+          <Reveal delay={180}>
+            <div className="flex flex-wrap justify-center gap-2 mb-10">
+              {['CMO Strategic Brief','Marketing Director Plan','Creative Team Brief','Ads Team Action Plan','Product Team Insights'].map(t => (
+                <span key={t} className="text-[11px] font-semibold px-3 py-1.5 rounded-full border border-white/10 text-white/60">
+                  ✓ {t}
+                </span>
+              ))}
+            </div>
+          </Reveal>
 
-            {/* Centre: AI bridge */}
-            <Reveal delay={150}>
-              <div className="flex flex-col items-center gap-3 py-6 lg:py-0">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-                  <Sparkles size={20} className="text-white" />
-                </div>
-                <div className="hidden lg:flex flex-col items-center gap-1">
-                  {[0,1,2,3].map(i => (
-                    <div key={i} className="w-0.5 h-3 rounded-full bg-white/20" />
-                  ))}
-                  <MoveRight size={14} className="text-white/40 rotate-90" />
-                </div>
-                <p className="text-xs font-bold text-white/60 text-center">Gemini AI<br/>maps signals</p>
-              </div>
-            </Reveal>
-
-            {/* Right: Google Ads actions */}
-            <Reveal delay={300}>
-              <div className="rounded-2xl p-6 border border-white/[0.08]"
-                   style={{ background: 'rgba(255,255,255,0.04)' }}>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                    <BarChart3 size={16} className="text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">Google Ads Actions</p>
-                    <p className="text-xs text-white/40">Specific, ready-to-apply changes</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {[
-                    {
-                      insight: '"looks cheap in real life"',
-                      action: 'New RSA headline: "Premium 925 Silver — Feel the Difference"',
-                      type: 'Ad copy', color: '#60a5fa', impact: '+11% CTR',
-                    },
-                    {
-                      insight: '"where can I actually buy this?"',
-                      action: 'Create brand + navigational search campaign',
-                      type: 'New campaign', color: '#34d399', impact: '+$420/mo',
-                    },
-                    {
-                      insight: '"sizing is completely off"',
-                      action: 'Add sitelink: "Size Guide — Find Your Perfect Fit"',
-                      type: 'Extension', color: '#fb923c', impact: '+6% conv',
-                    },
-                    {
-                      insight: '"need celebrity validation"',
-                      action: 'Add callout: "As seen on @creator · 50K+ happy customers"',
-                      type: 'Social proof', color: '#c084fc', impact: '+8% ROAS',
-                    },
-                  ].map((a, i) => (
-                    <div key={i} className="rounded-xl p-2.5 bg-white/[0.05]">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
-                              style={{ background: a.color + '25', color: a.color }}>{a.type}</span>
-                        <span className="text-[10px] font-bold text-emerald-400">{a.impact}</span>
-                      </div>
-                      <p className="text-xs text-white/70 leading-tight">{a.action}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Reveal>
-          </div>
+          {/* Actual playbook mockup */}
+          <Reveal delay={240}>
+            <YoutubePlaybookMockup />
+          </Reveal>
 
           {/* Bottom callout */}
-          <Reveal delay={200}>
-            <div className="rounded-2xl p-6 border border-white/[0.08] text-center max-w-2xl mx-auto"
+          <Reveal delay={100}>
+            <div className="mt-8 rounded-2xl p-5 border border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4"
                  style={{ background: 'rgba(255,255,255,0.04)' }}>
               <p className="text-sm text-white/60 leading-relaxed">
                 <span className="text-white font-bold">No other performance agency does this.</span>{' '}
-                We merge what people say in YouTube comments with what they search on Google — so your ads speak the exact language that already converts.
+                YouTube comments → five team briefs → Google Ads improvements, all in one click.
               </p>
               <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
-                 className="inline-flex items-center gap-2 mt-5 px-6 py-2.5 rounded-full text-sm font-bold text-white transition-all hover:-translate-y-0.5"
+                 className="shrink-0 inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold text-white transition-all hover:-translate-y-0.5 whitespace-nowrap"
                  style={{ background: 'linear-gradient(135deg,#F5AA84,#D97248)', boxShadow: '0 8px 24px rgba(217,114,72,0.3)' }}>
-                <PlayCircle size={14} /> See the YouTube intelligence demo
+                <PlayCircle size={14} /> See live demo
               </a>
             </div>
           </Reveal>
@@ -766,36 +883,65 @@ export default function LandingPage() {
           </Reveal>
 
           {/* Feature panel */}
-          <div key={activeTab} className="rounded-3xl p-8 sm:p-12 transition-all"
+          <div key={activeTab} className="rounded-3xl p-8 sm:p-10 transition-all"
                style={{ background: feat.bg, opacity: 1 }}>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {(feat as typeof feat & { wide?: boolean }).wide ? (
+              /* Wide layout: text top, mockup below */
               <div>
-                <h3 className="text-4xl sm:text-5xl font-black leading-tight mb-5 whitespace-pre-line"
-                    style={{ letterSpacing: '-0.02em', color: feat.color }}>
-                  {feat.headline}
-                </h3>
-                <p className="text-base text-[#444] leading-relaxed mb-8">{feat.sub}</p>
-                <ul className="space-y-3 mb-8">
-                  {feat.bullets.map((b, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-[#333]">
-                      <CheckCircle2 size={16} style={{ color: feat.color, flexShrink:0, marginTop:2 }} />
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-                <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
-                   className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold"
-                   style={{ background: feat.color }}>
-                  Learn more <ArrowRight size={13} />
-                </a>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8 items-start">
+                  <div>
+                    <h3 className="text-4xl sm:text-5xl font-black leading-tight mb-5 whitespace-pre-line"
+                        style={{ letterSpacing: '-0.02em', color: feat.color }}>
+                      {feat.headline}
+                    </h3>
+                    <p className="text-base text-[#444] leading-relaxed">{feat.sub}</p>
+                  </div>
+                  <div className="flex flex-col gap-3 justify-center">
+                    <ul className="space-y-3">
+                      {feat.bullets.map((b, i) => (
+                        <li key={i} className="flex items-start gap-3 text-sm text-[#333]">
+                          <CheckCircle2 size={16} style={{ color: feat.color, flexShrink:0, marginTop:2 }} />
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                    <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
+                       className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold self-start mt-2"
+                       style={{ background: feat.color }}>
+                      Learn more <ArrowRight size={13} />
+                    </a>
+                  </div>
+                </div>
+                <div className="anim-float3">{feat.visual}</div>
               </div>
-              {/* Right: floating visual */}
-              <div className="flex items-center justify-center">
-                <div className="anim-float3">
-                  {feat.visual}
+            ) : (
+              /* Default layout: text left, card right */
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div>
+                  <h3 className="text-4xl sm:text-5xl font-black leading-tight mb-5 whitespace-pre-line"
+                      style={{ letterSpacing: '-0.02em', color: feat.color }}>
+                    {feat.headline}
+                  </h3>
+                  <p className="text-base text-[#444] leading-relaxed mb-8">{feat.sub}</p>
+                  <ul className="space-y-3 mb-8">
+                    {feat.bullets.map((b, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm text-[#333]">
+                        <CheckCircle2 size={16} style={{ color: feat.color, flexShrink:0, marginTop:2 }} />
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                  <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
+                     className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold"
+                     style={{ background: feat.color }}>
+                    Learn more <ArrowRight size={13} />
+                  </a>
+                </div>
+                <div className="flex items-center justify-center">
+                  <div className="anim-float3">{feat.visual}</div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </section>
