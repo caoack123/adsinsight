@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Sparkles, TrendingUp, TrendingDown, Search, BarChart3, Video,
   Globe2, ArrowRight, CheckCircle2, Zap, Target,
@@ -48,39 +48,128 @@ function Counter({ to, suffix = '', duration = 1800 }: { to: number; suffix?: st
   return <span ref={ref}>{val.toLocaleString()}{suffix}</span>;
 }
 
-/* ─── Scroll-reveal wrapper ─────────────────────────────────────────────────── */
-function Reveal({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
+/* ─── Stagger container — triggers stagger-N classes on viewport entry ─────────── */
+function StaggerReveal({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [vis, setVis] = useState(false);
   useEffect(() => {
     const el = ref.current; if (!el) return;
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVis(true); io.disconnect(); } }, { threshold: 0.15 });
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVis(true); io.disconnect(); } }, { threshold: 0.1 });
     io.observe(el); return () => io.disconnect();
   }, []);
+  /* When not visible yet: hide children by overriding animation-play-state */
   return (
     <div ref={ref} className={className}
-      style={{ opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(28px)', transition: `opacity 0.6s ease ${delay}ms, transform 0.6s ease ${delay}ms` }}>
+      style={{ '--stagger-state': vis ? 'running' : 'paused' } as React.CSSProperties}>
       {children}
     </div>
   );
 }
 
-/* ─── Global CSS animations ─────────────────────────────────────────────────── */
+/* ─── Scroll-reveal wrapper (Emil: scale(0.97)→1, never scale(0), strong ease-out) */
+function Reveal({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVis(true); io.disconnect(); } }, { threshold: 0.12 });
+    io.observe(el); return () => io.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={className}
+      style={{
+        opacity:   vis ? 1 : 0,
+        transform: vis ? 'translateY(0) scale(1)' : 'translateY(14px) scale(0.97)',
+        /* Emil: never ease-in. Use strong ease-out so movement starts instantly */
+        transition: `opacity 500ms cubic-bezier(0.23,1,0.32,1) ${delay}ms, transform 500ms cubic-bezier(0.23,1,0.32,1) ${delay}ms`,
+      }}>
+      {children}
+    </div>
+  );
+}
+
+/* ─── Emil Kowalski animation system ─────────────────────────────────────────── */
 const GLOBAL_CSS = `
-@keyframes float1 { 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-12px) rotate(-3deg)} }
-@keyframes float2 { 0%,100%{transform:translateY(0) rotate(2deg)} 50%{transform:translateY(-18px) rotate(2deg)} }
-@keyframes float3 { 0%,100%{transform:translateY(0) rotate(-1deg)} 50%{transform:translateY(-8px) rotate(-1deg)} }
-@keyframes float4 { 0%,100%{transform:translateY(0) rotate(4deg)} 50%{transform:translateY(-14px) rotate(4deg)} }
+/* Custom easing curves — Emil's philosophy: built-in easings are too weak */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Decorative float — only animate transform+opacity (GPU composited) */
+@keyframes float1 { 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-10px) rotate(-3deg)} }
+@keyframes float2 { 0%,100%{transform:translateY(0) rotate(2deg)} 50%{transform:translateY(-14px) rotate(2deg)} }
+@keyframes float3 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+@keyframes float4 { 0%,100%{transform:translateY(0) rotate(4deg)} 50%{transform:translateY(-12px) rotate(4deg)} }
+
+/* Marquee — GPU composited, will-change declared inline */
 @keyframes marquee-left  { from{transform:translateX(0)} to{transform:translateX(-50%)} }
 @keyframes marquee-right { from{transform:translateX(-50%)} to{transform:translateX(0)} }
-@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
-@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-.anim-float1{animation:float1 6s ease-in-out infinite}
-.anim-float2{animation:float2 7s ease-in-out infinite}
-.anim-float3{animation:float3 5s ease-in-out infinite}
-.anim-float4{animation:float4 8s ease-in-out infinite}
-.marquee-left {animation:marquee-left 28s linear infinite}
-.marquee-right{animation:marquee-right 22s linear infinite}
+
+/* Pulse for status dot */
+@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.75)} }
+
+/* Stagger in — scale(0.97) start, not scale(0) — nothing in real world appears from nothing */
+@keyframes stagger-in {
+  from { opacity:0; transform:translateY(8px) scale(0.97); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+
+/* Float class bindings — use var(--ease-in-out) for smooth perpetual motion */
+.anim-float1 { animation: float1 6s   var(--ease-in-out, ease-in-out) infinite; }
+.anim-float2 { animation: float2 7.5s var(--ease-in-out, ease-in-out) infinite; }
+.anim-float3 { animation: float3 5.5s var(--ease-in-out, ease-in-out) infinite; }
+.anim-float4 { animation: float4 8s   var(--ease-in-out, ease-in-out) infinite; }
+.marquee-left  { animation: marquee-left  28s linear infinite; will-change: transform; }
+.marquee-right { animation: marquee-right 22s linear infinite; will-change: transform; }
+
+/* Button press feedback — Emil: buttons must feel responsive to press */
+.btn-press {
+  transition: transform 160ms var(--ease-out, cubic-bezier(0.23,1,0.32,1)),
+              box-shadow 160ms var(--ease-out, cubic-bezier(0.23,1,0.32,1)),
+              opacity    160ms var(--ease-out, cubic-bezier(0.23,1,0.32,1));
+  cursor: pointer;
+}
+.btn-press:active { transform: scale(0.97); }
+
+/* Card hover lift — perceived depth without changing layout */
+.card-lift {
+  transition: transform 220ms var(--ease-out, cubic-bezier(0.23,1,0.32,1)),
+              box-shadow 220ms var(--ease-out, cubic-bezier(0.23,1,0.32,1));
+}
+@media (hover: hover) and (pointer: fine) {
+  .card-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.10);
+  }
+}
+
+/* Chip hover lift for insight river */
+.chip-lift {
+  transition: transform 180ms var(--ease-out, cubic-bezier(0.23,1,0.32,1));
+}
+@media (hover: hover) and (pointer: fine) {
+  .chip-lift:hover { transform: translateY(-2px); }
+}
+
+/* Stagger classes — 60ms apart, stays under 300ms total for 5 items
+ * animation-play-state controlled by parent CSS var for scroll-triggered start */
+.stagger-1 { opacity:0; animation: stagger-in 420ms cubic-bezier(0.23,1,0.32,1) both; animation-delay:  0ms; animation-play-state: var(--stagger-state, paused); }
+.stagger-2 { opacity:0; animation: stagger-in 420ms cubic-bezier(0.23,1,0.32,1) both; animation-delay: 60ms; animation-play-state: var(--stagger-state, paused); }
+.stagger-3 { opacity:0; animation: stagger-in 420ms cubic-bezier(0.23,1,0.32,1) both; animation-delay:120ms; animation-play-state: var(--stagger-state, paused); }
+.stagger-4 { opacity:0; animation: stagger-in 420ms cubic-bezier(0.23,1,0.32,1) both; animation-delay:180ms; animation-play-state: var(--stagger-state, paused); }
+.stagger-5 { opacity:0; animation: stagger-in 420ms cubic-bezier(0.23,1,0.32,1) both; animation-delay:240ms; animation-play-state: var(--stagger-state, paused); }
+
+/* Reduced motion — keep opacity fades, remove all position/scale/rotation animations */
+@media (prefers-reduced-motion: reduce) {
+  .anim-float1,.anim-float2,.anim-float3,.anim-float4 { animation: none; }
+  .marquee-left,.marquee-right { animation-duration: 0.01ms !important; }
+  .stagger-1,.stagger-2,.stagger-3,.stagger-4,.stagger-5 { animation: none; opacity: 1; }
+  .btn-press:active { transform: none; }
+  .card-lift:hover  { transform: none; }
+}
 `;
 
 /* ─── Floating insight card atoms ───────────────────────────────────────────── */
@@ -596,7 +685,7 @@ const ROW2 = [
 function InsightChip({ item }: { item: typeof ROW1[0] }) {
   const Icon = item.icon;
   return (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-black/[0.07] shadow-sm shrink-0 select-none">
+    <div className="chip-lift flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-black/[0.07] shadow-sm shrink-0 select-none">
       <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: item.bg }}>
         <Icon size={14} style={{ color: item.color }} />
       </div>
@@ -616,6 +705,23 @@ function InsightChip({ item }: { item: typeof ROW1[0] }) {
 /* ─── Main page ─────────────────────────────────────────────────────────────── */
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState(0);
+
+  /* Emil: mouse-tracking 3D tilt with asymmetric CSS transition timing
+   * Following mouse: 120ms (feels responsive, instant feedback)
+   * Returning to rest: 700ms (simulates spring settle — momentum without JS springs)
+   */
+  const heroRef = useRef<HTMLDivElement>(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0, active: false });
+  const handleHeroMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = heroRef.current; if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const dx = (e.clientX - (rect.left + rect.width / 2))  / (rect.width  / 2);
+    const dy = (e.clientY - (rect.top  + rect.height / 2)) / (rect.height / 2);
+    setTilt({ x: dy * -5, y: dx * 6, active: true });
+  }, []);
+  const handleHeroMouseLeave = useCallback(() => {
+    setTilt({ x: 0, y: 0, active: false });
+  }, []);
 
   const FEATURES = [
     {
@@ -680,7 +786,7 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-3">
             <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
-               className="flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-bold transition-all hover:-translate-y-0.5"
+               className="btn-press flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-bold"
                style={{ background: 'linear-gradient(135deg,#F5AA84,#D97248)', boxShadow: '0 4px 14px rgba(217,114,72,0.35)' }}>
               Work with us <ExternalLink size={11} />
             </a>
@@ -729,11 +835,11 @@ export default function LandingPage() {
           <Reveal delay={240}>
             <div className="flex items-center justify-center gap-4 flex-wrap mb-6">
               <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
-                 className="flex items-center gap-2 px-7 py-3.5 rounded-full text-white text-sm font-bold transition-all hover:-translate-y-0.5"
+                 className="btn-press flex items-center gap-2 px-7 py-3.5 rounded-full text-white text-sm font-bold"
                  style={{ background: 'linear-gradient(135deg,#F5AA84,#D97248)', boxShadow: '0 8px 24px rgba(217,114,72,0.35)' }}>
                 Get a free AI audit <ArrowRight size={14} />
               </a>
-              <a href="#features" className="flex items-center gap-2 px-7 py-3.5 rounded-full border-2 border-[#E8D5C8] bg-white text-[#333] text-sm font-semibold hover:border-[#D4B8A8] transition-colors">
+              <a href="#features" className="btn-press flex items-center gap-2 px-7 py-3.5 rounded-full border-2 border-[#E8D5C8] bg-white text-[#333] text-sm font-semibold">
                 See capabilities <ChevronRight size={14} />
               </a>
             </div>
@@ -741,11 +847,21 @@ export default function LandingPage() {
           </Reveal>
         </div>
 
-        {/* ── Floating card scene ─────────────────────────────────────────── */}
-        <div className="relative max-w-6xl mx-auto px-6 mt-14 h-[480px] sm:h-[560px]">
-          {/* Centre: Video ABCD page mockup */}
+        {/* ── Floating card scene — mouse-tracking 3D tilt (Emil: spring via CSS) ── */}
+        <div ref={heroRef}
+          className="relative max-w-6xl mx-auto px-6 mt-14 h-[480px] sm:h-[560px]"
+          onMouseMove={handleHeroMouseMove}
+          onMouseLeave={handleHeroMouseLeave}>
+          {/* Centre: Video ABCD mockup with 3D tilt */}
           <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[560px] sm:w-[660px]"
-            style={{ animation: 'float3 7s ease-in-out infinite' }}>
+            style={{
+              transform: `perspective(1200px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(-4px)`,
+              /* Asymmetric: fast follow (120ms), slow spring-settle return (700ms) */
+              transition: tilt.active
+                ? 'transform 120ms cubic-bezier(0.23,1,0.32,1)'
+                : 'transform 700ms cubic-bezier(0.23,1,0.32,1)',
+              willChange: 'transform',
+            }}>
             <VideoAbcdMockup />
           </div>
 
@@ -845,7 +961,7 @@ export default function LandingPage() {
                 YouTube comments → five team briefs → Google Ads improvements, all in one click.
               </p>
               <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
-                 className="shrink-0 inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold text-white transition-all hover:-translate-y-0.5 whitespace-nowrap"
+                 className="btn-press shrink-0 inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold text-white whitespace-nowrap"
                  style={{ background: 'linear-gradient(135deg,#F5AA84,#D97248)', boxShadow: '0 8px 24px rgba(217,114,72,0.3)' }}>
                 <PlayCircle size={14} /> See live demo
               </a>
@@ -906,7 +1022,7 @@ export default function LandingPage() {
                       ))}
                     </ul>
                     <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
-                       className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold self-start mt-2"
+                       className="btn-press inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold self-start mt-2"
                        style={{ background: feat.color }}>
                       Learn more <ArrowRight size={13} />
                     </a>
@@ -932,7 +1048,7 @@ export default function LandingPage() {
                     ))}
                   </ul>
                   <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
-                     className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold"
+                     className="btn-press inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold"
                      style={{ background: feat.color }}>
                     Learn more <ArrowRight size={13} />
                   </a>
@@ -960,23 +1076,21 @@ export default function LandingPage() {
               </h2>
             </div>
           </Reveal>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <StaggerReveal className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {[
               { n:'01', color:'#dbeafe', tc:'#1d4ed8', title:'Connect your data', desc:'Google Ads scripts sync campaigns, search terms and change history automatically. Social scrapers pull Reddit discussions and competitor YouTube data.' },
               { n:'02', color:'#ede9fe', tc:'#5b21b6', title:'AI analyses everything', desc:'Gemini Vision and Claude models run structured analysis across your full account — finding patterns, risks and opportunities in seconds.' },
               { n:'03', color:'#d1fae5', tc:'#065f46', title:'You approve. It executes.', desc:'Every suggestion ships with a rationale and expected impact. One click applies it. Every action is fully reversible.' },
             ].map((s,i) => (
-              <Reveal key={s.n} delay={i * 100}>
-                <div className="rounded-2xl p-7 h-full" style={{ background: s.color }}>
-                  <div className="w-10 h-10 rounded-xl bg-white/60 flex items-center justify-center mb-5">
-                    <span className="text-sm font-black" style={{ color: s.tc }}>{s.n}</span>
-                  </div>
-                  <h3 className="text-lg font-black text-[#0a0a0a] mb-3">{s.title}</h3>
-                  <p className="text-sm text-[#444] leading-relaxed">{s.desc}</p>
+              <div key={s.n} className={`stagger-${i+1} card-lift rounded-2xl p-7 h-full`} style={{ background: s.color }}>
+                <div className="w-10 h-10 rounded-xl bg-white/60 flex items-center justify-center mb-5">
+                  <span className="text-sm font-black" style={{ color: s.tc }}>{s.n}</span>
                 </div>
-              </Reveal>
+                <h3 className="text-lg font-black text-[#0a0a0a] mb-3">{s.title}</h3>
+                <p className="text-sm text-[#444] leading-relaxed">{s.desc}</p>
+              </div>
             ))}
-          </div>
+          </StaggerReveal>
         </div>
       </section>
 
@@ -991,23 +1105,21 @@ export default function LandingPage() {
               </h2>
             </div>
           </Reveal>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <StaggerReveal className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
               { to:94, suffix:'%', label:'vs. manual ROAS forecasting',        color:'#dbeafe', tc:'#1e40af' },
               { to:60, suffix:'%', label:'average reduction in wasted spend',  color:'#d1fae5', tc:'#065f46' },
               { to:3,  suffix:'x', label:'faster campaign optimisation cycle', color:'#ede9fe', tc:'#5b21b6' },
               { to:12, suffix:'+', label:'AI-powered modules in one platform', color:'#fef3c7', tc:'#92400e' },
             ].map((s,i) => (
-              <Reveal key={s.label} delay={i * 80}>
-                <div className="rounded-2xl p-7 text-center" style={{ background: s.color }}>
-                  <p className="text-5xl font-black tabular-nums mb-2" style={{ color: s.tc }}>
-                    <Counter to={s.to} suffix={s.suffix} />
-                  </p>
-                  <p className="text-xs text-[#555] leading-snug">{s.label}</p>
-                </div>
-              </Reveal>
+              <div key={s.label} className={`stagger-${i+1} card-lift rounded-2xl p-7 text-center`} style={{ background: s.color }}>
+                <p className="text-5xl font-black tabular-nums mb-2" style={{ color: s.tc }}>
+                  <Counter to={s.to} suffix={s.suffix} />
+                </p>
+                <p className="text-xs text-[#555] leading-snug">{s.label}</p>
+              </div>
             ))}
-          </div>
+          </StaggerReveal>
         </div>
       </section>
 
@@ -1055,27 +1167,25 @@ export default function LandingPage() {
               </h2>
             </div>
           </Reveal>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <StaggerReveal className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {[
               { bg:'#eff6ff', logo:'CROWN ICE',   quote:'Before AdInsight, our team was spending hours every week exporting CSVs and building pivot tables. Now the AI flags issues before we even open the account.',                   name:'Alex Chen',    role:'Paid Media Lead'   },
               { bg:'#fdf4ff', logo:'VELDT BRAND', quote:'The campaign optimizer found $3k/month in wasted spend in our first week. One-click apply with rollback gave us the confidence to actually act on the suggestions.',   name:'Sarah Kim',    role:'Growth Director'  },
               { bg:'#fff7ed', logo:'ALPINE GEAR', quote:'The Reddit intelligence module completely changed how we brief creatives. Real audience language, real pain points — not focus group fluff.',                              name:'Marco Rivera', role:'CMO'              },
             ].map((t,i) => (
-              <Reveal key={i} delay={i * 100}>
-                <div className="rounded-2xl p-7 flex flex-col h-full" style={{ background: t.bg }}>
-                  <p className="text-sm font-black text-[#0a0a0a] tracking-widest mb-5">{t.logo}</p>
-                  <p className="text-sm text-[#333] leading-relaxed flex-1 mb-6">&ldquo;{t.quote}&rdquo;</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-black/10 flex items-center justify-center text-xs font-black text-[#333]">{t.name[0]}</div>
-                    <div>
-                      <p className="text-xs font-bold text-[#111]">{t.name}</p>
-                      <p className="text-xs text-[#666]">{t.role}</p>
-                    </div>
+              <div key={i} className={`stagger-${i+1} card-lift rounded-2xl p-7 flex flex-col h-full`} style={{ background: t.bg }}>
+                <p className="text-sm font-black text-[#0a0a0a] tracking-widest mb-5">{t.logo}</p>
+                <p className="text-sm text-[#333] leading-relaxed flex-1 mb-6">&ldquo;{t.quote}&rdquo;</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-black/10 flex items-center justify-center text-xs font-black text-[#333]">{t.name[0]}</div>
+                  <div>
+                    <p className="text-xs font-bold text-[#111]">{t.name}</p>
+                    <p className="text-xs text-[#666]">{t.role}</p>
                   </div>
                 </div>
-              </Reveal>
+              </div>
             ))}
-          </div>
+          </StaggerReveal>
         </div>
       </section>
 
@@ -1098,12 +1208,12 @@ export default function LandingPage() {
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap relative">
               <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
-                 className="flex items-center gap-2 px-8 py-4 rounded-full text-white text-base font-bold transition-all hover:-translate-y-0.5"
+                 className="btn-press flex items-center gap-2 px-8 py-4 rounded-full text-white text-base font-bold"
                  style={{ background:'linear-gradient(135deg,#F5AA84,#D97248)', boxShadow:'0 12px 32px rgba(217,114,72,0.35)' }}>
                 Get a free AI audit <ArrowRight size={16} />
               </a>
               <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
-                 className="flex items-center gap-2 px-8 py-4 rounded-full border-2 border-[#E8D5C8] bg-white text-[#333] text-base font-semibold hover:border-[#D4B8A8] transition-colors">
+                 className="btn-press flex items-center gap-2 px-8 py-4 rounded-full border-2 border-[#E8D5C8] bg-white text-[#333] text-base font-semibold">
                 Learn more <ExternalLink size={14} />
               </a>
             </div>
