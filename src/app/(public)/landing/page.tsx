@@ -65,7 +65,7 @@ const FEATURES = [
     glow: 'rgba(245,158,11,0.15)',
     tag: 'Search Intelligence',
     title: 'Search Terms Analysis',
-    desc: 'Maps your entire search term universe: winners to scale, wasted spend to cut, gaps your competitors haven't touched yet. Updated on every data sync.',
+    desc: "Maps your entire search term universe: winners to scale, wasted spend to cut, gaps your competitors haven't touched yet. Updated on every data sync.",
     bullets: ['ROAS segmentation by term', 'Intent classification', 'Negative keyword export'],
   },
   {
