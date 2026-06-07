@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, ShoppingBag, Settings, Wrench, History,
-  Video, Building2, SearchCode, PlayCircle, ExternalLink, BookMarked, Globe2, Sparkles,
+  Video, Building2, SearchCode, PlayCircle, ExternalLink, BookMarked, Globe2, Sparkles, Radio,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/context/i18n-context';
@@ -49,7 +49,7 @@ export function Sidebar() {
           </Link>
         ))}
 
-        {/* Insight tools — YouTube Intel & Reddit Intel */}
+        {/* Insight tools — YouTube Intel, AI Visibility & Reddit Intel */}
         <div className="pt-2 mt-2 border-t border-border/60 space-y-0.5">
           <a
             href="/yt"
@@ -61,6 +61,18 @@ export function Sidebar() {
             <span className="flex-1">{t('nav_youtube_intel')}</span>
             <ExternalLink size={11} className="opacity-40 group-hover:opacity-70 transition-opacity" />
           </a>
+          <Link
+            href="/ai-visibility"
+            className={cn(
+              'flex items-center gap-2.5 px-3 py-2 rounded text-sm font-medium transition-colors',
+              pathname.startsWith('/ai-visibility')
+                ? 'bg-accent text-accent-foreground'
+                : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+            )}
+          >
+            <Radio size={15} className="text-violet-500/70" />
+            {t('nav_ai_visibility')}
+          </Link>
           <Link
             href="/reddit-intel"
             className={cn(
