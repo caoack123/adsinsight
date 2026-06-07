@@ -9,6 +9,25 @@ import {
   SmilePlus, Meh, Frown, Lightbulb, MoveRight,
 } from 'lucide-react';
 
+/* ─── Bagel logo SVG (donut + gradient) ─────────────────────────────────────── */
+function BagelLogo({ size = 28, id = 'a' }: { size?: number; id?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={`bg-${id}`} x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#F5AA84" />
+          <stop offset="100%" stopColor="#D97248" />
+        </linearGradient>
+        <mask id={`bm-${id}`}>
+          <circle cx="20" cy="20" r="18" fill="white" />
+          <circle cx="20" cy="20" r="7" fill="black" />
+        </mask>
+      </defs>
+      <circle cx="20" cy="20" r="18" fill={`url(#bg-${id})`} mask={`url(#bm-${id})`} />
+    </svg>
+  );
+}
+
 /* ─── Animated counter ──────────────────────────────────────────────────────── */
 function Counter({ to, suffix = '', duration = 1800 }: { to: number; suffix?: string; duration?: number }) {
   const [val, setVal] = useState(0);
@@ -376,9 +395,9 @@ export default function LandingPage() {
       <style>{GLOBAL_CSS}</style>
 
       {/* ── TOP BAR ──────────────────────────────────────────────────────── */}
-      <div style={{ background: '#fef2f2' }} className="border-b border-red-100 px-4 py-2.5 text-center">
-        <p className="text-xs font-medium text-red-700 flex items-center justify-center gap-2">
-          <PlayCircle size={13} className="text-red-500 shrink-0" />
+      <div style={{ background: '#FEF0E6' }} className="border-b border-[#F5D5C0] px-4 py-2.5 text-center">
+        <p className="text-xs font-medium text-[#A84F28] flex items-center justify-center gap-2">
+          <PlayCircle size={13} className="text-[#D97248] shrink-0" />
           New: YouTube Comment Intelligence now connects directly to Google Ads optimisation — a world first for performance agencies.{' '}
           <a href="#youtube-intel" className="underline hover:no-underline font-semibold">See how →</a>
         </p>
@@ -388,11 +407,9 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#f0f0f0]">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center">
-              <span className="text-xs font-black text-white">B</span>
-            </div>
-            <span className="text-sm font-bold tracking-tight">Bagel Digital</span>
-            <span className="hidden sm:block text-xs text-[#bbb] font-normal">AI Operation Center</span>
+            <BagelLogo size={28} id="nav" />
+            <span className="text-sm font-bold tracking-tight" style={{ fontFamily: 'ui-monospace, SFMono-Regular, monospace', letterSpacing: '-0.01em' }}>bagel digital</span>
+            <span className="hidden sm:block text-xs text-[#bbb] font-normal" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>AI Operation Center</span>
           </div>
           <div className="hidden md:flex items-center gap-7 text-sm text-[#555]">
             {['Features','How it works','Results'].map(l => (
@@ -401,7 +418,8 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-3">
             <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
-               className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#0a0a0a] text-white text-sm font-bold hover:bg-[#222] transition-colors">
+               className="flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-bold transition-all hover:-translate-y-0.5"
+               style={{ background: 'linear-gradient(135deg,#F5AA84,#D97248)', boxShadow: '0 4px 14px rgba(217,114,72,0.35)' }}>
               Work with us <ExternalLink size={11} />
             </a>
           </div>
@@ -410,20 +428,20 @@ export default function LandingPage() {
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden pt-20 pb-0"
-        style={{ background: 'linear-gradient(160deg, #f0ecff 0%, #e8f4ff 40%, #f8f8ff 100%)' }}>
+        style={{ background: 'linear-gradient(160deg, #FEF4EE 0%, #FDF8F3 45%, #FAFAF9 100%)' }}>
 
         {/* Background circles */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[500px] rounded-full opacity-30"
-            style={{ background: 'radial-gradient(ellipse,#a78bfa 0%,transparent 70%)' }} />
-          <div className="absolute top-1/2 -left-32 w-64 h-64 rounded-full opacity-20"
-            style={{ background: 'radial-gradient(ellipse,#60a5fa 0%,transparent 70%)' }} />
+          <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[500px] rounded-full opacity-25"
+            style={{ background: 'radial-gradient(ellipse,#F5AA84 0%,transparent 70%)' }} />
+          <div className="absolute top-1/2 -left-32 w-64 h-64 rounded-full opacity-15"
+            style={{ background: 'radial-gradient(ellipse,#F5AA84 0%,transparent 70%)' }} />
         </div>
 
         <div className="relative max-w-4xl mx-auto px-6 text-center">
           <Reveal>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 border border-[#d4ceff] text-[#4f46e5] text-xs font-semibold mb-8 shadow-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#4f46e5]" style={{ animation: 'pulse-dot 2s ease-in-out infinite' }} />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 border border-[#F5D5C0] text-[#A84F28] text-xs font-semibold mb-8 shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#D97248]" style={{ animation: 'pulse-dot 2s ease-in-out infinite' }} />
               Bagel Digital · Internal AI Platform
             </div>
           </Reveal>
@@ -434,7 +452,7 @@ export default function LandingPage() {
               Run Google Ads<br />
               that actually{' '}
               <em className="not-italic" style={{
-                background: 'linear-gradient(135deg,#2563eb 0%,#7c3aed 100%)',
+                background: 'linear-gradient(135deg,#F5AA84 0%,#D97248 100%)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               }}>win</em>
             </h1>
@@ -450,10 +468,10 @@ export default function LandingPage() {
             <div className="flex items-center justify-center gap-4 flex-wrap mb-6">
               <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
                  className="flex items-center gap-2 px-7 py-3.5 rounded-full text-white text-sm font-bold transition-all hover:-translate-y-0.5"
-                 style={{ background: 'linear-gradient(135deg,#2563eb,#7c3aed)', boxShadow: '0 8px 24px rgba(99,102,241,0.35)' }}>
+                 style={{ background: 'linear-gradient(135deg,#F5AA84,#D97248)', boxShadow: '0 8px 24px rgba(217,114,72,0.35)' }}>
                 Get a free AI audit <ArrowRight size={14} />
               </a>
-              <a href="#features" className="flex items-center gap-2 px-7 py-3.5 rounded-full border-2 border-[#e0e0e0] bg-white text-[#333] text-sm font-semibold hover:border-[#c0c0c0] transition-colors">
+              <a href="#features" className="flex items-center gap-2 px-7 py-3.5 rounded-full border-2 border-[#E8D5C8] bg-white text-[#333] text-sm font-semibold hover:border-[#D4B8A8] transition-colors">
                 See capabilities <ChevronRight size={14} />
               </a>
             </div>
@@ -711,7 +729,7 @@ export default function LandingPage() {
               </p>
               <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
                  className="inline-flex items-center gap-2 mt-5 px-6 py-2.5 rounded-full text-sm font-bold text-white transition-all hover:-translate-y-0.5"
-                 style={{ background: 'linear-gradient(135deg,#ef4444,#f97316)', boxShadow: '0 8px 24px rgba(239,68,68,0.3)' }}>
+                 style={{ background: 'linear-gradient(135deg,#F5AA84,#D97248)', boxShadow: '0 8px 24px rgba(217,114,72,0.3)' }}>
                 <PlayCircle size={14} /> See the YouTube intelligence demo
               </a>
             </div>
@@ -724,7 +742,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <Reveal>
             <div className="text-center mb-12">
-              <p className="text-xs font-semibold text-[#2563eb] tracking-widest uppercase mb-3">Modules</p>
+              <p className="text-xs font-semibold text-[#D97248] tracking-widest uppercase mb-3">Modules</p>
               <h2 className="text-4xl sm:text-5xl font-black tracking-tight leading-tight" style={{ letterSpacing: '-0.02em' }}>
                 Your whole ads program.<br />
                 <span className="text-[#bbb]">Finally connected.</span>
@@ -739,7 +757,7 @@ export default function LandingPage() {
                 {FEATURES.map((f, i) => (
                   <button key={i} onClick={() => setActiveTab(i)}
                     className="px-5 py-2 rounded-full text-sm font-semibold transition-all"
-                    style={activeTab === i ? { background: '#0a0a0a', color: '#fff' } : { color: '#666' }}>
+                    style={activeTab === i ? { background: 'linear-gradient(135deg,#F5AA84,#D97248)', color: '#fff' } : { color: '#666' }}>
                     {f.label}
                   </button>
                 ))}
@@ -790,7 +808,7 @@ export default function LandingPage() {
               <p className="text-xs font-semibold text-[#999] tracking-widest uppercase mb-3">Process</p>
               <h2 className="text-4xl sm:text-5xl font-black tracking-tight" style={{ letterSpacing: '-0.02em' }}>
                 Human strategy.<br />
-                <span style={{ background:'linear-gradient(135deg,#2563eb,#7c3aed)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
+                <span style={{ background:'linear-gradient(135deg,#F5AA84,#D97248)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
                   Machine execution.
                 </span>
               </h2>
@@ -917,15 +935,15 @@ export default function LandingPage() {
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <section className="py-24 px-6 overflow-hidden"
-        style={{ background: 'linear-gradient(160deg,#f0ecff 0%,#e8f4ff 100%)' }}>
+        style={{ background: 'linear-gradient(160deg,#FEF4EE 0%,#FDF0E6 100%)' }}>
         <div className="max-w-3xl mx-auto text-center relative">
           <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full opacity-40"
-            style={{ background: 'radial-gradient(ellipse,#a78bfa 0%,transparent 70%)' }} />
+            style={{ background: 'radial-gradient(ellipse,#F5AA84 0%,transparent 70%)' }} />
           <Reveal>
-            <p className="text-xs font-semibold text-[#7c3aed] tracking-widest uppercase mb-5 relative">Ready?</p>
+            <p className="text-xs font-semibold text-[#D97248] tracking-widest uppercase mb-5 relative">Ready?</p>
             <h2 className="text-5xl sm:text-6xl font-black leading-tight mb-6 relative" style={{ letterSpacing: '-0.03em' }}>
               Run your campaigns<br />
-              <span style={{ background:'linear-gradient(135deg,#2563eb,#7c3aed)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
+              <span style={{ background:'linear-gradient(135deg,#F5AA84,#D97248)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
                 at AI speed
               </span>
             </h2>
@@ -935,11 +953,11 @@ export default function LandingPage() {
             <div className="flex items-center justify-center gap-4 flex-wrap relative">
               <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
                  className="flex items-center gap-2 px-8 py-4 rounded-full text-white text-base font-bold transition-all hover:-translate-y-0.5"
-                 style={{ background:'linear-gradient(135deg,#2563eb,#7c3aed)', boxShadow:'0 12px 32px rgba(99,102,241,0.35)' }}>
+                 style={{ background:'linear-gradient(135deg,#F5AA84,#D97248)', boxShadow:'0 12px 32px rgba(217,114,72,0.35)' }}>
                 Get a free AI audit <ArrowRight size={16} />
               </a>
               <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
-                 className="flex items-center gap-2 px-8 py-4 rounded-full border-2 border-[#d4d4d4] bg-white text-[#333] text-base font-semibold hover:border-[#bbb] transition-colors">
+                 className="flex items-center gap-2 px-8 py-4 rounded-full border-2 border-[#E8D5C8] bg-white text-[#333] text-base font-semibold hover:border-[#D4B8A8] transition-colors">
                 Learn more <ExternalLink size={14} />
               </a>
             </div>
@@ -951,10 +969,8 @@ export default function LandingPage() {
       <footer className="border-t border-[#f0f0f0] py-10 px-6 bg-white">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center">
-              <span className="text-xs font-black text-white">B</span>
-            </div>
-            <span className="text-sm font-bold text-[#555]">Bagel Digital</span>
+            <BagelLogo size={22} id="footer" />
+            <span className="text-sm font-bold text-[#555]" style={{ fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}>bagel digital</span>
           </div>
           <p className="text-xs text-[#bbb]">AdInsight AI — Proprietary platform. &copy; {new Date().getFullYear()} Bagel Digital.</p>
           <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
