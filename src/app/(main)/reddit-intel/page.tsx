@@ -511,12 +511,6 @@ export default function RedditIntelPage() {
         : '请先在设置中配置 Google AI API Key。');
       return;
     }
-    if (!settings.redditClientId || !settings.redditClientSecret) {
-      setError(lang === 'en'
-        ? 'Reddit API credentials not configured. Go to Settings → add Reddit Client ID and Secret.'
-        : '请先在设置页面配置 Reddit Client ID 和 Client Secret。前往 reddit.com/prefs/apps 免费注册。');
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -528,12 +522,10 @@ export default function RedditIntelPage() {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query:                query.trim(),
-          output_lang:          outputLang,
-          gemini_api_key:       settings.googleAiApiKey || undefined,
-          model:                settings.videoAbcdModel,
-          reddit_client_id:     settings.redditClientId,
-          reddit_client_secret: settings.redditClientSecret,
+          query:          query.trim(),
+          output_lang:    outputLang,
+          gemini_api_key: settings.googleAiApiKey || undefined,
+          model:          settings.videoAbcdModel,
         }),
       });
       const data = await res.json();
@@ -614,17 +606,17 @@ export default function RedditIntelPage() {
       </div>
 
       {/* Credential status */}
-      {settings.redditClientId && settings.redditClientSecret ? (
+      {settings.googleAiApiKey ? (
         <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1.5">
           <span>✓</span>
-          {lang === 'en' ? 'Reddit credentials configured.' : 'Reddit 凭证已配置。'}
+          {lang === 'en' ? 'Google AI key configured. Reddit data fetched via Apify.' : 'Google AI Key 已配置，Reddit 数据通过 Apify 获取。'}
         </p>
       ) : (
         <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
           <span>⚠</span>
           {lang === 'en'
-            ? 'Reddit credentials not set — go to Settings to add your Client ID & Secret.'
-            : '未配置 Reddit 凭证 — 前往设置页面添加 Client ID 和 Secret。'}
+            ? 'Google AI API Key not set — go to Settings to configure.'
+            : '未配置 Google AI API Key — 前往设置页面添加。'}
           <a href="/settings" className="underline hover:no-underline">
             {lang === 'en' ? 'Settings →' : '去设置 →'}
           </a>

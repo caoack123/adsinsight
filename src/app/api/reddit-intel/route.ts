@@ -15,13 +15,11 @@ import { scrapeReddit, type RedditPost } from '@/lib/reddit-scraper';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface RedditIntelRequest {
-  query:             string;
-  output_lang:       'zh' | 'en';
-  gemini_api_key?:   string;
-  model?:            string;
-  post_limit?:       number;   // default 25
-  reddit_client_id:     string;
-  reddit_client_secret: string;
+  query:           string;
+  output_lang:     'zh' | 'en';
+  gemini_api_key?: string;
+  model?:          string;
+  post_limit?:     number;   // default 25
 }
 
 export interface RedditIntelReport {
@@ -99,19 +97,19 @@ export async function POST(request: NextRequest) {
 
   const {
     query,
-    output_lang          = 'en',
+    output_lang    = 'en',
     gemini_api_key,
-    model                = 'gemini-2.5-flash',
-    post_limit           = 25,
-    reddit_client_id     = process.env.REDDIT_CLIENT_ID ?? '',
-    reddit_client_secret = process.env.REDDIT_CLIENT_SECRET ?? '',
+    model          = 'gemini-2.5-flash',
+    post_limit     = 25,
   } = body;
 
   if (!query?.trim()) return NextResponse.json({ error: 'query is required' }, { status: 400 });
-  if (!reddit_client_id || !reddit_client_secret) {
+
+  const apifyToken = process.env.APIFY_API_TOKEN ?? '';
+  if (!apifyToken) {
     return NextResponse.json(
-      { error: 'Reddit API credentials not configured. Please add your Reddit Client ID and Secret in Settings.' },
-      { status: 400 },
+      { error: 'APIFY_API_TOKEN not configured on the server.' },
+      { status: 500 },
     );
   }
 
@@ -123,7 +121,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // ── 1. Fetch Reddit posts + comments ───────────────────────────────────
-    const posts = await scrapeReddit(query, reddit_client_id, reddit_client_secret, post_limit);
+    const posts = await scrapeReddit(query, apifyToken, post_limit);
 
     if (posts.length === 0) {
       return NextResponse.json({ error: 'No Reddit posts found for this query' }, { status: 404 });

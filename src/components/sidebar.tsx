@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, ShoppingBag, Settings, Wrench, History,
-  Video, Building2, SearchCode, PlayCircle, ExternalLink, BookMarked, Globe2,
+  Video, Building2, SearchCode, PlayCircle, ExternalLink, BookMarked, Globe2, Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/context/i18n-context';
@@ -17,7 +17,8 @@ export function Sidebar() {
     { href: '/',               label: t('nav_overview'),      icon: LayoutDashboard },
     { href: '/feed-optimizer', label: t('nav_feed'),          icon: ShoppingBag },
     { href: '/search-terms',   label: t('nav_search_terms'),  icon: SearchCode },
-    { href: '/change-tracker', label: t('nav_change_tracker'),icon: History },
+    { href: '/campaign-optimizer', label: t('nav_campaign_optimizer'), icon: Sparkles },
+    { href: '/change-tracker',     label: t('nav_change_tracker'),      icon: History },
     { href: '/video-abcd',     label: t('nav_video'),         icon: Video },
     { href: '/video-library',  label: t('nav_video_library'), icon: BookMarked },
     { href: '/accounts',       label: t('nav_accounts'),      icon: Building2 },

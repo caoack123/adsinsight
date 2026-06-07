@@ -543,43 +543,6 @@ export default function SettingsPage() {
             )}
           </div>
 
-          {/* Reddit API credentials */}
-          <div className="space-y-2 pt-3 border-t border-border">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-foreground">
-                Reddit Client ID
-                <span className="ml-2 text-muted-foreground font-normal">Reddit 社群洞察</span>
-              </label>
-              {!isStandard && (
-                <a
-                  href="https://www.reddit.com/prefs/apps"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-blue-400 hover:underline"
-                >
-                  获取 App 凭证 <ExternalLink size={10} />
-                </a>
-              )}
-            </div>
-            <MaskedInput
-              value={settings.redditClientId}
-              onChange={v => updateSettings({ redditClientId: v })}
-              placeholder="xxxxxxxxxxxxxxx"
-              disabled={isStandard}
-            />
-            <label className="text-xs font-medium text-foreground">Reddit Client Secret</label>
-            <MaskedInput
-              value={settings.redditClientSecret}
-              onChange={v => updateSettings({ redditClientSecret: v })}
-              placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-              disabled={isStandard}
-            />
-            {!isStandard && (
-              <p className="text-xs text-muted-foreground">
-                前往 reddit.com/prefs/apps → create app → 类型选 script → 获取 Client ID 和 Secret
-              </p>
-            )}
-          </div>
         </CardContent>
       </Card>
 

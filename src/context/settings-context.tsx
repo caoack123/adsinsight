@@ -90,14 +90,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         if (!json) return;
         setSettings(prev => ({
           ...prev,
-          openrouterApiKey:    json.openrouterApiKey    ?? prev.openrouterApiKey,
-          googleAiApiKey:      json.googleAiApiKey      ?? prev.googleAiApiKey,
-          youtubeApiKey:       json.youtubeApiKey       ?? prev.youtubeApiKey,
-          redditClientId:      json.redditClientId      ?? prev.redditClientId,
-          redditClientSecret:  json.redditClientSecret  ?? prev.redditClientSecret,
-          feedOptimizerModel:  json.feedOptimizerModel  ?? prev.feedOptimizerModel,
-          changeTrackerModel:  json.changeTrackerModel  ?? prev.changeTrackerModel,
-          videoAbcdModel:      json.videoAbcdModel      ?? prev.videoAbcdModel,
+          openrouterApiKey:   json.openrouterApiKey   ?? prev.openrouterApiKey,
+          googleAiApiKey:     json.googleAiApiKey     ?? prev.googleAiApiKey,
+          youtubeApiKey:      json.youtubeApiKey      ?? prev.youtubeApiKey,
+          feedOptimizerModel: json.feedOptimizerModel ?? prev.feedOptimizerModel,
+          changeTrackerModel: json.changeTrackerModel ?? prev.changeTrackerModel,
+          videoAbcdModel:     json.videoAbcdModel     ?? prev.videoAbcdModel,
         }));
       })
       .catch(() => {});

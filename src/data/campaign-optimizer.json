@@ -1,0 +1,276 @@
+{
+  "account_name": "Crowned Ice Store",
+  "account_id": "demo",
+  "currency": "USD",
+  "snapshot_date": "2026-06-07",
+  "date_range": "Last 30 days",
+  "campaigns": [
+    {
+      "id": "camp_001",
+      "name": "Shopping - Ice Jewelry",
+      "type": "SHOPPING",
+      "status": "ENABLED",
+      "bidding_strategy": "Target ROAS",
+      "target_roas": 3.0,
+      "daily_budget": 120.00,
+      "metrics": {
+        "impressions": 92400,
+        "clicks": 1386,
+        "ctr": 0.015,
+        "cost": 886.40,
+        "conversions": 29,
+        "conversions_value": 2159.71,
+        "roas": 2.44,
+        "cpc": 0.64,
+        "cost_per_conversion": 30.56
+      },
+      "ad_groups": [
+        {
+          "id": "ag_001",
+          "name": "Ice Crystal Rings",
+          "status": "ENABLED",
+          "max_cpc": 0.75,
+          "metrics": {
+            "impressions": 28600,
+            "clicks": 429,
+            "ctr": 0.015,
+            "cost": 322.25,
+            "conversions": 9,
+            "conversions_value": 449.91,
+            "roas": 1.40,
+            "cost_per_conversion": 35.81
+          }
+        },
+        {
+          "id": "ag_002",
+          "name": "Hip Hop Bracelets",
+          "status": "ENABLED",
+          "max_cpc": 0.55,
+          "metrics": {
+            "impressions": 41200,
+            "clicks": 618,
+            "ctr": 0.015,
+            "cost": 340.00,
+            "conversions": 8,
+            "conversions_value": 479.92,
+            "roas": 1.41,
+            "cost_per_conversion": 42.50
+          }
+        },
+        {
+          "id": "ag_003",
+          "name": "Snow Boots",
+          "status": "ENABLED",
+          "max_cpc": 0.90,
+          "metrics": {
+            "impressions": 22600,
+            "clicks": 339,
+            "ctr": 0.015,
+            "cost": 224.15,
+            "conversions": 12,
+            "conversions_value": 1229.88,
+            "roas": 5.49,
+            "cost_per_conversion": 18.68
+          }
+        }
+      ],
+      "top_search_terms": [
+        { "query": "iced out rings men", "clicks": 124, "conversions": 4, "cost": 85.20, "roas": 1.29 },
+        { "query": "hip hop bracelet gold", "clicks": 98, "conversions": 3, "cost": 62.40, "roas": 1.44 },
+        { "query": "snow boots waterproof", "clicks": 203, "conversions": 9, "cost": 148.10, "roas": 5.80 }
+      ]
+    },
+    {
+      "id": "camp_002",
+      "name": "Search - Brand Terms",
+      "type": "SEARCH",
+      "status": "ENABLED",
+      "bidding_strategy": "Target ROAS",
+      "target_roas": 5.0,
+      "daily_budget": 30.00,
+      "metrics": {
+        "impressions": 18900,
+        "clicks": 1701,
+        "ctr": 0.09,
+        "cost": 847.20,
+        "conversions": 81,
+        "conversions_value": 3239.19,
+        "roas": 3.82,
+        "cpc": 0.50,
+        "cost_per_conversion": 10.46
+      },
+      "ad_groups": [
+        {
+          "id": "ag_004",
+          "name": "Brand Keywords",
+          "status": "ENABLED",
+          "max_cpc": 0.80,
+          "metrics": {
+            "impressions": 14200,
+            "clicks": 1278,
+            "ctr": 0.09,
+            "cost": 638.40,
+            "conversions": 63,
+            "conversions_value": 2519.37,
+            "roas": 3.95,
+            "cost_per_conversion": 10.13
+          }
+        },
+        {
+          "id": "ag_005",
+          "name": "Competitor Terms",
+          "status": "ENABLED",
+          "max_cpc": 0.65,
+          "metrics": {
+            "impressions": 4700,
+            "clicks": 423,
+            "ctr": 0.09,
+            "cost": 208.80,
+            "conversions": 18,
+            "conversions_value": 719.82,
+            "roas": 3.45,
+            "cost_per_conversion": 11.60
+          }
+        }
+      ],
+      "top_search_terms": [
+        { "query": "crowned ice jewelry", "clicks": 386, "conversions": 22, "cost": 193.00, "roas": 5.12 },
+        { "query": "ice jewelry store online", "clicks": 198, "conversions": 11, "cost": 89.10, "roas": 4.62 },
+        { "query": "competitor brand iced out", "clicks": 134, "conversions": 4, "cost": 67.00, "roas": 1.79 }
+      ]
+    },
+    {
+      "id": "camp_003",
+      "name": "Search - Generic Jewelry",
+      "type": "SEARCH",
+      "status": "ENABLED",
+      "bidding_strategy": "Manual CPC",
+      "target_roas": null,
+      "daily_budget": 50.00,
+      "metrics": {
+        "impressions": 134000,
+        "clicks": 1206,
+        "ctr": 0.009,
+        "cost": 1086.00,
+        "conversions": 11,
+        "conversions_value": 659.89,
+        "roas": 0.61,
+        "cpc": 0.90,
+        "cost_per_conversion": 98.73
+      },
+      "ad_groups": [
+        {
+          "id": "ag_006",
+          "name": "Jewelry General",
+          "status": "ENABLED",
+          "max_cpc": 0.90,
+          "metrics": {
+            "impressions": 98000,
+            "clicks": 882,
+            "ctr": 0.009,
+            "cost": 793.80,
+            "conversions": 6,
+            "conversions_value": 359.94,
+            "roas": 0.45,
+            "cost_per_conversion": 132.30
+          }
+        },
+        {
+          "id": "ag_007",
+          "name": "Gold Jewelry",
+          "status": "ENABLED",
+          "max_cpc": 0.90,
+          "metrics": {
+            "impressions": 36000,
+            "clicks": 324,
+            "ctr": 0.009,
+            "cost": 292.20,
+            "conversions": 5,
+            "conversions_value": 299.95,
+            "roas": 1.03,
+            "cost_per_conversion": 58.44
+          }
+        }
+      ],
+      "top_search_terms": [
+        { "query": "jewelry", "clicks": 312, "conversions": 1, "cost": 280.80, "roas": 0.09 },
+        { "query": "cheap rings", "clicks": 187, "conversions": 0, "cost": 168.30, "roas": 0 },
+        { "query": "gold necklace women", "clicks": 143, "conversions": 3, "cost": 128.70, "roas": 1.17 }
+      ]
+    },
+    {
+      "id": "camp_004",
+      "name": "Performance Max - All Products",
+      "type": "PERFORMANCE_MAX",
+      "status": "ENABLED",
+      "bidding_strategy": "Maximize Conversion Value",
+      "target_roas": 2.5,
+      "daily_budget": 80.00,
+      "metrics": {
+        "impressions": 217000,
+        "clicks": 2170,
+        "ctr": 0.01,
+        "cost": 1736.00,
+        "conversions": 58,
+        "conversions_value": 3626.42,
+        "roas": 2.09,
+        "cpc": 0.80,
+        "cost_per_conversion": 29.93
+      },
+      "ad_groups": [],
+      "top_search_terms": [
+        { "query": "iced out jewelry", "clicks": 421, "conversions": 14, "cost": 337.10, "roas": 2.47 },
+        { "query": "hip hop accessories", "clicks": 312, "conversions": 8, "cost": 249.60, "roas": 1.93 },
+        { "query": "snow boots men winter", "clicks": 289, "conversions": 16, "cost": 231.20, "roas": 4.16 }
+      ]
+    },
+    {
+      "id": "camp_005",
+      "name": "Remarketing - Past Visitors",
+      "type": "DISPLAY",
+      "status": "ENABLED",
+      "bidding_strategy": "Target CPA",
+      "target_cpa": 18.00,
+      "daily_budget": 20.00,
+      "metrics": {
+        "impressions": 482000,
+        "clicks": 965,
+        "ctr": 0.002,
+        "cost": 289.50,
+        "conversions": 14,
+        "conversions_value": 699.86,
+        "roas": 2.42,
+        "cpc": 0.30,
+        "cost_per_conversion": 20.68
+      },
+      "ad_groups": [],
+      "top_search_terms": []
+    }
+  ],
+  "recent_changes": [
+    {
+      "date": "2026-05-28",
+      "campaign": "Shopping - Ice Jewelry",
+      "action": "切换出价策略至 tROAS 300%",
+      "result": "ROAS 从 1.83x 提升至 2.96x"
+    },
+    {
+      "date": "2026-06-01",
+      "campaign": "Search - Brand Terms",
+      "action": "日预算从 $15 提升至 $30",
+      "result": "转化量翻倍，ROAS 保持 4.8x"
+    },
+    {
+      "date": "2026-06-03",
+      "campaign": "Search - Generic Jewelry",
+      "action": "新增关键词 [gold necklace women]",
+      "result": "ROAS 1.17x，仍低于盈亏平衡"
+    }
+  ],
+  "account_totals": {
+    "total_cost": 4845.10,
+    "total_conversions_value": 10385.07,
+    "total_roas": 2.14,
+    "total_conversions": 193
+  }
+}
