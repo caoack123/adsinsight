@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Sparkles, TrendingUp, TrendingDown, Search, BarChart3, Video,
   Globe2, ArrowRight, CheckCircle2, Zap, Target,
-  ChevronRight, ExternalLink, Play, RotateCcw, AlertTriangle,
-  MessageSquare, ThumbsUp, Eye, DollarSign,
+  ChevronRight, ExternalLink, Play, AlertTriangle,
+  MessageSquare, ThumbsUp, Eye, DollarSign, PlayCircle,
+  SmilePlus, Meh, Frown, Lightbulb, MoveRight,
 } from 'lucide-react';
 
 /* ─── Animated counter ──────────────────────────────────────────────────────── */
@@ -197,26 +198,120 @@ function FeedCard() {
   );
 }
 
+/* ─── YouTube Intel card ────────────────────────────────────────────────────── */
+function YoutubeIntelCard() {
+  return (
+    <div className="w-72 bg-white rounded-2xl shadow-xl border border-black/[0.07] p-4 select-none">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-red-100 flex items-center justify-center"><PlayCircle size={12} className="text-red-500" /></div>
+          <span className="text-xs font-bold text-[#111]">YouTube Intel</span>
+        </div>
+        <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">324 comments</span>
+      </div>
+      {/* Fake video thumbnail */}
+      <div className="w-full h-24 rounded-xl mb-3 overflow-hidden relative"
+           style={{ background: 'linear-gradient(135deg,#1e1b4b,#312e81)' }}>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
+            <Play size={14} className="text-white ml-0.5" />
+          </div>
+        </div>
+        <div className="absolute bottom-2 left-2 right-2">
+          <p className="text-[11px] font-semibold text-white/90 leading-tight">Review: Top 5 Ice Jewelry Brands 2024</p>
+          <p className="text-[10px] text-white/50 mt-0.5">148K views · competitor</p>
+        </div>
+      </div>
+      {/* Sentiment bars */}
+      <p className="text-[10px] font-semibold text-[#999] uppercase tracking-wider mb-2">Comment sentiment</p>
+      {[
+        { label:'Positive', pct:71, color:'#059669', bg:'#d1fae5', icon:SmilePlus },
+        { label:'Neutral',  pct:21, color:'#d97706', bg:'#fef3c7', icon:Meh       },
+        { label:'Negative', pct:8,  color:'#dc2626', bg:'#fee2e2', icon:Frown      },
+      ].map(s => {
+        const Icon = s.icon;
+        return (
+          <div key={s.label} className="flex items-center gap-2 mb-1.5">
+            <Icon size={11} style={{ color: s.color, flexShrink: 0 }} />
+            <div className="flex-1 h-1.5 bg-[#f3f4f6] rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all" style={{ width:`${s.pct}%`, background: s.color }} />
+            </div>
+            <span className="text-[10px] font-bold w-7 text-right" style={{ color: s.color }}>{s.pct}%</span>
+          </div>
+        );
+      })}
+      {/* Top insight */}
+      <div className="mt-3 pt-3 border-t border-[#f0f0f0] flex gap-2">
+        <Lightbulb size={11} className="text-amber-500 shrink-0 mt-0.5" />
+        <p className="text-[11px] text-[#555] leading-relaxed">
+          Top objection: <strong className="text-[#111]">&ldquo;looks cheap in person&rdquo;</strong> — 38 comments
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── YouTube Ads bridge card ────────────────────────────────────────────────── */
+function AdsActionCard() {
+  return (
+    <div className="w-72 bg-white rounded-2xl shadow-xl border border-black/[0.07] p-4 select-none">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center"><Sparkles size={11} className="text-blue-600" /></div>
+        <span className="text-xs font-bold text-[#111]">AI Generated Actions</span>
+      </div>
+      <p className="text-[10px] font-semibold text-[#999] uppercase tracking-wider mb-2">From YouTube insight → Ads</p>
+      {[
+        {
+          from: '"looks cheap in person"',
+          to: 'Add RSA headline: "Premium 925 Silver — Feel the Difference"',
+          color: '#2563eb', bg: '#eff6ff', icon: MessageSquare,
+        },
+        {
+          from: '"where do I buy this?"',
+          to: 'New campaign: Brand + "buy [brand name]" exact match',
+          color: '#7c3aed', bg: '#ede9fe', icon: Target,
+        },
+        {
+          from: '"shipping took forever"',
+          to: 'Add callout extension: "Ships in 24h · Free returns"',
+          color: '#059669', bg: '#d1fae5', icon: Zap,
+        },
+      ].map((a, i) => {
+        const Icon = a.icon;
+        return (
+          <div key={i} className="rounded-xl p-2.5 mb-2 last:mb-0" style={{ background: a.bg }}>
+            <p className="text-[10px] text-[#888] mb-1 truncate">💬 {a.from}</p>
+            <div className="flex items-start gap-1.5">
+              <Icon size={10} style={{ color: a.color, flexShrink:0, marginTop:1 }} />
+              <p className="text-[11px] font-semibold leading-tight" style={{ color: a.color }}>{a.to}</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ─── Auto-scroll insight rows ──────────────────────────────────────────────── */
 const ROW1 = [
-  { icon: TrendingUp,   color:'#059669', bg:'#d1fae5', label:'Snow Boots ROAS',        val:'5.49x',    delta:'+2.2x',   positive:true  },
-  { icon: Globe2,       color:'#f97316', bg:'#fff7ed', label:'Reddit Sentiment',        val:'89/100',   delta:'High',    positive:true  },
-  { icon: Video,        color:'#ef4444', bg:'#fee2e2', label:'Hook Score — UGC v3',     val:'88/100',   delta:'Strong',  positive:true  },
-  { icon: DollarSign,   color:'#dc2626', bg:'#fee2e2', label:'Generic Jewelry waste',   val:'$794/mo',  delta:'urgent',  positive:false },
-  { icon: Target,       color:'#7c3aed', bg:'#ede9fe', label:'Brand ROAS',              val:'3.82x',    delta:'+0.4x',   positive:true  },
-  { icon: Search,       color:'#2563eb', bg:'#dbeafe', label:'Wasted search terms',     val:'47 terms', delta:'$1.1K',   positive:false },
-  { icon: Sparkles,     color:'#d97706', bg:'#fef3c7', label:'AI suggestions ready',    val:'9 total',  delta:'3 high',  positive:null  },
-  { icon: BarChart3,    color:'#059669', bg:'#d1fae5', label:'Feed quality avg score',  val:'67/100',   delta:'+8 pts',  positive:true  },
+  { icon: TrendingUp,   color:'#059669', bg:'#d1fae5', label:'Snow Boots ROAS',              val:'5.49x',    delta:'+2.2x',     positive:true  },
+  { icon: PlayCircle,   color:'#dc2626', bg:'#fee2e2', label:'YT comment signals found',     val:'324',      delta:'4 videos',  positive:null  },
+  { icon: Video,        color:'#ef4444', bg:'#fee2e2', label:'Hook Score — UGC v3',           val:'88/100',   delta:'Strong',    positive:true  },
+  { icon: DollarSign,   color:'#dc2626', bg:'#fee2e2', label:'Generic Jewelry waste',         val:'$794/mo',  delta:'urgent',    positive:false },
+  { icon: Target,       color:'#7c3aed', bg:'#ede9fe', label:'Brand ROAS',                    val:'3.82x',    delta:'+0.4x',     positive:true  },
+  { icon: Search,       color:'#2563eb', bg:'#dbeafe', label:'Wasted search terms',           val:'47 terms', delta:'$1.1K',     positive:false },
+  { icon: Sparkles,     color:'#d97706', bg:'#fef3c7', label:'AI suggestions ready',          val:'9 total',  delta:'3 high',    positive:null  },
+  { icon: BarChart3,    color:'#059669', bg:'#d1fae5', label:'Feed quality avg score',        val:'67/100',   delta:'+8 pts',    positive:true  },
 ];
 const ROW2 = [
-  { icon: Eye,          color:'#7c3aed', bg:'#ede9fe', label:'Impression share lost',   val:'28%',      delta:'budget',  positive:false },
-  { icon: MessageSquare,color:'#f97316', bg:'#fff7ed', label:'Reddit comments read',    val:'1,240',    delta:'30 posts',positive:null  },
-  { icon: ThumbsUp,     color:'#2563eb', bg:'#dbeafe', label:'Brand ABCD avg',          val:'79/100',   delta:'B is low',positive:true  },
-  { icon: TrendingDown, color:'#dc2626', bg:'#fee2e2', label:'"cheap rings" spend',     val:'$168',     delta:'0 conv',  positive:false },
-  { icon: Zap,          color:'#059669', bg:'#d1fae5', label:'Auto-applied this week',  val:'6 actions',delta:'all good',positive:true  },
-  { icon: Video,        color:'#ef4444', bg:'#fee2e2', label:'Best hook type',          val:'Unboxing', delta:'+34% CTR',positive:true  },
-  { icon: Globe2,       color:'#f97316', bg:'#fff7ed', label:'Pain point opportunity',  val:'"sizing"', delta:'not addressed',positive:null},
-  { icon: BarChart3,    color:'#7c3aed', bg:'#ede9fe', label:'PMax vs target ROAS',     val:'2.09x',    delta:'-0.41x',  positive:false },
+  { icon: Eye,          color:'#7c3aed', bg:'#ede9fe', label:'Impression share lost',        val:'28%',      delta:'budget',    positive:false },
+  { icon: MessageSquare,color:'#dc2626', bg:'#fee2e2', label:'YT top objection',             val:'"sizing"', delta:'38 comments',positive:false },
+  { icon: ThumbsUp,     color:'#2563eb', bg:'#dbeafe', label:'Brand ABCD avg',               val:'79/100',   delta:'B is low',  positive:true  },
+  { icon: TrendingDown, color:'#dc2626', bg:'#fee2e2', label:'"cheap rings" spend',          val:'$168',     delta:'0 conv',    positive:false },
+  { icon: Zap,          color:'#059669', bg:'#d1fae5', label:'Auto-applied this week',       val:'6 actions',delta:'all good',  positive:true  },
+  { icon: PlayCircle,   color:'#ef4444', bg:'#fee2e2', label:'YT → Ads: new headlines gen', val:'4 copies', delta:'ready',     positive:null  },
+  { icon: Globe2,       color:'#f97316', bg:'#fff7ed', label:'Reddit pain point',            val:'"sizing"', delta:'not in ads',positive:null  },
+  { icon: BarChart3,    color:'#7c3aed', bg:'#ede9fe', label:'PMax vs target ROAS',         val:'2.09x',    delta:'-0.41x',    positive:false },
 ];
 
 function InsightChip({ item }: { item: typeof ROW1[0] }) {
@@ -266,11 +361,11 @@ export default function LandingPage() {
       visual: <AbcdCard />,
     },
     {
-      color: '#f97316', bg: '#fff7ed', label: 'Intel',
-      headline: 'Decode your\nmarket in real time',
-      sub: 'Reddit community scraping + YouTube competitor research surfaces what your audience actually says before you spend a dollar on creative.',
-      bullets: ['Reddit sentiment + pain point extraction', 'YouTube competitor creative audit', 'Content gaps and untapped hook angles'],
-      visual: <RedditCard />,
+      color: '#dc2626', bg: '#fff1f2', label: 'YouTube Intel',
+      headline: 'Turn 1,000 comments\ninto 10 winning ads',
+      sub: "Gemini reads every comment on competitor YouTube videos in your niche — extracting objections, purchase triggers and trust gaps — then maps each signal directly to your live Google Ads campaigns.",
+      bullets: ['Competitor video comment sentiment analysis', 'Objection → ad copy translation, auto-generated', 'Purchase intent signals mapped to campaign keywords'],
+      visual: <YoutubeIntelCard />,
     },
   ];
 
@@ -281,10 +376,11 @@ export default function LandingPage() {
       <style>{GLOBAL_CSS}</style>
 
       {/* ── TOP BAR ──────────────────────────────────────────────────────── */}
-      <div style={{ background: '#e8e4ff' }} className="border-b border-[#d4ceff] px-4 py-2.5 text-center">
-        <p className="text-xs font-medium text-[#4f46e5]">
-          Bagel Digital now runs AI-optimised campaigns for 20+ brands.{' '}
-          <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline font-semibold">See how →</a>
+      <div style={{ background: '#fef2f2' }} className="border-b border-red-100 px-4 py-2.5 text-center">
+        <p className="text-xs font-medium text-red-700 flex items-center justify-center gap-2">
+          <PlayCircle size={13} className="text-red-500 shrink-0" />
+          New: YouTube Comment Intelligence now connects directly to Google Ads optimisation — a world first for performance agencies.{' '}
+          <a href="#youtube-intel" className="underline hover:no-underline font-semibold">See how →</a>
         </p>
       </div>
 
@@ -449,6 +545,177 @@ export default function LandingPage() {
           <div className="flex gap-3 w-max marquee-right">
             {[...ROW2, ...ROW2].map((item, i) => <InsightChip key={i} item={item} />)}
           </div>
+        </div>
+      </section>
+
+      {/* ── YOUTUBE INTEL SPOTLIGHT ──────────────────────────────────────── */}
+      <section id="youtube-intel" className="py-24 px-6 overflow-hidden"
+        style={{ background: 'linear-gradient(160deg,#0f0a1e 0%,#1a0a0a 50%,#0a0f1e 100%)' }}>
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <Reveal>
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/20 border border-red-500/30">
+                <PlayCircle size={14} className="text-red-400" />
+                <span className="text-xs font-bold text-red-300">YouTube Intelligence</span>
+              </div>
+              <span className="text-xs text-white/30">×</span>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/30">
+                <BarChart3 size={14} className="text-blue-400" />
+                <span className="text-xs font-bold text-blue-300">Google Ads Performance</span>
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal delay={80}>
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-center leading-tight mb-6"
+                style={{ letterSpacing: '-0.03em' }}>
+              <span className="text-white">What your audience </span>
+              <em className="not-italic" style={{
+                background: 'linear-gradient(135deg,#f87171 0%,#fb923c 100%)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>says on YouTube</em>
+              <br />
+              <span className="text-white/40">becomes your next winning ad</span>
+            </h2>
+          </Reveal>
+
+          <Reveal delay={140}>
+            <p className="text-base text-white/50 text-center max-w-2xl mx-auto leading-relaxed mb-16">
+              Most agencies keep content research and performance marketing in separate silos.
+              We use AI to bridge them — turning YouTube comment intelligence into concrete Google Ads improvements, automatically.
+            </p>
+          </Reveal>
+
+          {/* Three-column bridge diagram */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-6 items-center mb-16">
+            {/* Left: YouTube analysis */}
+            <Reveal delay={0}>
+              <div className="rounded-2xl p-6 border border-white/[0.08]"
+                   style={{ background: 'rgba(255,255,255,0.04)' }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-xl bg-red-500/20 flex items-center justify-center">
+                    <PlayCircle size={16} className="text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">YouTube Comment Analysis</p>
+                    <p className="text-xs text-white/40">AI reads what people actually say</p>
+                  </div>
+                </div>
+                {/* Stacked video + sentiment */}
+                <div className="space-y-3">
+                  {/* Video row */}
+                  <div className="flex items-center gap-3 rounded-xl p-2.5 bg-white/[0.05]">
+                    <div className="w-12 h-9 rounded-lg shrink-0 flex items-center justify-center"
+                         style={{ background: 'linear-gradient(135deg,#7f1d1d,#991b1b)' }}>
+                      <Play size={10} className="text-white ml-0.5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-white/80 truncate">Competitor review: Ice Jewelry</p>
+                      <p className="text-[10px] text-white/40">148K views · 324 comments</p>
+                    </div>
+                  </div>
+                  {/* Extracted signals */}
+                  {[
+                    { text:'"looks cheap in real life"', count:'38 comments', type:'objection', color:'#f87171' },
+                    { text:'"where can I actually buy this?"', count:'24 comments', type:'intent', color:'#34d399' },
+                    { text:'"sizing is completely off"', count:'19 comments', type:'pain point', color:'#fb923c' },
+                    { text:'"need to see celebrity wearing it"', count:'15 comments', type:'trust trigger', color:'#a78bfa' },
+                  ].map((s, i) => (
+                    <div key={i} className="flex items-start gap-2.5 rounded-xl p-2.5 bg-white/[0.05]">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 mt-0.5"
+                            style={{ background: s.color + '25', color: s.color }}>{s.type}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-white/70 leading-tight">{s.text}</p>
+                        <p className="text-[10px] text-white/30 mt-0.5">{s.count}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+
+            {/* Centre: AI bridge */}
+            <Reveal delay={150}>
+              <div className="flex flex-col items-center gap-3 py-6 lg:py-0">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+                  <Sparkles size={20} className="text-white" />
+                </div>
+                <div className="hidden lg:flex flex-col items-center gap-1">
+                  {[0,1,2,3].map(i => (
+                    <div key={i} className="w-0.5 h-3 rounded-full bg-white/20" />
+                  ))}
+                  <MoveRight size={14} className="text-white/40 rotate-90" />
+                </div>
+                <p className="text-xs font-bold text-white/60 text-center">Gemini AI<br/>maps signals</p>
+              </div>
+            </Reveal>
+
+            {/* Right: Google Ads actions */}
+            <Reveal delay={300}>
+              <div className="rounded-2xl p-6 border border-white/[0.08]"
+                   style={{ background: 'rgba(255,255,255,0.04)' }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <BarChart3 size={16} className="text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">Google Ads Actions</p>
+                    <p className="text-xs text-white/40">Specific, ready-to-apply changes</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {[
+                    {
+                      insight: '"looks cheap in real life"',
+                      action: 'New RSA headline: "Premium 925 Silver — Feel the Difference"',
+                      type: 'Ad copy', color: '#60a5fa', impact: '+11% CTR',
+                    },
+                    {
+                      insight: '"where can I actually buy this?"',
+                      action: 'Create brand + navigational search campaign',
+                      type: 'New campaign', color: '#34d399', impact: '+$420/mo',
+                    },
+                    {
+                      insight: '"sizing is completely off"',
+                      action: 'Add sitelink: "Size Guide — Find Your Perfect Fit"',
+                      type: 'Extension', color: '#fb923c', impact: '+6% conv',
+                    },
+                    {
+                      insight: '"need celebrity validation"',
+                      action: 'Add callout: "As seen on @creator · 50K+ happy customers"',
+                      type: 'Social proof', color: '#c084fc', impact: '+8% ROAS',
+                    },
+                  ].map((a, i) => (
+                    <div key={i} className="rounded-xl p-2.5 bg-white/[0.05]">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                              style={{ background: a.color + '25', color: a.color }}>{a.type}</span>
+                        <span className="text-[10px] font-bold text-emerald-400">{a.impact}</span>
+                      </div>
+                      <p className="text-xs text-white/70 leading-tight">{a.action}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* Bottom callout */}
+          <Reveal delay={200}>
+            <div className="rounded-2xl p-6 border border-white/[0.08] text-center max-w-2xl mx-auto"
+                 style={{ background: 'rgba(255,255,255,0.04)' }}>
+              <p className="text-sm text-white/60 leading-relaxed">
+                <span className="text-white font-bold">No other performance agency does this.</span>{' '}
+                We merge what people say in YouTube comments with what they search on Google — so your ads speak the exact language that already converts.
+              </p>
+              <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
+                 className="inline-flex items-center gap-2 mt-5 px-6 py-2.5 rounded-full text-sm font-bold text-white transition-all hover:-translate-y-0.5"
+                 style={{ background: 'linear-gradient(135deg,#ef4444,#f97316)', boxShadow: '0 8px 24px rgba(239,68,68,0.3)' }}>
+                <PlayCircle size={14} /> See the YouTube intelligence demo
+              </a>
+            </div>
+          </Reveal>
         </div>
       </section>
 
