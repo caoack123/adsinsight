@@ -423,25 +423,27 @@ function exportVideoAds() {
         'ORDER BY metrics.impressions DESC ' +
         'LIMIT 200';
       try {
-        var report = AdsApp.search(query);
-        while (report.hasNext()) {
-          var row = report.next();
-          var assetRes = (row.adGroupAd && row.adGroupAd.ad && row.adGroupAd.ad.videoAd && row.adGroupAd.ad.videoAd.video) ? row.adGroupAd.ad.videoAd.video.asset : '';
+        // metrics.video_views is not exposed through AdsApp.search() (confirmed: fails
+        // with UNRECOGNIZED_FIELD regardless of FROM resource) — use the older report API instead.
+        var rows = AdsApp.report(query, { apiVersion: 'v17' }).rows();
+        while (rows.hasNext()) {
+          var row = rows.next();
+          var assetRes = row['ad_group_ad.ad.video_ad.video.asset'] || '';
           if (!assetRes) continue;
           var assetInfo = assetMap[assetRes];
           var youtubeId = assetInfo ? assetInfo.youtubeId : '';
           if (!youtubeId) continue;
 
-          var impressions = parseInt(row.metrics.impressions) || 0;
-          var clicks = parseInt(row.metrics.clicks) || 0;
-          var cost = (parseInt(row.metrics.costMicros) || 0) / 1000000;
-          var conversions = parseFloat(row.metrics.conversions) || 0;
-          var convValue = parseFloat(row.metrics.conversionsValue) || 0;
-          var videoViews = parseInt(row.metrics.videoViews) || 0;
-          var campName = (row.campaign && row.campaign.name) ? row.campaign.name : '';
-          var adGroupName = (row.adGroup && row.adGroup.name) ? row.adGroup.name : '';
-          var adName = (row.adGroupAd && row.adGroupAd.ad && row.adGroupAd.ad.name) ? row.adGroupAd.ad.name : ((assetInfo && assetInfo.title) || youtubeId);
-          var adType = (row.adGroupAd && row.adGroupAd.ad && row.adGroupAd.ad.type) ? row.adGroupAd.ad.type : '';
+          var impressions = parseInt(row['metrics.impressions']) || 0;
+          var clicks = parseInt(row['metrics.clicks']) || 0;
+          var cost = (parseInt(row['metrics.cost_micros']) || 0) / 1000000;
+          var conversions = parseFloat(row['metrics.conversions']) || 0;
+          var convValue = parseFloat(row['metrics.conversions_value']) || 0;
+          var videoViews = parseInt(row['metrics.video_views']) || 0;
+          var campName = row['campaign.name'] || '';
+          var adGroupName = row['ad_group.name'] || '';
+          var adName = row['ad_group_ad.ad.name'] || ((assetInfo && assetInfo.title) || youtubeId);
+          var adType = row['ad_group_ad.ad.type'] || '';
 
           if (!videoMap[youtubeId]) {
             videoMap[youtubeId] = { video_id: youtubeId, ad_name: adName, format: adType, campaign: campName, ad_group: adGroupName, ranges: {} };
