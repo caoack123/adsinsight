@@ -5,6 +5,8 @@ import {
   type ABCDCategory,
   type CategoryRating,
   type VideoAd,
+  type VideoDateRange,
+  type VideoRangeMetrics,
 } from '@/modules/video-abcd/schema';
 
 interface VideoAbcdDataset {
@@ -73,14 +75,17 @@ export function getSignalsByCategory(category: ABCDCategory) {
 
 // ─── Performance helpers ──────────────────────────────────────────────────────
 
-export function getRoas(video: VideoAd): number {
-  const p = video.performance;
-  return p && p.cost > 0 ? p.conversions_value / p.cost : 0;
+export function getRoas(metrics: VideoRangeMetrics | undefined): number {
+  return metrics && metrics.cost > 0 ? metrics.conversions_value / metrics.cost : 0;
 }
 
-export function getCpv(video: VideoAd): number {
-  const p = video.performance;
-  return p && p.views > 0 ? p.cost / p.views : 0;
+export function getCpv(metrics: VideoRangeMetrics | undefined): number {
+  return metrics && metrics.views > 0 ? metrics.cost / metrics.views : 0;
+}
+
+// Resolve a specific date-range window, falling back to the primary (30d) snapshot
+export function getVideoRangeMetrics(video: VideoAd, range: VideoDateRange): VideoRangeMetrics | undefined {
+  return video.performance?.metrics_by_range?.[range] ?? video.performance;
 }
 
 export function formatDuration(seconds: number | undefined): string {

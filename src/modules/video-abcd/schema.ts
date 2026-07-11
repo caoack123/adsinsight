@@ -295,7 +295,9 @@ export interface ABCDAnalysis {
 
 // ─── Video ad types ────────────────────────────────────────────────────────
 
-export interface VideoAdPerformance {
+export type VideoDateRange = '7d' | '14d' | '30d' | '60d' | '90d';
+
+export interface VideoRangeMetrics {
   impressions: number;
   views: number;
   view_rate: number;
@@ -306,6 +308,10 @@ export interface VideoAdPerformance {
   conversions_value: number;
 }
 
+export interface VideoAdPerformance extends VideoRangeMetrics {
+  metrics_by_range?: Partial<Record<VideoDateRange, VideoRangeMetrics>>;
+}
+
 export interface VideoAd {
   video_id: string;
   youtube_url: string;
@@ -314,7 +320,7 @@ export interface VideoAd {
   campaign?: string;
   ad_group?: string;
   duration_seconds?: number;
-  format?: 'in_stream' | 'in_feed' | 'shorts' | 'bumper';
+  format?: string;
   thumbnail_url?: string;
   performance?: VideoAdPerformance;
   abcd_analysis?: ABCDAnalysis;

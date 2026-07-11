@@ -7,6 +7,7 @@ import { useSettings } from '@/context/settings-context';
 import {
   getRoas,
   getCpv,
+  getVideoRangeMetrics,
   formatDuration,
   FORMAT_LABEL,
   CATEGORY_META,
@@ -14,7 +15,7 @@ import {
   getVideoAbcdSummary,
   videoAbcdVideos,
 } from '@/lib/video-abcd';
-import type { VideoAd, ABCDAnalysis } from '@/modules/video-abcd/schema';
+import type { VideoAd, VideoDateRange, ABCDAnalysis } from '@/modules/video-abcd/schema';
 import type { AnalyzeVideoRequest } from '@/app/api/ai/analyze-video/route';
 import { MetricCard } from '@/components/metric-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -271,10 +272,11 @@ function YoutubeAnalyzer({ accountId, brandName: defaultBrand, onSaved }: { acco
 
 // ── Video card (shared between demo & real) ───────────────────────────────────
 
-function VideoCard({ video }: { video: VideoAd }) {
+function VideoCard({ video, dateRange }: { video: VideoAd; dateRange: VideoDateRange }) {
   const { t, lang } = useI18n();
-  const roas = getRoas(video);
-  const cpv = getCpv(video);
+  const metrics = getVideoRangeMetrics(video, dateRange);
+  const roas = getRoas(metrics);
+  const cpv = getCpv(metrics);
   const analysis = video.abcd_analysis;
 
   return (
@@ -313,9 +315,9 @@ function VideoCard({ video }: { video: VideoAd }) {
 
             <div className="flex gap-5 mb-3">
               {[
-                { label: t('ct_impressions'), value: ((video.performance?.impressions ?? 0) / 1000).toFixed(0) + 'K' },
-                { label: 'VTR', value: ((video.performance?.view_rate ?? 0) * 100).toFixed(0) + '%' },
-                { label: 'CTR', value: ((video.performance?.ctr ?? 0) * 100).toFixed(1) + '%', warn: (video.performance?.ctr ?? 0) < 0.008 },
+                { label: t('ct_impressions'), value: ((metrics?.impressions ?? 0) / 1000).toFixed(0) + 'K' },
+                { label: 'VTR', value: ((metrics?.view_rate ?? 0) * 100).toFixed(0) + '%' },
+                { label: 'CTR', value: ((metrics?.ctr ?? 0) * 100).toFixed(1) + '%', warn: (metrics?.ctr ?? 0) < 0.008 },
                 { label: 'CPV', value: '$' + cpv.toFixed(3) },
                 { label: 'ROAS', value: roas.toFixed(2) + 'x', good: roas >= 2, warn: roas < 1 },
               ].map(({ label, value, warn, good }) => (
@@ -372,6 +374,15 @@ export default function VideoAbcdPage() {
   const [videos, setVideos] = useState<VideoAd[]>([]);
   const [brandName, setBrandName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<VideoDateRange>('30d');
+
+  const DATE_RANGE_OPTIONS: { key: VideoDateRange; label: string }[] = [
+    { key: '7d',  label: '7d'  },
+    { key: '14d', label: '14d' },
+    { key: '30d', label: '30d' },
+    { key: '60d', label: '60d' },
+    { key: '90d', label: '90d' },
+  ];
 
   function loadVideos() {
     if (isDemo) {
@@ -452,6 +463,26 @@ export default function VideoAbcdPage() {
             </div>
           </div>
 
+          {/* Date range selector */}
+          {!isDemo && (
+            <div className="flex items-center gap-0.5 rounded-md border border-border bg-muted/40 p-0.5 w-fit">
+              {DATE_RANGE_OPTIONS.map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setDateRange(opt.key)}
+                  className={cn(
+                    'px-2.5 py-0.5 rounded text-xs transition-colors',
+                    dateRange === opt.key
+                      ? 'bg-background text-foreground font-medium shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Video list */}
           <div className="space-y-3">
             {loading ? (
@@ -459,7 +490,7 @@ export default function VideoAbcdPage() {
                 <Loader2 size={16} className="animate-spin" /> {t('loading')}
               </div>
             ) : (
-              videos.map(video => <VideoCard key={video.video_id} video={video} />)
+              videos.map(video => <VideoCard key={video.video_id} video={video} dateRange={dateRange} />)
             )}
           </div>
         </>

@@ -293,8 +293,8 @@ export default function VideoDetailPage({
   }
 
   const effectiveVideo = video ?? dbVideo!;
-  const roas = getRoas(effectiveVideo);
-  const cpv = getCpv(effectiveVideo);
+  const roas = getRoas(effectiveVideo.performance);
+  const cpv = getCpv(effectiveVideo.performance);
 
   async function handleAnalyze() {
     setLoading(true);
