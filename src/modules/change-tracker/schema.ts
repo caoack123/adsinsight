@@ -27,6 +27,10 @@ export interface PerformanceSnapshot {
   roas: number;
 }
 
+// Keyed by comparison window: 'default' (14d before / 7d after), '60' (60d/60d), '90' (90d/90d)
+export type PerfWindowKey = 'default' | '60' | '90';
+export type PerformanceSnapshotMap = Partial<Record<PerfWindowKey, PerformanceSnapshot>>;
+
 export interface AccountChange {
   change_id: string;
   timestamp: string;         // ISO 8601
@@ -38,8 +42,8 @@ export interface AccountChange {
   changed_by: string;
   old_value: string | null;
   new_value: string | null;
-  performance_before: PerformanceSnapshot | null;
-  performance_after: PerformanceSnapshot | null;
+  performance_before: PerformanceSnapshotMap | null;
+  performance_after: PerformanceSnapshotMap | null;
 }
 
 export interface PerformanceDelta {

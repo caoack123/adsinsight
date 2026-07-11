@@ -41,7 +41,7 @@ export interface DbUserProfile {
 export interface DbSyncLog {
   id: string;
   account_id: string;
-  data_type: 'feed' | 'changes' | 'videos';
+  data_type: 'feed' | 'changes' | 'videos' | 'search_terms' | 'performance';
   records_upserted: number;
   status: 'success' | 'error';
   error_message: string | null;

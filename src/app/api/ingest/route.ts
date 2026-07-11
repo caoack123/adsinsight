@@ -62,11 +62,11 @@ export async function POST(request: NextRequest) {
     }
 
     await touchAccountSync(account.id);
-    // Only log to sync_logs for the main data types (performance logs separately)
-    if (['feed', 'changes', 'videos'].includes(data_type)) {
+    // Performance is excluded here — it batches many requests per sync and would spam the log
+    if (['feed', 'changes', 'videos', 'search_terms'].includes(data_type)) {
       await writeSyncLog({
         account_id: account.id,
-        data_type: data_type as 'feed' | 'changes' | 'videos',
+        data_type: data_type as 'feed' | 'changes' | 'videos' | 'search_terms',
         records_upserted: upserted,
         status: 'success',
       });
@@ -79,10 +79,10 @@ export async function POST(request: NextRequest) {
       records_upserted: upserted,
     });
   } catch (err) {
-    if (['feed', 'changes', 'videos'].includes(data_type)) {
+    if (['feed', 'changes', 'videos', 'search_terms'].includes(data_type)) {
       await writeSyncLog({
         account_id: account.id,
-        data_type: data_type as 'feed' | 'changes' | 'videos',
+        data_type: data_type as 'feed' | 'changes' | 'videos' | 'search_terms',
         records_upserted: 0,
         status: 'error',
         error_message: String(err),

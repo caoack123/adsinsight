@@ -11,7 +11,7 @@ import {
   fmtRoas,
 } from '@/lib/change-tracker';
 import { annotateChanges, computeSummary } from '@/modules/change-tracker/processor';
-import type { AnnotatedChange } from '@/modules/change-tracker/schema';
+import type { AccountChange, AnnotatedChange, PerfWindowKey } from '@/modules/change-tracker/schema';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -174,10 +174,10 @@ function DeltaCell({ value, good, bad }: { value: string; good: boolean; bad: bo
   );
 }
 
-function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
+function ExpandedRow({ annotated, perfWindow }: { annotated: AnnotatedChange; perfWindow: PerfWindowKey }) {
   const { change, delta } = annotated;
-  const before = change.performance_before;
-  const after = change.performance_after;
+  const before = change.performance_before?.[perfWindow] ?? null;
+  const after = change.performance_after?.[perfWindow] ?? null;
   const { settings } = useSettings();
   const { t, lang } = useI18n();
 
@@ -205,8 +205,8 @@ function ExpandedRow({ annotated }: { annotated: AnnotatedChange }) {
           timestamp: change.timestamp,
           old_value: change.old_value,
           new_value: change.new_value,
-          performance_before: change.performance_before,
-          performance_after: change.performance_after,
+          performance_before: before,
+          performance_after: after,
           delta: {
             impressions_delta: delta.impressions_delta,
             clicks_delta: delta.clicks_delta,
@@ -335,18 +335,25 @@ type ChangeDateRange = '30d' | '90d' | '180d' | '365d';
 export default function ChangeTrackerPage() {
   const { selectedAccountId } = useSettings();
   const { t, lang } = useI18n();
-  const [allAnnotated, setAllAnnotated] = useState<AnnotatedChange[]>([]);
+  const [rawChanges, setRawChanges] = useState<AccountChange[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [campaign, setCampaign] = useState('all');
   const [verdict, setVerdict] = useState('all');
   const [dateRange, setDateRange] = useState<ChangeDateRange>('30d');
+  const [perfWindow, setPerfWindow] = useState<PerfWindowKey>('default');
 
   const CHANGE_DATE_RANGE_OPTIONS: { key: ChangeDateRange; label: string; days: number }[] = [
     { key: '30d',  label: t('ct_change_range_30'),  days: 30  },
     { key: '90d',  label: t('ct_change_range_90'),  days: 90  },
     { key: '180d', label: t('ct_change_range_180'), days: 180 },
     { key: '365d', label: t('ct_change_range_365'), days: 365 },
+  ];
+
+  const PERF_WINDOW_OPTIONS: { key: PerfWindowKey; label: string }[] = [
+    { key: 'default', label: t('ct_perf_window_default') },
+    { key: '60',       label: t('ct_perf_window_60') },
+    { key: '90',       label: t('ct_perf_window_90') },
   ];
 
   useEffect(() => {
@@ -370,12 +377,13 @@ export default function ChangeTrackerPage() {
           performance_before: c.performance_before ?? null,
           performance_after: c.performance_after ?? null,
         }));
-        setAllAnnotated(annotateChanges(normalized));
+        setRawChanges(normalized);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [selectedAccountId]);
 
+  const allAnnotated = useMemo(() => annotateChanges(rawChanges, perfWindow), [rawChanges, perfWindow]);
   const summary = useMemo(() => computeSummary(allAnnotated), [allAnnotated]);
   const allCampaigns = useMemo(() => [...new Set(allAnnotated.map(a => a.change.campaign))], [allAnnotated]);
 
@@ -449,6 +457,23 @@ export default function ChangeTrackerPage() {
               className={cn(
                 'px-2.5 py-0.5 rounded text-xs transition-colors',
                 dateRange === opt.key
+                  ? 'bg-background text-foreground font-medium shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {/* Performance impact window tabs */}
+        <div className="flex items-center gap-0.5 rounded-md border border-border bg-muted/40 p-0.5">
+          {PERF_WINDOW_OPTIONS.map(opt => (
+            <button
+              key={opt.key}
+              onClick={() => setPerfWindow(opt.key)}
+              className={cn(
+                'px-2.5 py-0.5 rounded text-xs transition-colors',
+                perfWindow === opt.key
                   ? 'bg-background text-foreground font-medium shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
               )}
@@ -566,7 +591,7 @@ export default function ChangeTrackerPage() {
                   </span>
                 </div>
 
-                {isExpanded && <ExpandedRow annotated={annotated} />}
+                {isExpanded && <ExpandedRow annotated={annotated} perfWindow={perfWindow} />}
               </div>
             );
           })}

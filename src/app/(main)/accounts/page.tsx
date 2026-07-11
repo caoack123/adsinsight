@@ -22,10 +22,10 @@ function timeAgo(iso: string, lang: 'zh' | 'en' = 'zh'): string {
 
 function getDataTypeLabel(type: string, lang: 'zh' | 'en'): string {
   if (lang === 'en') {
-    const map: Record<string, string> = { feed: 'Feed Products', changes: 'Changes', videos: 'Videos' };
+    const map: Record<string, string> = { feed: 'Feed Products', changes: 'Changes', videos: 'Videos', search_terms: 'Search Terms' };
     return map[type] ?? type;
   }
-  const map: Record<string, string> = { feed: 'Feed 产品', changes: '变更记录', videos: '视频素材' };
+  const map: Record<string, string> = { feed: 'Feed 产品', changes: '变更记录', videos: '视频素材', search_terms: '搜索词' };
   return map[type] ?? type;
 }
 

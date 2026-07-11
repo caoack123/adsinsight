@@ -2,20 +2,21 @@ import {
   AccountChange,
   AnnotatedChange,
   ChangeTrackerSummary,
+  PerfWindowKey,
   PerformanceDelta,
   PerformanceSnapshot,
 } from './schema';
 
-export function annotateChanges(changes: AccountChange[]): AnnotatedChange[] {
+export function annotateChanges(changes: AccountChange[], windowKey: PerfWindowKey = 'default'): AnnotatedChange[] {
   return changes.map(change => ({
     change,
-    delta: computeDelta(change),
+    delta: computeDelta(change, windowKey),
   }));
 }
 
-function computeDelta(change: AccountChange): PerformanceDelta {
-  const before = change.performance_before;
-  const after = change.performance_after;
+function computeDelta(change: AccountChange, windowKey: PerfWindowKey): PerformanceDelta {
+  const before = change.performance_before?.[windowKey] ?? null;
+  const after = change.performance_after?.[windowKey] ?? null;
 
   // No performance data (e.g. freshly imported from DB without perf snapshot)
   if (!before || !after) {

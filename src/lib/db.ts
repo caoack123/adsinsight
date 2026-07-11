@@ -123,7 +123,7 @@ export async function getRecentSyncLogs(accountId: string, limit = 10): Promise<
 
 export async function writeSyncLog(params: {
   account_id: string;
-  data_type: 'feed' | 'changes' | 'videos';
+  data_type: 'feed' | 'changes' | 'videos' | 'search_terms' | 'performance';
   records_upserted: number;
   status: 'success' | 'error';
   error_message?: string;

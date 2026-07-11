@@ -35,6 +35,7 @@ function main() {
   exportFeedProducts();
   exportSearchTerms();
   exportChangeHistory();
+  exportVideoAds();
   exportDailyPerformance();
   Logger.log('=== AdInsight AI export finished ===');
 }
@@ -257,60 +258,86 @@ function exportChangeHistory() {
       });
     }
 
-    // Attach before/after performance snapshots
+    // Attach before/after performance snapshots — 3 comparison windows:
+    // 'default' (14d before / 7d after) for immediate impact, '60' and '90' (symmetric) for longer-term impact.
     if (records.length > 0) {
       // Use the OLDEST change date as the anchor so we get the widest before/after window
       var changeDate = records[records.length - 1]._change_date || dateOnly(0);
       var yesterday  = dateOnly(1);   // yesterday — today's data is not yet finalized
 
-      var beforeStart = daysBeforeDate(changeDate, 14);
-      var beforeEnd   = daysBeforeDate(changeDate, 1);
-      var afterStart  = changeDate;
-      // Cap afterEnd to yesterday; if change happened today, skip after metrics entirely
-      var afterEnd    = daysAfterDate(changeDate, 7);
-      if (afterEnd > yesterday) afterEnd = yesterday;
-
-      var beforeMetrics = getCampaignMetrics(beforeStart, beforeEnd);
-      var afterMetrics  = (afterStart <= yesterday)
-        ? getCampaignMetrics(afterStart, afterEnd)
-        : {};   // change is too recent — no finalized after data yet
-      Logger.log('Campaign metrics before: ' + Object.keys(beforeMetrics).length + ' campaigns ('+beforeStart+' to '+beforeEnd+')');
-      Logger.log('Campaign metrics after:  ' + Object.keys(afterMetrics).length + ' campaigns ('+afterStart+' to '+afterEnd+')');
-
+      var PERF_WINDOWS = [
+        { key: 'default', beforeDays: 14, afterDays: 7  },
+        { key: '60',      beforeDays: 60, afterDays: 60 },
+        { key: '90',      beforeDays: 90, afterDays: 90 }
+      ];
       // Zero-metric template for campaigns paused/inactive after the change
       var emptyMetrics = { impressions: 0, clicks: 0, ctr: 0, cost: 0, conversions: 0, conv_value: 0 };
+
+      var windowData = {};   // windowData[key] = { beforeStart, beforeEnd, afterStart, afterEnd, beforeMetrics, afterMetrics }
+      for (var wi = 0; wi < PERF_WINDOWS.length; wi++) {
+        var w = PERF_WINDOWS[wi];
+        var beforeStart = daysBeforeDate(changeDate, w.beforeDays);
+        var beforeEnd   = daysBeforeDate(changeDate, 1);
+        var afterStart  = changeDate;
+        // Cap afterEnd to yesterday; if change happened today, skip after metrics entirely
+        var afterEnd = daysAfterDate(changeDate, w.afterDays);
+        if (afterEnd > yesterday) afterEnd = yesterday;
+
+        var beforeMetrics = getCampaignMetrics(beforeStart, beforeEnd);
+        var afterMetrics  = (afterStart <= yesterday)
+          ? getCampaignMetrics(afterStart, afterEnd)
+          : {};   // change is too recent — no finalized after data yet
+        Logger.log('Campaign metrics [' + w.key + '] before: ' + Object.keys(beforeMetrics).length + ' campaigns (' + beforeStart + ' to ' + beforeEnd + ')');
+        Logger.log('Campaign metrics [' + w.key + '] after:  ' + Object.keys(afterMetrics).length + ' campaigns (' + afterStart + ' to ' + afterEnd + ')');
+
+        windowData[w.key] = {
+          beforeStart: beforeStart, beforeEnd: beforeEnd,
+          afterStart: afterStart, afterEnd: afterEnd,
+          beforeMetrics: beforeMetrics, afterMetrics: afterMetrics,
+          afterWindowDays: afterStart <= yesterday ? w.afterDays : 0
+        };
+      }
+
       for (var k = 0; k < records.length; k++) {
         var camp = records[k]._campaign;
         delete records[k]._change_date;
         delete records[k]._campaign;
-        // Require before metrics; after metrics default to 0 if campaign had no activity
-        if (camp && beforeMetrics[camp]) {
-          var bm = beforeMetrics[camp];
-          var am = afterMetrics[camp] || emptyMetrics;
-          records[k].performance_before = {
-            window_days: 14,
-            date_start: beforeStart,
-            date_end: beforeEnd,
-            impressions: bm.impressions,
-            clicks: bm.clicks,
-            ctr: bm.ctr,
-            cost: bm.cost,
-            conversions: bm.conversions,
-            conversions_value: bm.conv_value,
-            roas: bm.cost > 0 ? bm.conv_value / bm.cost : 0
-          };
-          records[k].performance_after = {
-            window_days: afterStart <= yesterday ? 7 : 0,
-            date_start: afterStart,
-            date_end: afterEnd,
-            impressions: am.impressions,
-            clicks: am.clicks,
-            ctr: am.ctr,
-            cost: am.cost,
-            conversions: am.conversions,
-            conversions_value: am.conv_value,
-            roas: am.cost > 0 ? am.conv_value / am.cost : 0
-          };
+        // Require before metrics (default window) as the signal that this campaign has history at all
+        if (camp && windowData['default'].beforeMetrics[camp]) {
+          var beforeMap = {};
+          var afterMap = {};
+          for (var wj = 0; wj < PERF_WINDOWS.length; wj++) {
+            var wk = PERF_WINDOWS[wj].key;
+            var wd = windowData[wk];
+            var bm = wd.beforeMetrics[camp] || emptyMetrics;
+            var am = wd.afterMetrics[camp] || emptyMetrics;
+            beforeMap[wk] = {
+              window_days: PERF_WINDOWS[wj].beforeDays,
+              date_start: wd.beforeStart,
+              date_end: wd.beforeEnd,
+              impressions: bm.impressions,
+              clicks: bm.clicks,
+              ctr: bm.ctr,
+              cost: bm.cost,
+              conversions: bm.conversions,
+              conversions_value: bm.conv_value,
+              roas: bm.cost > 0 ? bm.conv_value / bm.cost : 0
+            };
+            afterMap[wk] = {
+              window_days: wd.afterWindowDays,
+              date_start: wd.afterStart,
+              date_end: wd.afterEnd,
+              impressions: am.impressions,
+              clicks: am.clicks,
+              ctr: am.ctr,
+              cost: am.cost,
+              conversions: am.conversions,
+              conversions_value: am.conv_value,
+              roas: am.cost > 0 ? am.conv_value / am.cost : 0
+            };
+          }
+          records[k].performance_before = beforeMap;
+          records[k].performance_after = afterMap;
         }
       }
     }
@@ -319,6 +346,107 @@ function exportChangeHistory() {
     postData('changes', records);
   } catch (e) {
     Logger.log('Change history export error: ' + e.message);
+  }
+}
+
+// ── 4. Video Ads ──────────────────────────────────────────────────────────────
+function exportVideoAds() {
+  var startDate = dateOnly(30);
+  var endDate   = dateOnly(0);
+
+  var query =
+    'SELECT ' +
+    '  video.id, ' +
+    '  video.duration_millis, ' +
+    '  ad_group_ad.ad.id, ' +
+    '  ad_group_ad.ad.name, ' +
+    '  ad_group_ad.ad.type, ' +
+    '  campaign.name, ' +
+    '  ad_group.name, ' +
+    '  metrics.impressions, ' +
+    '  metrics.clicks, ' +
+    '  metrics.cost_micros, ' +
+    '  metrics.conversions, ' +
+    '  metrics.conversions_value, ' +
+    '  metrics.video_views, ' +
+    '  metrics.video_quartile_p25_rate, ' +
+    '  metrics.video_quartile_p50_rate, ' +
+    '  metrics.video_quartile_p75_rate, ' +
+    '  metrics.video_quartile_p100_rate ' +
+    'FROM video ' +
+    'WHERE segments.date BETWEEN "' + startDate + '" AND "' + endDate + '" ' +
+    '  AND metrics.impressions > 0 ' +
+    'ORDER BY metrics.impressions DESC ' +
+    'LIMIT 200';
+
+  // videoMap[videoId] = aggregated record (a video can appear across multiple ads/campaigns)
+  var videoMap = {};
+  try {
+    var report = AdsApp.search(query);
+    while (report.hasNext()) {
+      var row = report.next();
+      var videoId = (row.video && row.video.id) ? String(row.video.id) : '';
+      if (!videoId) continue;
+
+      var cost = (parseInt(row.metrics.costMicros) || 0) / 1000000;
+      var impressions = parseInt(row.metrics.impressions) || 0;
+      var clicks = parseInt(row.metrics.clicks) || 0;
+      var conversions = parseFloat(row.metrics.conversions) || 0;
+      var convValue = parseFloat(row.metrics.conversionsValue) || 0;
+      var videoViews = parseInt(row.metrics.videoViews) || 0;
+      var campName = (row.campaign && row.campaign.name) ? row.campaign.name : '';
+      var adGroupName = (row.adGroup && row.adGroup.name) ? row.adGroup.name : '';
+      var adName = (row.adGroupAd && row.adGroupAd.ad && row.adGroupAd.ad.name)
+        ? row.adGroupAd.ad.name
+        : (campName || videoId);
+      var adType = (row.adGroupAd && row.adGroupAd.ad && row.adGroupAd.ad.type) ? row.adGroupAd.ad.type : '';
+
+      if (!videoMap[videoId]) {
+        videoMap[videoId] = {
+          video_id: videoId,
+          ad_name: adName,
+          youtube_url: 'https://www.youtube.com/watch?v=' + videoId,
+          format: adType,
+          duration_seconds: (row.video && row.video.durationMillis) ? Math.round(row.video.durationMillis / 1000) : null,
+          performance: {
+            campaign: campName,
+            ad_group: adGroupName,
+            impressions: 0,
+            clicks: 0,
+            cost: 0,
+            conversions: 0,
+            conversions_value: 0,
+            video_views: 0,
+            quartile_p25: parseFloat(row.metrics.videoQuartileP25Rate) || 0,
+            quartile_p50: parseFloat(row.metrics.videoQuartileP50Rate) || 0,
+            quartile_p75: parseFloat(row.metrics.videoQuartileP75Rate) || 0,
+            quartile_p100: parseFloat(row.metrics.videoQuartileP100Rate) || 0
+          }
+        };
+      }
+      var perf = videoMap[videoId].performance;
+      perf.impressions += impressions;
+      perf.clicks += clicks;
+      perf.cost = parseFloat((perf.cost + cost).toFixed(4));
+      perf.conversions = parseFloat((perf.conversions + conversions).toFixed(2));
+      perf.conversions_value = parseFloat((perf.conversions_value + convValue).toFixed(2));
+      perf.video_views += videoViews;
+    }
+
+    var records = [];
+    var videoIds = Object.keys(videoMap);
+    for (var vi = 0; vi < videoIds.length; vi++) {
+      var rec = videoMap[videoIds[vi]];
+      rec.performance.ctr = rec.performance.impressions > 0
+        ? parseFloat((rec.performance.clicks / rec.performance.impressions).toFixed(6))
+        : 0;
+      records.push(rec);
+    }
+
+    Logger.log('Video ads: ' + records.length + ' videos');
+    postData('videos', records);
+  } catch (e) {
+    Logger.log('Video ads export error: ' + e.message);
   }
 }
 
