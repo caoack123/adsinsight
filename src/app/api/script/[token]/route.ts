@@ -367,12 +367,7 @@ function exportVideoAds() {
     '  metrics.clicks, ' +
     '  metrics.cost_micros, ' +
     '  metrics.conversions, ' +
-    '  metrics.conversions_value, ' +
-    '  metrics.video_views, ' +
-    '  metrics.video_quartile_p25_rate, ' +
-    '  metrics.video_quartile_p50_rate, ' +
-    '  metrics.video_quartile_p75_rate, ' +
-    '  metrics.video_quartile_p100_rate ' +
+    '  metrics.conversions_value ' +
     'FROM video ' +
     'WHERE segments.date BETWEEN "' + startDate + '" AND "' + endDate + '" ' +
     '  AND metrics.impressions > 0 ' +
@@ -393,7 +388,6 @@ function exportVideoAds() {
       var clicks = parseInt(row.metrics.clicks) || 0;
       var conversions = parseFloat(row.metrics.conversions) || 0;
       var convValue = parseFloat(row.metrics.conversionsValue) || 0;
-      var videoViews = parseInt(row.metrics.videoViews) || 0;
       var campName = (row.campaign && row.campaign.name) ? row.campaign.name : '';
       var adGroupName = (row.adGroup && row.adGroup.name) ? row.adGroup.name : '';
       var adName = (row.adGroupAd && row.adGroupAd.ad && row.adGroupAd.ad.name)
@@ -415,12 +409,7 @@ function exportVideoAds() {
             clicks: 0,
             cost: 0,
             conversions: 0,
-            conversions_value: 0,
-            video_views: 0,
-            quartile_p25: parseFloat(row.metrics.videoQuartileP25Rate) || 0,
-            quartile_p50: parseFloat(row.metrics.videoQuartileP50Rate) || 0,
-            quartile_p75: parseFloat(row.metrics.videoQuartileP75Rate) || 0,
-            quartile_p100: parseFloat(row.metrics.videoQuartileP100Rate) || 0
+            conversions_value: 0
           }
         };
       }
@@ -430,7 +419,6 @@ function exportVideoAds() {
       perf.cost = parseFloat((perf.cost + cost).toFixed(4));
       perf.conversions = parseFloat((perf.conversions + conversions).toFixed(2));
       perf.conversions_value = parseFloat((perf.conversions_value + convValue).toFixed(2));
-      perf.video_views += videoViews;
     }
 
     var records = [];
