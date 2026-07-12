@@ -425,7 +425,8 @@ function exportVideoAds() {
       try {
         // metrics.video_views is not exposed through AdsApp.search() (confirmed: fails
         // with UNRECOGNIZED_FIELD regardless of FROM resource) — use the older report API instead.
-        var rows = AdsApp.report(query, { apiVersion: 'v17' }).rows();
+        // No explicit apiVersion — pinning to a specific version risks it being sunset later.
+        var rows = AdsApp.report(query).rows();
         while (rows.hasNext()) {
           var row = rows.next();
           var assetRes = row['ad_group_ad.ad.video_ad.video.asset'] || '';
