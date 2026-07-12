@@ -313,13 +313,15 @@ function VideoCard({ video, dateRange }: { video: VideoAd; dateRange: VideoDateR
               </a>
             </div>
 
-            <div className="flex gap-5 mb-3">
+            <div className="flex gap-5 mb-2 flex-wrap">
               {[
                 { label: t('ct_impressions'), value: ((metrics?.impressions ?? 0) / 1000).toFixed(0) + 'K' },
-                { label: 'VTR', value: metrics?.view_rate != null ? (metrics.view_rate * 100).toFixed(0) + '%' : '—' },
                 { label: 'CTR', value: ((metrics?.ctr ?? 0) * 100).toFixed(1) + '%', warn: (metrics?.ctr ?? 0) < 0.008 },
-                { label: 'CPV', value: metrics?.views != null ? '$' + cpv.toFixed(3) : '—' },
+                { label: 'CVR', value: ((metrics?.cvr ?? 0) * 100).toFixed(1) + '%' },
+                { label: t('ct_spend'), value: '$' + (metrics?.cost ?? 0).toFixed(2) },
                 { label: 'ROAS', value: roas.toFixed(2) + 'x', good: roas >= 2, warn: roas < 1 },
+                { label: 'VTR', value: metrics?.view_rate != null ? (metrics.view_rate * 100).toFixed(0) + '%' : '—' },
+                { label: 'CPV', value: metrics?.views != null ? '$' + cpv.toFixed(3) : '—' },
               ].map(({ label, value, warn, good }) => (
                 <div key={label}>
                   <p className="text-xs text-muted-foreground">{label}</p>
@@ -327,6 +329,22 @@ function VideoCard({ video, dateRange }: { video: VideoAd; dateRange: VideoDateR
                 </div>
               ))}
             </div>
+
+            {metrics?.quartile_p25 != null && (
+              <div className="flex items-center gap-3 mb-3">
+                {[
+                  { label: '25%', value: metrics.quartile_p25 },
+                  { label: '50%', value: metrics.quartile_p50 ?? 0 },
+                  { label: '75%', value: metrics.quartile_p75 ?? 0 },
+                  { label: '100%', value: metrics.quartile_p100 ?? 0 },
+                ].map(q => (
+                  <div key={q.label} className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">{q.label}</span>
+                    <span className="text-xs font-medium tabular-nums">{(q.value * 100).toFixed(0)}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {analysis ? (
               <div className="flex items-center gap-3">

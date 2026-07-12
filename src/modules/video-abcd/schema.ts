@@ -299,14 +299,20 @@ export type VideoDateRange = '7d' | '14d' | '30d' | '60d' | '90d';
 
 export interface VideoRangeMetrics {
   impressions: number;
-  // Not available from Google Ads Scripts for this account/API version — see route.ts
-  views?: number;
-  view_rate?: number;
   clicks: number;
   ctr: number;
+  cvr: number;
   cost: number;
   conversions: number;
   conversions_value: number;
+  // Only present for campaigns where Google Ads exposes video view-through metrics
+  // (Demand Gen / Video channel types) — see route.ts for why this is best-effort.
+  views?: number;
+  view_rate?: number;
+  quartile_p25?: number;
+  quartile_p50?: number;
+  quartile_p75?: number;
+  quartile_p100?: number;
 }
 
 export interface VideoAdPerformance extends VideoRangeMetrics {

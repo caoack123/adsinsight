@@ -350,10 +350,11 @@ function exportChangeHistory() {
 }
 
 // ── 4. Video Ads ──────────────────────────────────────────────────────────────
-// Note: metrics.video_views consistently fails as UNRECOGNIZED_FIELD in this account/API
-// version, via AdsApp.search() (FROM video and FROM ad_group_ad) and AdsApp.report()
-// (pinned and default apiVersion). Views/VTR/CPV are not available — everything below
-// uses only fields proven to work: FROM video with the standard metrics.
+// Note: metrics.video_views is UNRECOGNIZED_FIELD FROM video and FROM ad_group_ad
+// (confirmed via live testing, both AdsApp.search() and AdsApp.report()). It IS valid
+// FROM campaign — attributed here to videos by campaign name, since Demand Gen video
+// campaigns typically run one video each. Isolated in its own try/catch: if this ever
+// breaks again, the core impressions/clicks/cost/conversions export keeps working.
 function exportVideoAds() {
   var DATE_RANGES = [
     { key: '7d',  days: 7  },
@@ -362,6 +363,45 @@ function exportVideoAds() {
     { key: '60d', days: 60 },
     { key: '90d', days: 90 }
   ];
+
+  // campaignViewMap[campaignName][rangeKey] = { views, impressions, quartile_p25..p100 }
+  var campaignViewMap = {};
+  for (var vwi = 0; vwi < DATE_RANGES.length; vwi++) {
+    var vwdr = DATE_RANGES[vwi];
+    var vwQuery =
+      'SELECT ' +
+      '  campaign.name, ' +
+      '  metrics.impressions, ' +
+      '  metrics.video_views, ' +
+      '  metrics.video_quartile_p25_rate, ' +
+      '  metrics.video_quartile_p50_rate, ' +
+      '  metrics.video_quartile_p75_rate, ' +
+      '  metrics.video_quartile_p100_rate ' +
+      'FROM campaign ' +
+      'WHERE campaign.advertising_channel_type IN ("DEMAND_GEN", "VIDEO") ' +
+      '  AND segments.date BETWEEN "' + dateOnly(vwdr.days) + '" AND "' + dateOnly(0) + '" ' +
+      '  AND metrics.impressions > 0';
+    try {
+      var vwReport = AdsApp.search(vwQuery);
+      while (vwReport.hasNext()) {
+        var vwRow = vwReport.next();
+        var vwCamp = (vwRow.campaign && vwRow.campaign.name) ? vwRow.campaign.name : '';
+        if (!vwCamp) continue;
+        if (!campaignViewMap[vwCamp]) campaignViewMap[vwCamp] = {};
+        campaignViewMap[vwCamp][vwdr.key] = {
+          views: parseInt(vwRow.metrics.videoViews) || 0,
+          impressions: parseInt(vwRow.metrics.impressions) || 0,
+          quartile_p25: parseFloat(vwRow.metrics.videoQuartileP25Rate) || 0,
+          quartile_p50: parseFloat(vwRow.metrics.videoQuartileP50Rate) || 0,
+          quartile_p75: parseFloat(vwRow.metrics.videoQuartileP75Rate) || 0,
+          quartile_p100: parseFloat(vwRow.metrics.videoQuartileP100Rate) || 0
+        };
+      }
+      Logger.log('Video view metrics [' + vwdr.key + ']: ' + Object.keys(campaignViewMap).length + ' campaigns');
+    } catch (e) {
+      Logger.log('Video view metrics [' + vwdr.key + '] error: ' + e.message);
+    }
+  }
 
   // videoMap[videoId] = { ad_name, format, duration_seconds, campaign, ad_group, ranges: { '7d': {...}, ... } }
   var videoMap = {};
@@ -437,17 +477,48 @@ function exportVideoAds() {
       for (var rj = 0; rj < rangeKeys.length; rj++) {
         var rk = rangeKeys[rj];
         var r = v.ranges[rk];
+        var vw = (campaignViewMap[v.campaign] && campaignViewMap[v.campaign][rk]) ? campaignViewMap[v.campaign][rk] : null;
         metricsByRange[rk] = {
           impressions: r.impressions,
           clicks: r.clicks,
           ctr: r.impressions > 0 ? parseFloat((r.clicks / r.impressions).toFixed(6)) : 0,
+          cvr: r.clicks > 0 ? parseFloat((r.conversions / r.clicks).toFixed(6)) : 0,
           cost: r.cost,
           conversions: r.conversions,
           conversions_value: r.conversions_value
         };
+        if (vw) {
+          metricsByRange[rk].views = vw.views;
+          metricsByRange[rk].view_rate = vw.impressions > 0 ? parseFloat((vw.views / vw.impressions).toFixed(6)) : 0;
+          metricsByRange[rk].quartile_p25 = vw.quartile_p25;
+          metricsByRange[rk].quartile_p50 = vw.quartile_p50;
+          metricsByRange[rk].quartile_p75 = vw.quartile_p75;
+          metricsByRange[rk].quartile_p100 = vw.quartile_p100;
+        }
       }
-      var empty = { impressions: 0, clicks: 0, ctr: 0, cost: 0, conversions: 0, conversions_value: 0 };
+      var empty = { impressions: 0, clicks: 0, ctr: 0, cvr: 0, cost: 0, conversions: 0, conversions_value: 0 };
       var primary = metricsByRange['30d'] || empty;
+
+      var perfRecord = {
+        campaign: v.campaign,
+        ad_group: v.ad_group,
+        impressions: primary.impressions,
+        clicks: primary.clicks,
+        ctr: primary.ctr,
+        cvr: primary.cvr,
+        cost: primary.cost,
+        conversions: primary.conversions,
+        conversions_value: primary.conversions_value,
+        metrics_by_range: metricsByRange
+      };
+      if (primary.views !== undefined) {
+        perfRecord.views = primary.views;
+        perfRecord.view_rate = primary.view_rate;
+        perfRecord.quartile_p25 = primary.quartile_p25;
+        perfRecord.quartile_p50 = primary.quartile_p50;
+        perfRecord.quartile_p75 = primary.quartile_p75;
+        perfRecord.quartile_p100 = primary.quartile_p100;
+      }
 
       records.push({
         video_id: vid2,
@@ -455,17 +526,7 @@ function exportVideoAds() {
         youtube_url: 'https://www.youtube.com/watch?v=' + vid2,
         format: v.format,
         duration_seconds: v.duration_seconds,
-        performance: {
-          campaign: v.campaign,
-          ad_group: v.ad_group,
-          impressions: primary.impressions,
-          clicks: primary.clicks,
-          ctr: primary.ctr,
-          cost: primary.cost,
-          conversions: primary.conversions,
-          conversions_value: primary.conversions_value,
-          metrics_by_range: metricsByRange
-        }
+        performance: perfRecord
       });
     }
 

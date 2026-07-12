@@ -525,6 +525,7 @@ export default function VideoDetailPage({
                     { label: lang === 'en' ? 'Views' : '视频观看', value: effectiveVideo.performance.views != null ? (effectiveVideo.performance.views / 1000).toFixed(0) + 'K' : '—' },
                     { label: lang === 'en' ? 'View Rate (VTR)' : '观看率 (VTR)', value: effectiveVideo.performance.view_rate != null ? (effectiveVideo.performance.view_rate * 100).toFixed(0) + '%' : '—', good: (effectiveVideo.performance.view_rate ?? 0) >= 0.3 },
                     { label: lang === 'en' ? 'Click Rate (CTR)' : '点击率 (CTR)', value: ((effectiveVideo.performance.ctr ?? 0) * 100).toFixed(2) + '%', warn: (effectiveVideo.performance.ctr ?? 0) < 0.008 },
+                    { label: lang === 'en' ? 'Conv. Rate (CVR)' : '转化率 (CVR)', value: ((effectiveVideo.performance.cvr ?? 0) * 100).toFixed(1) + '%' },
                     { label: lang === 'en' ? 'Cost/View (CPV)' : '单次观看成本 (CPV)', value: effectiveVideo.performance.views != null ? '$' + cpv.toFixed(3) : '—' },
                     { label: lang === 'en' ? 'Total Spend' : '总花费', value: '$' + (effectiveVideo.performance.cost ?? 0).toLocaleString() },
                     { label: lang === 'en' ? 'Conversions' : '转化数', value: String(effectiveVideo.performance.conversions ?? 0) },
@@ -538,6 +539,25 @@ export default function VideoDetailPage({
                     </div>
                   ))}
                 </div>
+
+                {effectiveVideo.performance.quartile_p25 != null && (
+                  <div className="mt-4 pt-3 border-t border-border">
+                    <p className="text-xs text-muted-foreground mb-2">{lang === 'en' ? 'Watched to' : '播放完成度'}</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { label: '25%', value: effectiveVideo.performance.quartile_p25 },
+                        { label: '50%', value: effectiveVideo.performance.quartile_p50 ?? 0 },
+                        { label: '75%', value: effectiveVideo.performance.quartile_p75 ?? 0 },
+                        { label: '100%', value: effectiveVideo.performance.quartile_p100 ?? 0 },
+                      ].map(q => (
+                        <div key={q.label}>
+                          <p className="text-xs text-muted-foreground">{q.label}</p>
+                          <p className="text-sm font-semibold tabular-nums">{(q.value * 100).toFixed(0)}%</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
