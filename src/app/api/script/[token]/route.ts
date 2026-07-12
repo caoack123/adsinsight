@@ -350,9 +350,10 @@ function exportChangeHistory() {
 }
 
 // ── 4. Video Ads ──────────────────────────────────────────────────────────────
-// Note: metrics.video_views is not selectable FROM video — it requires FROM ad_group_ad.
-// ad_group_ad.ad.video_ad.video.asset gives an Asset resource name, which is resolved to
-// a real YouTube video ID via a separate FROM asset lookup.
+// Note: metrics.video_views consistently fails as UNRECOGNIZED_FIELD in this account/API
+// version, via AdsApp.search() (FROM video and FROM ad_group_ad) and AdsApp.report()
+// (pinned and default apiVersion). Views/VTR/CPV are not available — everything below
+// uses only fields proven to work: FROM video with the standard metrics.
 function exportVideoAds() {
   var DATE_RANGES = [
     { key: '7d',  days: 7  },
@@ -362,103 +363,62 @@ function exportVideoAds() {
     { key: '90d', days: 90 }
   ];
 
+  // videoMap[videoId] = { ad_name, format, duration_seconds, campaign, ad_group, ranges: { '7d': {...}, ... } }
+  var videoMap = {};
   try {
-    // ── 1. Asset resource name → YouTube video id/title lookup ──────────────────
-    var assetMap = {};
-    try {
-      var assetReport = AdsApp.search(
-        'SELECT asset.resource_name, asset.youtube_video_asset.youtube_video_id, asset.youtube_video_asset.youtube_video_title ' +
-        'FROM asset ' +
-        'WHERE asset.type = "YOUTUBE_VIDEO"'
-      );
-      while (assetReport.hasNext()) {
-        var arow = assetReport.next();
-        var resName = (arow.asset && arow.asset.resourceName) ? arow.asset.resourceName : '';
-        var yid = (arow.asset && arow.asset.youtubeVideoAsset && arow.asset.youtubeVideoAsset.youtubeVideoId) ? arow.asset.youtubeVideoAsset.youtubeVideoId : '';
-        var title = (arow.asset && arow.asset.youtubeVideoAsset && arow.asset.youtubeVideoAsset.youtubeVideoTitle) ? arow.asset.youtubeVideoAsset.youtubeVideoTitle : '';
-        if (resName && yid) assetMap[resName] = { youtubeId: yid, title: title };
-      }
-      Logger.log('Video assets: ' + Object.keys(assetMap).length + ' YouTube videos found');
-    } catch (e) {
-      Logger.log('Video asset lookup error: ' + e.message);
-    }
-
-    // ── 2. YouTube video id → duration lookup (best-effort, non-fatal) ──────────
-    var durationMap = {};
-    try {
-      var vidReport = AdsApp.search('SELECT video.id, video.duration_millis FROM video');
-      while (vidReport.hasNext()) {
-        var vrow = vidReport.next();
-        var vid = (vrow.video && vrow.video.id) ? String(vrow.video.id) : '';
-        if (vid) durationMap[vid] = vrow.video.durationMillis ? Math.round(vrow.video.durationMillis / 1000) : null;
-      }
-    } catch (e) {
-      Logger.log('Video duration lookup error: ' + e.message);
-    }
-
-    // ── 3. Performance across 5 date ranges from ad_group_ad ────────────────────
-    // videoMap[youtubeId] = { ad_name, campaign, ad_group, ranges: { '7d': {...}, ... } }
-    var videoMap = {};
     for (var ri = 0; ri < DATE_RANGES.length; ri++) {
       var dr = DATE_RANGES[ri];
       var startDate = dateOnly(dr.days);
       var endDate   = dateOnly(0);
       var query =
         'SELECT ' +
+        '  video.id, ' +
+        '  video.duration_millis, ' +
         '  ad_group_ad.ad.id, ' +
         '  ad_group_ad.ad.name, ' +
         '  ad_group_ad.ad.type, ' +
-        '  ad_group_ad.ad.video_ad.video.asset, ' +
         '  campaign.name, ' +
         '  ad_group.name, ' +
         '  metrics.impressions, ' +
         '  metrics.clicks, ' +
         '  metrics.cost_micros, ' +
         '  metrics.conversions, ' +
-        '  metrics.conversions_value, ' +
-        '  metrics.video_views ' +
-        'FROM ad_group_ad ' +
+        '  metrics.conversions_value ' +
+        'FROM video ' +
         'WHERE segments.date BETWEEN "' + startDate + '" AND "' + endDate + '" ' +
         '  AND metrics.impressions > 0 ' +
         'ORDER BY metrics.impressions DESC ' +
         'LIMIT 200';
       try {
-        // metrics.video_views is not exposed through AdsApp.search() (confirmed: fails
-        // with UNRECOGNIZED_FIELD regardless of FROM resource) — use the older report API instead.
-        // No explicit apiVersion — pinning to a specific version risks it being sunset later.
-        var rows = AdsApp.report(query).rows();
-        while (rows.hasNext()) {
-          var row = rows.next();
-          var assetRes = row['ad_group_ad.ad.video_ad.video.asset'] || '';
-          if (!assetRes) continue;
-          var assetInfo = assetMap[assetRes];
-          var youtubeId = assetInfo ? assetInfo.youtubeId : '';
-          if (!youtubeId) continue;
+        var report = AdsApp.search(query);
+        while (report.hasNext()) {
+          var row = report.next();
+          var videoId = (row.video && row.video.id) ? String(row.video.id) : '';
+          if (!videoId) continue;
 
-          var impressions = parseInt(row['metrics.impressions']) || 0;
-          var clicks = parseInt(row['metrics.clicks']) || 0;
-          var cost = (parseInt(row['metrics.cost_micros']) || 0) / 1000000;
-          var conversions = parseFloat(row['metrics.conversions']) || 0;
-          var convValue = parseFloat(row['metrics.conversions_value']) || 0;
-          var videoViews = parseInt(row['metrics.video_views']) || 0;
-          var campName = row['campaign.name'] || '';
-          var adGroupName = row['ad_group.name'] || '';
-          var adName = row['ad_group_ad.ad.name'] || ((assetInfo && assetInfo.title) || youtubeId);
-          var adType = row['ad_group_ad.ad.type'] || '';
+          var impressions = parseInt(row.metrics.impressions) || 0;
+          var clicks = parseInt(row.metrics.clicks) || 0;
+          var cost = (parseInt(row.metrics.costMicros) || 0) / 1000000;
+          var conversions = parseFloat(row.metrics.conversions) || 0;
+          var convValue = parseFloat(row.metrics.conversionsValue) || 0;
+          var campName = (row.campaign && row.campaign.name) ? row.campaign.name : '';
+          var adGroupName = (row.adGroup && row.adGroup.name) ? row.adGroup.name : '';
+          var adName = (row.adGroupAd && row.adGroupAd.ad && row.adGroupAd.ad.name) ? row.adGroupAd.ad.name : (campName || videoId);
+          var adType = (row.adGroupAd && row.adGroupAd.ad && row.adGroupAd.ad.type) ? row.adGroupAd.ad.type : '';
+          var durationSeconds = (row.video && row.video.durationMillis) ? Math.round(row.video.durationMillis / 1000) : null;
 
-          if (!videoMap[youtubeId]) {
-            videoMap[youtubeId] = { video_id: youtubeId, ad_name: adName, format: adType, campaign: campName, ad_group: adGroupName, ranges: {} };
+          if (!videoMap[videoId]) {
+            videoMap[videoId] = { video_id: videoId, ad_name: adName, format: adType, duration_seconds: durationSeconds, campaign: campName, ad_group: adGroupName, ranges: {} };
           }
-          if (!videoMap[youtubeId].ranges[dr.key]) {
-            videoMap[youtubeId].ranges[dr.key] = { impressions: 0, clicks: 0, cost: 0, conversions: 0, conversions_value: 0, video_views: 0 };
+          if (!videoMap[videoId].ranges[dr.key]) {
+            videoMap[videoId].ranges[dr.key] = { impressions: 0, clicks: 0, cost: 0, conversions: 0, conversions_value: 0 };
           }
-          var rm = videoMap[youtubeId].ranges[dr.key];
+          var rm = videoMap[videoId].ranges[dr.key];
           rm.impressions += impressions;
           rm.clicks += clicks;
           rm.cost = parseFloat((rm.cost + cost).toFixed(4));
           rm.conversions = parseFloat((rm.conversions + conversions).toFixed(2));
           rm.conversions_value = parseFloat((rm.conversions_value + convValue).toFixed(2));
-          rm.video_views += videoViews;
         }
         Logger.log('Video ads range ' + dr.key + ': ' + Object.keys(videoMap).length + ' videos so far');
       } catch (e) {
@@ -466,12 +426,12 @@ function exportVideoAds() {
       }
     }
 
-    // ── 4. Build final records — 30d as primary metrics, full breakdown in metrics_by_range ──
+    // Build final records — 30d as primary metrics, full breakdown in metrics_by_range
     var records = [];
-    var ytIds = Object.keys(videoMap);
-    for (var vi = 0; vi < ytIds.length; vi++) {
-      var yid2 = ytIds[vi];
-      var v = videoMap[yid2];
+    var videoIds = Object.keys(videoMap);
+    for (var vi = 0; vi < videoIds.length; vi++) {
+      var vid2 = videoIds[vi];
+      var v = videoMap[vid2];
       var metricsByRange = {};
       var rangeKeys = Object.keys(v.ranges);
       for (var rj = 0; rj < rangeKeys.length; rj++) {
@@ -483,20 +443,18 @@ function exportVideoAds() {
           ctr: r.impressions > 0 ? parseFloat((r.clicks / r.impressions).toFixed(6)) : 0,
           cost: r.cost,
           conversions: r.conversions,
-          conversions_value: r.conversions_value,
-          views: r.video_views,
-          view_rate: r.impressions > 0 ? parseFloat((r.video_views / r.impressions).toFixed(6)) : 0
+          conversions_value: r.conversions_value
         };
       }
-      var empty = { impressions: 0, clicks: 0, ctr: 0, cost: 0, conversions: 0, conversions_value: 0, views: 0, view_rate: 0 };
+      var empty = { impressions: 0, clicks: 0, ctr: 0, cost: 0, conversions: 0, conversions_value: 0 };
       var primary = metricsByRange['30d'] || empty;
 
       records.push({
-        video_id: yid2,
+        video_id: vid2,
         ad_name: v.ad_name,
-        youtube_url: 'https://www.youtube.com/watch?v=' + yid2,
+        youtube_url: 'https://www.youtube.com/watch?v=' + vid2,
         format: v.format,
-        duration_seconds: (durationMap[yid2] !== undefined) ? durationMap[yid2] : null,
+        duration_seconds: v.duration_seconds,
         performance: {
           campaign: v.campaign,
           ad_group: v.ad_group,
@@ -506,8 +464,6 @@ function exportVideoAds() {
           cost: primary.cost,
           conversions: primary.conversions,
           conversions_value: primary.conversions_value,
-          views: primary.views,
-          view_rate: primary.view_rate,
           metrics_by_range: metricsByRange
         }
       });

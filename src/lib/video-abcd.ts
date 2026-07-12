@@ -80,7 +80,7 @@ export function getRoas(metrics: VideoRangeMetrics | undefined): number {
 }
 
 export function getCpv(metrics: VideoRangeMetrics | undefined): number {
-  return metrics && metrics.views > 0 ? metrics.cost / metrics.views : 0;
+  return metrics && metrics.views && metrics.views > 0 ? metrics.cost / metrics.views : 0;
 }
 
 // Resolve a specific date-range window, falling back to the primary (30d) snapshot

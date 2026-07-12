@@ -505,10 +505,10 @@ export default function VideoDetailPage({
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
                   {[
                     { label: lang === 'en' ? 'Impressions' : '曝光量', value: ((effectiveVideo.performance.impressions ?? 0) / 1000).toFixed(0) + 'K' },
-                    { label: lang === 'en' ? 'Views' : '视频观看', value: ((effectiveVideo.performance.views ?? 0) / 1000).toFixed(0) + 'K' },
-                    { label: lang === 'en' ? 'View Rate (VTR)' : '观看率 (VTR)', value: ((effectiveVideo.performance.view_rate ?? 0) * 100).toFixed(0) + '%', good: (effectiveVideo.performance.view_rate ?? 0) >= 0.3 },
+                    { label: lang === 'en' ? 'Views' : '视频观看', value: effectiveVideo.performance.views != null ? (effectiveVideo.performance.views / 1000).toFixed(0) + 'K' : '—' },
+                    { label: lang === 'en' ? 'View Rate (VTR)' : '观看率 (VTR)', value: effectiveVideo.performance.view_rate != null ? (effectiveVideo.performance.view_rate * 100).toFixed(0) + '%' : '—', good: (effectiveVideo.performance.view_rate ?? 0) >= 0.3 },
                     { label: lang === 'en' ? 'Click Rate (CTR)' : '点击率 (CTR)', value: ((effectiveVideo.performance.ctr ?? 0) * 100).toFixed(2) + '%', warn: (effectiveVideo.performance.ctr ?? 0) < 0.008 },
-                    { label: lang === 'en' ? 'Cost/View (CPV)' : '单次观看成本 (CPV)', value: '$' + cpv.toFixed(3) },
+                    { label: lang === 'en' ? 'Cost/View (CPV)' : '单次观看成本 (CPV)', value: effectiveVideo.performance.views != null ? '$' + cpv.toFixed(3) : '—' },
                     { label: lang === 'en' ? 'Total Spend' : '总花费', value: '$' + (effectiveVideo.performance.cost ?? 0).toLocaleString() },
                     { label: lang === 'en' ? 'Conversions' : '转化数', value: String(effectiveVideo.performance.conversions ?? 0) },
                     { label: 'ROAS', value: roas.toFixed(2) + 'x', good: roas >= 2, warn: roas > 0 && roas < 1 },

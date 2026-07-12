@@ -299,8 +299,9 @@ export type VideoDateRange = '7d' | '14d' | '30d' | '60d' | '90d';
 
 export interface VideoRangeMetrics {
   impressions: number;
-  views: number;
-  view_rate: number;
+  // Not available from Google Ads Scripts for this account/API version — see route.ts
+  views?: number;
+  view_rate?: number;
   clicks: number;
   ctr: number;
   cost: number;
