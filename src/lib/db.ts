@@ -3,6 +3,7 @@
  * All functions use the service-role client (server-side only).
  */
 import { createServerClient, type DbAccount, type DbSyncLog, type DbAiCache } from './supabase';
+import type { ABCDAnalysis } from '@/modules/video-abcd/schema';
 
 // ─── Accounts ─────────────────────────────────────────────────────────────────
 
@@ -21,6 +22,17 @@ export async function getAccountByToken(token: string): Promise<DbAccount | null
     .from('accounts')
     .select('*')
     .eq('script_token', token)
+    .single();
+  if (error) return null;
+  return data;
+}
+
+export async function getAccountById(id: string): Promise<DbAccount | null> {
+  const db = createServerClient();
+  const { data, error } = await db
+    .from('accounts')
+    .select('*')
+    .eq('id', id)
     .single();
   if (error) return null;
   return data;
@@ -233,6 +245,37 @@ export async function upsertVideoAds(
     .select('id');
   if (error) throw error;
   return data?.length ?? 0;
+}
+
+// Save an ABCD analysis result without touching ad_name/performance/synced_at —
+// a plain upsert here would wipe real Google-Ads-synced performance data on every save.
+// Only falls back to inserting a placeholder row when the video was never synced
+// (i.e. it came from the manual YouTube-URL analyzer, not a Google Ads account).
+export async function saveVideoAbcdAnalysis(params: {
+  account_id: string;
+  video_id: string;
+  youtube_url: string;
+  analysis: ABCDAnalysis;
+}): Promise<void> {
+  const db = createServerClient();
+  const { data, error } = await db
+    .from('video_ads')
+    .update({ abcd_analysis: params.analysis })
+    .eq('account_id', params.account_id)
+    .eq('video_id', params.video_id)
+    .select('id');
+  if (error) throw error;
+  if (data && data.length > 0) return;
+
+  await upsertVideoAds(params.account_id, [{
+    video_id: params.video_id,
+    youtube_url: params.youtube_url,
+    ad_name: `[手动分析] ${params.video_id}`,
+    thumbnail_url: `https://img.youtube.com/vi/${params.video_id}/hqdefault.jpg`,
+    abcd_analysis: params.analysis,
+    performance: {},
+    synced_at: new Date().toISOString(),
+  }]);
 }
 
 // ─── Performance Daily ────────────────────────────────────────────────────────

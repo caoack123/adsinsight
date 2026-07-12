@@ -253,6 +253,7 @@ export default function VideoDetailPage({
   // For DB videos — fetch from API if not found in static data or sessionStorage
   const [dbVideo, setDbVideo] = useState<VideoAd | null>(null);
   const [dbLoading, setDbLoading] = useState(false);
+  const [dbBrandName, setDbBrandName] = useState('');
   useEffect(() => {
     if (!video && manualChecked && !manualData) {
       setDbLoading(true);
@@ -261,6 +262,7 @@ export default function VideoDetailPage({
         .then(data => {
           const found = (data.videos ?? []).find((v: VideoAd) => v.video_id === video_id);
           if (found) setDbVideo(found);
+          setDbBrandName(data.brand_name ?? '');
         })
         .catch(console.error)
         .finally(() => setDbLoading(false));
@@ -303,8 +305,8 @@ export default function VideoDetailPage({
       const body: AnalyzeVideoRequest = {
         youtube_url: effectiveVideo.youtube_url,
         video_id: effectiveVideo.video_id,
-        brand_name: videoAbcdData.brand_name,
-        branded_products: videoAbcdData.branded_products,
+        brand_name: video ? videoAbcdData.brand_name : (dbBrandName || effectiveVideo.ad_name),
+        branded_products: video ? videoAbcdData.branded_products : [],
         ...(settings.googleAiApiKey && { api_key: settings.googleAiApiKey }),
         model: settings.videoAbcdModel,
       };
@@ -319,6 +321,21 @@ export default function VideoDetailPage({
       }
       const data: ABCDAnalysis = await res.json();
       setAnalysis(data);
+
+      // Persist for real (non-demo, non-manual) videos so the result survives navigation
+      if (!video && dbVideo) {
+        await fetch('/api/data/videos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account_id: selectedAccountId,
+            video_id: effectiveVideo.video_id,
+            youtube_url: effectiveVideo.youtube_url,
+            analysis: data,
+          }),
+        }).catch(() => {});
+        setDbVideo(prev => (prev ? { ...prev, abcd_analysis: data } : prev));
+      }
     } catch (e) {
       setError(String(e));
     } finally {
