@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' }, // Google avatars
     ],
   },
+  async redirects() {
+    return [
+      // /landing merged into / — keep old links (ads, bookmarks) working
+      { source: '/landing', destination: '/', permanent: true },
+    ];
+  },
   serverExternalPackages: [
     '@react-pdf/renderer',
     '@react-pdf/fns',

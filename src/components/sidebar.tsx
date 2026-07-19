@@ -14,7 +14,7 @@ export function Sidebar() {
   const { t } = useI18n();
 
   const navItems = [
-    { href: '/',               label: t('nav_overview'),      icon: LayoutDashboard },
+    { href: '/app',            label: t('nav_overview'),      icon: LayoutDashboard },
     { href: '/feed-optimizer', label: t('nav_feed'),          icon: ShoppingBag },
     { href: '/search-terms',   label: t('nav_search_terms'),  icon: SearchCode },
     { href: '/campaign-optimizer', label: t('nav_campaign_optimizer'), icon: Sparkles },

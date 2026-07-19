@@ -785,7 +785,7 @@ export default function LandingPage() {
             ))}
           </div>
           <div className="flex items-center gap-3">
-            <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
+            <a href="/app"
                className="btn-press flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-bold"
                style={{ background: 'linear-gradient(135deg,#F5AA84,#D97248)', boxShadow: '0 4px 14px rgba(217,114,72,0.35)' }}>
               Work with us <ExternalLink size={11} />
@@ -834,7 +834,7 @@ export default function LandingPage() {
 
           <Reveal delay={240}>
             <div className="flex items-center justify-center gap-4 flex-wrap mb-6">
-              <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
+              <a href="/app"
                  className="btn-press flex items-center gap-2 px-7 py-3.5 rounded-full text-white text-sm font-bold"
                  style={{ background: 'linear-gradient(135deg,#F5AA84,#D97248)', boxShadow: '0 8px 24px rgba(217,114,72,0.35)' }}>
                 Get a free AI audit <ArrowRight size={14} />
@@ -960,7 +960,7 @@ export default function LandingPage() {
                 <span className="text-white font-bold">No other performance agency does this.</span>{' '}
                 YouTube comments → five team briefs → Google Ads improvements, all in one click.
               </p>
-              <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
+              <a href="/app"
                  className="btn-press shrink-0 inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold text-white whitespace-nowrap"
                  style={{ background: 'linear-gradient(135deg,#F5AA84,#D97248)', boxShadow: '0 8px 24px rgba(217,114,72,0.3)' }}>
                 <PlayCircle size={14} /> See live demo
@@ -1021,7 +1021,7 @@ export default function LandingPage() {
                         </li>
                       ))}
                     </ul>
-                    <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
+                    <a href="/app"
                        className="btn-press inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold self-start mt-2"
                        style={{ background: feat.color }}>
                       Learn more <ArrowRight size={13} />
@@ -1047,7 +1047,7 @@ export default function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
+                  <a href="/app"
                      className="btn-press inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold"
                      style={{ background: feat.color }}>
                     Learn more <ArrowRight size={13} />
@@ -1207,12 +1207,12 @@ export default function LandingPage() {
               Talk to Bagel Digital. We&apos;ll audit your account, show you exactly what our AI finds, and build a growth roadmap — no commitment required.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap relative">
-              <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
+              <a href="/app"
                  className="btn-press flex items-center gap-2 px-8 py-4 rounded-full text-white text-base font-bold"
                  style={{ background:'linear-gradient(135deg,#F5AA84,#D97248)', boxShadow:'0 12px 32px rgba(217,114,72,0.35)' }}>
                 Get a free AI audit <ArrowRight size={16} />
               </a>
-              <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
+              <a href="/app"
                  className="btn-press flex items-center gap-2 px-8 py-4 rounded-full border-2 border-[#E8D5C8] bg-white text-[#333] text-base font-semibold">
                 Learn more <ExternalLink size={14} />
               </a>
@@ -1229,7 +1229,7 @@ export default function LandingPage() {
             <span className="text-sm font-bold text-[#555]" style={{ fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}>bagel digital</span>
           </div>
           <p className="text-xs text-[#bbb]">AdInsight AI — Proprietary platform. &copy; {new Date().getFullYear()} Bagel Digital.</p>
-          <a href="https://bageldigital.ai" target="_blank" rel="noopener noreferrer"
+          <a href="/app"
              className="text-xs text-[#bbb] hover:text-[#555] flex items-center gap-1 transition-colors">
             bageldigital.ai <ExternalLink size={10} />
           </a>
